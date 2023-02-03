@@ -4,7 +4,7 @@
 //  Created:
 //    18 Aug 2022, 13:46:22
 //  Last edited:
-//    23 Dec 2022, 16:08:34
+//    03 Feb 2023, 16:25:28
 //  Auto updated?
 //    Yes
 // 
@@ -202,14 +202,18 @@ pub fn pass_stmt(writer: &mut impl Write, stmt: &Stmt, indent: usize) -> std::io
             }
             writeln!(writer)?;
         },
-        For{ initializer, condition, increment, consequent, .. } => {
+        For{ name, start, stop, step, consequent, .. } => {
             // Print the three for parts
             write!(writer, "{}for (", indent!(indent))?;
-            pass_stmt(writer, initializer, indent)?;
-            write!(writer, " ")?;
-            pass_expr(writer, condition, indent)?;
-            write!(writer, "; ")?;
-            pass_stmt(writer, increment, indent)?;
+            pass_identifier(writer, name)?;
+            write!(writer, " in ")?;
+            pass_expr(writer, start, indent)?;
+            write!(writer, " to ")?;
+            pass_expr(writer, stop, indent)?;
+            if let Some(step) = step {
+                write!(writer, " step ")?;
+                pass_expr(writer, step, indent)?;
+            }
             write!(writer, ") ")?;
             // Print the block
             pass_block(writer, consequent, indent)?;
@@ -259,10 +263,10 @@ pub fn pass_stmt(writer: &mut impl Write, stmt: &Stmt, indent: usize) -> std::io
             pass_expr(writer, value, indent)?;
             writeln!(writer, ";")?;
         },
-        Assign{ name, value, .. } => {
+        Assign{ var, value, .. } => {
             // Just print the identifier
             write!(writer, "{}", indent!(indent))?;
-            pass_identifier(writer, name)?;
+            pass_expr(writer, var, indent)?;
             // Print the expression
             write!(writer, " := ")?;
             pass_expr(writer, value, indent)?;

@@ -4,7 +4,7 @@
 //  Created:
 //    17 Aug 2022, 16:01:41
 //  Last edited:
-//    17 Jan 2023, 14:53:31
+//    03 Feb 2023, 16:28:26
 //  Auto updated?
 //    Yes
 // 
@@ -270,15 +270,20 @@ pub fn let_assign_stmt<'a, E: ParseError<Tokens<'a>> + ContextError<Tokens<'a>>>
 pub fn assign_stmt<'a, E: ParseError<Tokens<'a>> + ContextError<Tokens<'a>>>(
     input: Tokens<'a>
 ) -> IResult<Tokens, Stmt, E> {
-        // Parse the body of the statement
-    let (r, (name, value)) = seq::separated_pair(identifier::parse, tag_token!(Token::Assign), expression::parse).parse(input)?;
+    // Parse the body of the statement
+    let (r, (var, value)) = seq::separated_pair(
+        expression::parse,
+        tag_token!(Token::Assign),
+        expression::parse
+    ).parse(input)?;
+
     // Parse the semicolon
     let (r, s) = comb::cut(tag_token!(Token::Semicolon)).parse(r)?;
 
     // Put it in an assign and done
-    let range: TextRange = TextRange::new(name.start().clone(), TextPos::end_of(s.tok[0].inner()));
+    let range: TextRange = TextRange::new(var.start().clone(), TextPos::end_of(s.tok[0].inner()));
     Ok((r, Stmt::new_assign(
-        name,
+        var,
         value,
 
         range,
@@ -651,29 +656,22 @@ pub fn for_stmt<'a, E: ParseError<Tokens<'a>> + ContextError<Tokens<'a>>>(
         // Parse the for token first
     let (r, f) = nom::error::context("'for' statement", tag_token!(Token::For)).parse(input)?;
     // Parse the rest
-    let (r, ((initializer, condition, increment), consequent)) = nom::error::context("'for' statement",
+    let (r, ((name, (start, (stop, step))), consequent)) = nom::error::context("'for' statement",
         comb::cut(seq::pair(
             seq::delimited(
                 tag_token!(Token::LeftParen),
-                seq::tuple((
-                    let_assign_stmt,
-                    seq::terminated(expression::parse, tag_token!(Token::Semicolon)),
-                    comb::map(
-                        seq::separated_pair(identifier::parse, tag_token!(Token::Assign), expression::parse),
-                        |(name, value)| {
-                            // Get the start and end pos for this assign
-                            let range: TextRange = TextRange::new(name.start().clone(), value.end().clone());
-
-                            // Return as the proper struct
-                            Stmt::new_assign(
-                                name,
-                                value,
-
-                                range,
-                            )
-                        },
+                seq::separated_pair(
+                    identifier::parse,
+                    tag_token!(Token::In),
+                    seq::separated_pair(
+                        expression::parse,
+                        tag_token!(Token::To),
+                        seq::pair(
+                            expression::parse,
+                            comb::opt(seq::preceded(tag_token!(Token::Step), expression::parse)),
+                        ),
                     ),
-                )),
+                ),
                 tag_token!(Token::RightParen),
             ),
             block,
@@ -683,10 +681,13 @@ pub fn for_stmt<'a, E: ParseError<Tokens<'a>> + ContextError<Tokens<'a>>>(
     // Hey-ho, let's go put it in a struct
     let range: TextRange = TextRange::new(f.tok[0].inner().into(), consequent.end().clone());
     Ok((r, Stmt::For {
-        initializer : Box::new(initializer),
-        condition,
-        increment   : Box::new(increment),
-        consequent  : Box::new(consequent),
+        name,
+        start,
+        stop,
+        step,
+        consequent : Box::new(consequent),
+
+        st_entry : None,
 
         range,
     }))

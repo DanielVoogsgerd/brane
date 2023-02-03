@@ -4,7 +4,7 @@
 //  Created:
 //    25 Aug 2022, 11:01:54
 //  Last edited:
-//    17 Jan 2023, 14:58:05
+//    03 Feb 2023, 16:22:19
 //  Auto updated?
 //    Yes
 // 
@@ -90,6 +90,9 @@ fn keyword<'a, E: ParseError<Span<'a>> + ContextError<Span<'a>>>(input: Span<'a>
         comb::map(seq::terminated(bc::tag("continue"), comb::peek(separator)), Token::Continue),
         comb::map(seq::terminated(bc::tag("else"), comb::peek(separator)), Token::Else),
         comb::map(seq::terminated(bc::tag("for"), comb::peek(separator)), Token::For),
+        comb::map(seq::terminated(bc::tag("in"), comb::peek(separator)), Token::In),
+        comb::map(seq::terminated(bc::tag("to"), comb::peek(separator)), Token::To),
+        comb::map(seq::terminated(bc::tag("step"), comb::peek(separator)), Token::Step),
         comb::map(seq::terminated(bc::tag("func"), comb::peek(separator)), Token::Function),
         comb::map(seq::terminated(bc::tag("if"), comb::peek(separator)), Token::If),
         comb::map(seq::terminated(bc::tag("import"), comb::peek(separator)), Token::Import),

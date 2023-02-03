@@ -28,6 +28,15 @@ pub enum Token<'a> {
     /// `for`
     For(Span<'a>),
 
+    /// `in`
+    In(Span<'a>),
+
+    /// `to`
+    To(Span<'a>),
+
+    /// `step`
+    Step(Span<'a>),
+
     /// `func`
     Function(Span<'a>),
 
@@ -198,7 +207,7 @@ impl<'a> Token<'a> {
         use Token::*;
 
         match self {
-            At(span) | And(span) | Break(span) | Class(span) | Continue(span) | Else(span) | For(span) | Function(span)
+            At(span) | And(span) | Break(span) | Class(span) | Continue(span) | Else(span) | For(span) | In(span) | To(span) | Step(span) | Function(span)
             | If(span) | Import(span) | Let(span) | On(span) | Or(span) | Return(span) | Unit(span) | While(span)
             | Dot(span) | Colon(span) | Comma(span) | LeftBrace(span) | LeftBracket(span) | LeftParen(span)
             | Parallel(span) | RightBrace(span) | RightBracket(span) | RightParen(span) | Semicolon(span)

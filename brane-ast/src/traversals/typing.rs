@@ -4,7 +4,7 @@
 //  Created:
 //    19 Aug 2022, 16:34:16
 //  Last edited:
-//    17 Jan 2023, 15:14:50
+//    03 Feb 2023, 17:08:26
 //  Auto updated?
 //    Yes
 // 
@@ -362,13 +362,17 @@ fn pass_stmt(stmt: &mut Stmt, symbol_table: &Rc<RefCell<SymbolTable>>, warnings:
             // Done
             ret_type
         },
-        For{ initializer, ref mut condition, increment, consequent, .. } => {
-            // Resolve the initializer type
-            pass_stmt(initializer, &consequent.table, warnings, errors);
-            // Force the condition type to a boolean
-            *condition = force_cast(condition.clone(), DataType::Boolean, symbol_table, errors);
-            // Resolve the increment type
-            pass_stmt(increment, &consequent.table, warnings, errors);
+        For{ name, start, stop, step, consequent, st_entry, .. } => {
+            // We can hardcode the variable type as an integer
+            {
+                let mut entry: RefMut<VarEntry> = st_entry.as_ref().unwrap().borrow_mut();
+                entry.data_type = DataType::Integer;
+            }
+
+            // Similarly, we can hardcode assert the start, stop, step
+            *start = force_cast(start.clone(), DataType::Integer, symbol_table, errors);
+            *stop  = force_cast(stop.clone(), DataType::Integer, symbol_table, errors);
+            if let Some(step) = step { *step  = force_cast(step.clone(), DataType::Integer, symbol_table, errors); }
 
             // Descent into the consequent
             pass_block(consequent, warnings, errors)
@@ -483,7 +487,7 @@ fn pass_stmt(stmt: &mut Stmt, symbol_table: &Rc<RefCell<SymbolTable>>, warnings:
             // A LetAssign never returns
             None
         },
-        Assign{ ref mut value, st_entry, .. } => {
+        Assign{ ref mut value, .. } => {
             // Get the current datatype (should always be resolved, since otherwise it would have been marked as undeclared)
             let data_type: DataType = {
                 let entry: Ref<VarEntry> = st_entry.as_ref().unwrap().borrow();

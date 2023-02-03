@@ -4,7 +4,7 @@
 //  Created:
 //    18 Aug 2022, 15:24:54
 //  Last edited:
-//    05 Jan 2023, 13:13:47
+//    03 Feb 2023, 17:11:56
 //  Auto updated?
 //    Yes
 // 
@@ -16,6 +16,8 @@
 use std::cell::{Ref, RefCell, RefMut};
 use std::collections::HashMap;
 use std::rc::Rc;
+
+use enum_debug::EnumDebug as _;
 
 use brane_dsl::spec::MergeStrategy;
 use brane_dsl::{DataType, SymbolTable, TextRange};
@@ -440,20 +442,29 @@ fn pass_stmt(state: &CompileState, package_index: &PackageIndex, data_index: &Da
                 pass_block(state, package_index, data_index, alternative, Some(symbol_table.clone()), errors);
             }
         },
-        For{ initializer, condition, increment, consequent, ref mut range, .. } => {
+        For{ name, start, stop, step, consequent, ref mut st_entry, ref mut range, .. } => {
             // Update the block's range
             offset_range!(range, state.offset);
+
+            // Recurse into the three for-parts first
+            pass_expr(state, data_index, start, &symbol_table, errors);
+            pass_expr(state, data_index, stop, &symbol_table, errors);
+            if let Some(step) = step { pass_expr(state, data_index, step, &symbol_table, errors); }
 
             // Set the parent for the nested block's symbol table
             {
                 let mut st: RefMut<SymbolTable> = consequent.table.borrow_mut();
                 st.parent = Some(symbol_table.clone());
-            }
 
-            // Recurse into the three for-parts first
-            pass_stmt(state, package_index, data_index, initializer, &consequent.table, errors);
-            pass_expr(state, data_index, condition, &consequent.table, errors);
-            pass_stmt(state, package_index, data_index, increment, &consequent.table, errors);
+                // Add an entry for this variable
+                *st_entry = match st.add_var(VarEntry::from_def(&name.value, name.range.clone())) {
+                    Ok(entry) => Some(entry),
+                    Err(err)  => {
+                        errors.push(Error::VariableDefineError{ name: name.value.clone(), err, range: name.range.clone() });
+                        return;
+                    },
+                };
+            }
 
             // Recurse into the block
             for s in consequent.stmts.iter_mut() {
@@ -523,20 +534,20 @@ fn pass_stmt(state: &CompileState, package_index: &PackageIndex, data_index: &Da
                 Err(err)  => { errors.push(Error::VariableDefineError{ name: name.value.clone(), err, range: name.range().clone() }); },
             }
         },
-        Assign{ ref mut name, value, ref mut st_entry, ref mut range, .. } => {
+        Assign{ var, value, ref mut st_entry, ref mut range, .. } => {
             // Update the block's range
-            offset_range!(name.range, state.offset);
             offset_range!(range, state.offset);
 
-            // Recurse into the expression to resolve any reference there
-            pass_expr(state, data_index, value, symbol_table, errors);
-
-            // Attempt to resolve the identifier
-            let st: Ref<SymbolTable> = symbol_table.borrow();
-            match st.get_var(&name.value) {
-                Some(entry) => { *st_entry = Some(entry); },
-                None        => { errors.push(Error::UndefinedVariable{ ident: name.value.clone(), range: name.range().clone() }); }
+            // Assert the var is only one of a limited set of expressions
+            match var {
+                brane_dsl::ast::Expr::ArrayIndex{ .. } |
+                brane_dsl::ast::Expr::Proj{ .. }       => {},
+                _                                      => { errors.push(Error::IllegalAssignExpression{ variant: var.variant().to_string(), range: var.range().clone() }); return; },
             }
+
+            // Then recurse into the expressions to handle shit there
+            pass_expr(state, data_index, var, symbol_table, errors);
+            pass_expr(state, data_index, value, symbol_table, errors);
         },
         Expr { expr, ref mut range, .. } => {
             // Update the block's range

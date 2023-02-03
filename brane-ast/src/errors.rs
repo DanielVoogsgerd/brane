@@ -4,7 +4,7 @@
 //  Created:
 //    10 Aug 2022, 13:52:37
 //  Last edited:
-//    09 Jan 2023, 13:19:38
+//    03 Feb 2023, 17:04:36
 //  Auto updated?
 //    Yes
 // 
@@ -518,6 +518,8 @@ pub enum ResolveError {
     UnknownMergeStrategy{ raw: String, range: TextRange },
     /// Failed to declare a new variable.
     VariableDefineError{ name: String, err: brane_dsl::errors::SymbolTableError, range: TextRange },
+    /// An assignment was given with an illegal expression as its base.
+    IllegalAssignExpression{ variant: String, range: TextRange },
 
     /// The given function was not declared before.
     UndefinedFunction{ ident: String, range: TextRange },
@@ -567,8 +569,9 @@ impl ResolveError {
             IllegalSelf{ range, .. }                                    => prettyprint_err(file, source, self, range),
             MissingSelf{ range, .. }                                    => prettyprint_err(file, source, self, range),
 
-            UnknownMergeStrategy{ range, .. } => prettyprint_err(file, source, self, range),
-            VariableDefineError{ range, .. }  => prettyprint_err(file, source, self, range),
+            UnknownMergeStrategy{ range, .. }    => prettyprint_err(file, source, self, range),
+            VariableDefineError{ range, .. }     => prettyprint_err(file, source, self, range),
+            IllegalAssignExpression{ range, .. } => prettyprint_err(file, source, self, range),
 
             UndefinedFunction{ range, .. } => prettyprint_err(file, source, self, range),
 
@@ -602,8 +605,9 @@ impl Display for ResolveError {
             IllegalSelf{ arg, .. }                         => write!(f, "'self' can only be first parameter of method, not at position {}", arg),
             MissingSelf{ c_name, name, .. }                => write!(f, "Missing 'self' parameter as first parameter in method '{}' in class {}", name, c_name),
 
-            UnknownMergeStrategy{ raw, .. }      => write!(f, "Unknown merge strategy '{}'", raw),
-            VariableDefineError{ name, err, .. } => write!(f, "Could not define variable '{}': {}", name, err),
+            UnknownMergeStrategy{ raw, .. }        => write!(f, "Unknown merge strategy '{}'", raw),
+            VariableDefineError{ name, err, .. }   => write!(f, "Could not define variable '{}': {}", name, err),
+            IllegalAssignExpression{ variant, .. } => write!(f, "You can only assign to variables, indexed arrays or class fields; not to {}", variant),
 
             UndefinedFunction{ ident, .. } => write!(f, "Undefined function or method '{}'", ident),
 

@@ -4,7 +4,7 @@
 //  Created:
 //    10 Aug 2022, 14:00:59
 //  Last edited:
-//    17 Jan 2023, 15:13:46
+//    03 Feb 2023, 17:11:45
 //  Auto updated?
 //    Yes
 // 
@@ -209,14 +209,19 @@ pub enum Stmt {
     },
     /// Defines a for-loop.
     For {
-        /// The statement that is run at the start of the for-loop.
-        initializer : Box<Stmt>,
-        /// The expression that has to evaluate to true while running.
-        condition   : Expr,
-        /// The statement that is run at the end of every iteration.
-        increment   : Box<Stmt>,
+        /// The name of the for loop's variable.
+        name       : Identifier,
+        /// The start value of the loop's range.
+        start      : Expr,
+        /// The stop value of the loop's range (exclusive).
+        stop       : Expr,
+        /// The step value of the loop's range. Will default to '1' if the user omitted it.
+        step       : Option<Expr>,
         /// The block to run every iteration.
-        consequent  : Box<Block>,
+        consequent : Box<Block>,
+
+        // The symbol table entry for the created variable.
+        st_entry : Option<Rc<RefCell<VarEntry>>>,
 
         /// The range of the for-loop in the source text.
         range : TextRange,
@@ -272,8 +277,8 @@ pub enum Stmt {
     },
     /// Defines an assignment (i.e., `<name> := <expr>`).
     Assign {
-        /// The name of the variable referenced.
-        name  : Identifier,
+        /// The variable to update.
+        var   : Expr,
         /// The expression that gives a value to the assignment.
         value : Expr,
 
@@ -433,16 +438,16 @@ impl Stmt {
     /// Creates a new Assign node with some auxillary fields set to empty.
     /// 
     /// # Arguments
-    /// - `name`: The identifier of the variable to write to.
+    /// - `var`: The expression that forms the variable to write to.
     /// - `value`: The value to write.
     /// - `range`: The TextRange that relates this node to the source text.
     /// 
     /// # Returns
     /// A new `Stmt::LetAssign` instance.
     #[inline]
-    pub fn new_assign(name: Identifier, value: Expr, range: TextRange) -> Self {
+    pub fn new_assign(var: Expr, value: Expr, range: TextRange) -> Self {
         Self::Assign {
-            name,
+            var,
             value,
 
             st_entry : None,
@@ -1204,155 +1209,6 @@ impl Node for Identifier {
     #[inline]
     fn range(&self) -> &TextRange { &self.range }
 }
-
-// /// Defines an identifier.
-// #[derive(Clone, Debug)]
-// pub enum Identifier {
-//     /// Defines a simple identifier of only one word.
-//     Name {
-//         /// The value of the identifier itself.
-//         value : String,
-
-//         /// The entry to which this variable references.
-//         st_entry : Option<Rc<RefCell<STVarEntry>>>,
-
-//         /// The range of the identifier in the source text.
-//         range : TextRange,
-//     },
-
-//     /// Defines a more complex identifier that is a projection.
-//     Proj {
-//         /// The value of the lhs of the projection.
-//         lhs : Box<Self>,
-//         /// The value of the rhs of the projection.
-//         rhs : Box<Self>,
-
-//         /// The class to which the left-hand side references.
-//         st_entry : Option<Rc<RefCell<STClassEntry>>>,
-
-//         /// The range of the identifier in the source text.
-//         range : TextRange,
-//     }
-// }
-
-// impl Identifier {
-//     /// Constructor for the Identifier that initializes some auxillary fields to empty.
-//     /// 
-//     /// # Arguments
-//     /// - `value`: The value (i.e., identifier) of the identifier.
-//     /// - `range`: The range of the identifier in the source text.
-//     /// 
-//     /// # Returns
-//     /// A new Identifier instance with the given value and range.
-//     #[inline]
-//     pub fn new_name(value: String, range: TextRange) -> Self {
-//         Self::Name {
-//             value,
-
-//             st_entry : None,
-
-//             range,
-//         }
-//     }
-
-//     /// Constructor for the Identifier that initializes it as a project operator (and sets some auxillary fields to empty).
-//     /// 
-//     /// # Arguments
-//     /// - `lhs`: The left-hand side value of the identifier.
-//     /// - `rhs`: The right-hand side value of the identifier.
-//     /// - `range`: The range of the identifier in the source text.
-//     /// 
-//     /// # Returns
-//     /// A new Identifier instance with the given value and range.
-//     #[inline]
-//     pub fn new_proj(lhs: Box<Self>, rhs: Box<Self>, range: TextRange) -> Self {
-//         Self::Proj {
-//             lhs,
-//             rhs,
-
-//             st_entry : None,
-
-//             range,
-//         }
-//     }
-
-
-
-//     /// Sets the st_entry of this Identifier as if this is an `Identifier::Name`.
-//     /// 
-//     /// # Arguments
-//     /// - `entry`: The entry to set.
-//     /// 
-//     /// # Returns
-//     /// Nothing, but does change the internal value.
-//     /// 
-//     /// # Panics
-//     /// This function panics if this was an `Identifier::Proj` instead of an `Identifier::Name`.
-//     #[inline]
-//     pub fn set_entry(&mut self, entry: Rc<RefCell<STVarEntry>>) {
-//         if let Identifier::Name{ ref mut st_entry, .. } = self {
-//             *st_entry = Some(entry);
-//         } else {
-//             panic!("Cannot set entry value of Name identifier (is Proj identifier)");
-//         }
-//     }
-
-//     /// Builds a complete identifier from the parts.
-//     /// 
-//     /// # Returns
-//     /// Either the normal value if this is an `Identifier::Name`, or else a combination of all nested identifiers separated by dots if it is an `Identifier::Proj`.
-//     #[inline]
-//     pub fn full_value(&self) -> String {
-//         match self {
-//             Identifier::Name{ value, .. }    => value.clone(),
-//             Identifier::Proj{ lhs, rhs, .. } => format!("{}.{}", lhs.full_value(), rhs.full_value()),
-//         }
-//     }
-
-//     /// Returns the value of the identifier if this is a Name identifier.
-//     /// 
-//     /// # Returns
-//     /// A string reference to the identifier value.
-//     /// 
-//     /// # Panics
-//     /// This function panics if this was an `Identifier::Proj` instead of an `Identifier::Name`.
-//     #[inline]
-//     pub fn value(&self) -> &str {
-//         if let Identifier::Name{ value, .. } = self {
-//             value
-//         } else {
-//             panic!("Cannot set entry value of Name identifier (is Proj identifier)");
-//         }
-//     }
-
-//     /// Returns the variable entry of the identifier if this is a Name identifier.
-//     /// 
-//     /// # Returns
-//     /// An STVarEntry that represents the referenced variable.
-//     /// 
-//     /// # Panics
-//     /// This function panics if this was an `Identifier::Proj` instead of an `Identifier::Name`.
-//     #[inline]
-//     pub fn st_entry(&self) -> &Option<Rc<RefCell<STVarEntry>>> {
-//         if let Identifier::Name{ st_entry, .. } = self {
-//             st_entry
-//         } else {
-//             panic!("Cannot get entry value of Name identifier (is Proj identifier)");
-//         }
-//     }
-// }
-
-// impl Node for Identifier {
-//     /// Returns the node's source range.
-//     #[inline]
-//     fn range(&self) -> &TextRange {
-//         use Identifier::*;
-//         match self {
-//             Name{ range, .. } => range,
-//             Proj{ range, .. } => range,
-//         }
-//     }
-// }
 
 
 
