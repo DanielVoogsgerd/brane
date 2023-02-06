@@ -29,6 +29,9 @@ members = [
     "brane-ast",
     "brane-dsl",
 
+    "brane-dsl-2",
+    "brane-ast-2",
+
     # These crates provide specifications / general implementations
     "brane-cfg",
     "brane-shr",

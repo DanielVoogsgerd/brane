@@ -1,0 +1,8 @@
+[package]
+name = "brane-ast-2"
+version = { workspace = true }
+edition = "2021"
+authors = [ "Tim Müller" ]
+description = "The `brane-ast` crate specifies a common workflow representation that various languages can compile to. This is executed by the VM defined in `brane-exe`."
+
+[dependencies]
