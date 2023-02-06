@@ -4,7 +4,7 @@
 //  Created:
 //    18 Aug 2022, 15:24:54
 //  Last edited:
-//    03 Feb 2023, 17:11:56
+//    06 Feb 2023, 14:48:36
 //  Auto updated?
 //    Yes
 // 
@@ -22,7 +22,7 @@ use enum_debug::EnumDebug as _;
 use brane_dsl::spec::MergeStrategy;
 use brane_dsl::{DataType, SymbolTable, TextRange};
 use brane_dsl::data_type::{ClassSignature, FunctionSignature};
-use brane_dsl::symbol_table::{ClassEntry, FunctionEntry, SymbolTableEntry, VarEntry};
+use brane_dsl::symbol_table::{ClassEntry, FunctionEntry, VarEntry};
 use brane_dsl::ast::{Block, Expr, Identifier, Literal, Node, Program, Stmt};
 use specifications::data::DataIndex;
 use specifications::package::{PackageIndex, PackageInfo};
@@ -144,6 +144,26 @@ fn define_func(state: &CompileState, entry: &mut FunctionEntry, params: &mut [Id
     entry.signature = FunctionSignature::new(vec![ DataType::Any; params.len() ], DataType::Any);
 
     // Done
+}
+
+/// Resolves the symbol table entry of a variable by examining the variable reference.
+/// 
+/// It assumes that `pass_expr` is already called on this variable.
+/// 
+/// This will simply return the entry in the "toplevel" variable of the list. Any other parts (i.e., array index or projection) can be seen as "narrowing down" in that single variable entry, and should be as safe to leave to runtime as any array index or projection.
+/// 
+/// # Arguments
+/// - `var`: The expression that represents the variable target.
+/// 
+/// # Returns
+/// The symbol table entry of the most toplevel variable reference if it has one. If not, then the variable is undeclared, but an error for that is already emitted (in the `pass_expr` on the variable).
+pub fn get_var_entry(var: &Expr) -> Option<Rc<RefCell<VarEntry>>> {
+    match var {
+        Expr::VarRef{ st_entry, .. }  => st_entry.clone(),
+        Expr::ArrayIndex{ array, .. } => get_var_entry(array),
+        Expr::Proj{ lhs, .. }         => get_var_entry(lhs),
+        _                             => { unreachable!(); },
+    }
 }
 
 
@@ -449,7 +469,15 @@ fn pass_stmt(state: &CompileState, package_index: &PackageIndex, data_index: &Da
             // Recurse into the three for-parts first
             pass_expr(state, data_index, start, &symbol_table, errors);
             pass_expr(state, data_index, stop, &symbol_table, errors);
-            if let Some(step) = step { pass_expr(state, data_index, step, &symbol_table, errors); }
+            if let Some(step) = step {
+                // Instead of iterating, we assert that the step is literal (or else we can never know the direction of the equality operator)
+                if let brane_dsl::ast::Expr::Literal{ literal: Literal::Integer{ value, range } } = step {
+                    // Assert it isn't zero
+                    if *value == 0 { errors.push(Error::ForStepZero{ range: range.clone() }); }
+                } else {
+                    errors.push(Error::ForStepNotALiteral{ range: step.range().clone() });
+                }
+            }
 
             // Set the parent for the nested block's symbol table
             {
@@ -538,15 +566,22 @@ fn pass_stmt(state: &CompileState, package_index: &PackageIndex, data_index: &Da
             // Update the block's range
             offset_range!(range, state.offset);
 
-            // Assert the var is only one of a limited set of expressions
+            // Assert that only allowed expressions are used here
             match var {
+                brane_dsl::ast::Expr::VarRef{ .. }     |
                 brane_dsl::ast::Expr::ArrayIndex{ .. } |
                 brane_dsl::ast::Expr::Proj{ .. }       => {},
                 _                                      => { errors.push(Error::IllegalAssignExpression{ variant: var.variant().to_string(), range: var.range().clone() }); return; },
             }
 
-            // Then recurse into the expressions to handle shit there
+            // Pass the variable to make it populate references, if any, and then get it
             pass_expr(state, data_index, var, symbol_table, errors);
+            *st_entry = Some(match get_var_entry(var) {
+                Some(entry) => entry,
+                None        => { return; },
+            });
+
+            // Then recurse into the value to handle any references there
             pass_expr(state, data_index, value, symbol_table, errors);
         },
         Expr { expr, ref mut range, .. } => {
@@ -657,77 +692,74 @@ fn pass_expr(state: &CompileState, data_index: &DataIndex, expr: &mut Expr, symb
             pass_expr(state, data_index, lhs, symbol_table, errors);
             pass_expr(state, data_index, rhs, symbol_table, errors);
         },
-        Proj{ lhs, rhs, ref mut st_entry, ref mut range, .. } => {
+        Proj{ lhs, rhs, ref mut range, .. } => {
             // Update the expr's range
             offset_range!(range, state.offset);
 
-            // By design, the lhs is only Expr::VarRef or Expr::Proj
-            // The rhs is only Expr::Identifier
-
-            // Recurse into the left-hand side first
+            // Recurse into the left-hand side
             pass_expr(state, data_index, lhs, symbol_table, errors);
-            // Then the righthand-side (not necessary, but just in case we ever do need recursion for identifiers)
-            pass_expr(state, data_index, rhs, symbol_table, errors);
+            // // Then the righthand-side (not necessary, but just in case we ever do need recursion for identifiers)
+            // pass_expr(state, data_index, rhs, symbol_table, errors);
 
-            // Get the rhs identifier
-            let rhs_ident: &brane_dsl::ast::Identifier = if let Expr::Identifier{ name, .. } = &**rhs {
-                name
-            } else {
-                panic!("Encountered non-Identifier expression on righthand-side of projection expression");  
-            };
+            // // Get the rhs identifier
+            // let rhs_ident: &brane_dsl::ast::Identifier = if let Expr::Identifier{ name, .. } = &**rhs {
+            //     name
+            // } else {
+            //     panic!("Encountered non-Identifier expression on righthand-side of projection expression");  
+            // };
 
-            // With the type evaluated, get the symbol table that contains the class' fields referenced by the LHS
-            let c_entry: Rc<RefCell<ClassEntry>> = {
-                // Get a borrow to the underlying variable entry first
-                let var_entry: Rc<RefCell<VarEntry>> = match &**lhs {
-                    Expr::Proj{ st_entry, .. } => {
-                        // Get the class symbol table as simply the parent table of the variable entry
-                        let entry: &SymbolTableEntry = st_entry.as_ref().unwrap();
-                        match entry {
-                            SymbolTableEntry::VarEntry(v)      => v.clone(),
-                            SymbolTableEntry::FunctionEntry(f) => {
-                                let entry: Ref<FunctionEntry> = f.borrow();
-                                errors.push(Error::NonClassProjection{ name: rhs_ident.value.clone(), got: DataType::Function(Box::new(entry.signature.clone())), range: lhs.range().clone() });
-                                return;
-                            },
-                            _ => { panic!("Got non-Var, non-Method SymbolTableEntry in a projection"); }
-                        }
-                    },
-                    Expr::VarRef { st_entry, .. } => {
-                        // If the VarRef is not given, then something went wrong (e.g., unknown argument)
-                        if st_entry.is_none() { return; }
+            // // With the type evaluated, get the symbol table that contains the class' fields referenced by the LHS
+            // let c_entry: Rc<RefCell<ClassEntry>> = {
+            //     // Get a borrow to the underlying variable entry first
+            //     let var_entry: Rc<RefCell<VarEntry>> = match &**lhs {
+            //         Expr::Proj{ st_entry, .. } => {
+            //             // Get the class symbol table as simply the parent table of the variable entry
+            //             let entry: &SymbolTableEntry = st_entry.as_ref().unwrap();
+            //             match entry {
+            //                 SymbolTableEntry::VarEntry(v)      => v.clone(),
+            //                 SymbolTableEntry::FunctionEntry(f) => {
+            //                     let entry: Ref<FunctionEntry> = f.borrow();
+            //                     errors.push(Error::NonClassProjection{ name: rhs_ident.value.clone(), got: DataType::Function(Box::new(entry.signature.clone())), range: lhs.range().clone() });
+            //                     return;
+            //                 },
+            //                 _ => { panic!("Got non-Var, non-Method SymbolTableEntry in a projection"); }
+            //             }
+            //         },
+            //         Expr::VarRef { st_entry, .. } => {
+            //             // If the VarRef is not given, then something went wrong (e.g., unknown argument)
+            //             if st_entry.is_none() { return; }
 
-                        // Always a variable entry
-                        st_entry.as_ref().unwrap().clone()
-                    },
+            //             // Always a variable entry
+            //             st_entry.as_ref().unwrap().clone()
+            //         },
 
-                    _ => { panic!("Got non-Proj, non-VarRef expression on lefthand-side of projection expression"); }
-                };
+            //         _ => { panic!("Got non-Proj, non-VarRef expression on lefthand-side of projection expression"); }
+            //     };
 
-                // Get the type behind that entry as a ClassType
-                let entry: Ref<VarEntry> = var_entry.borrow();
-                let c_name: &str = match &entry.data_type {
-                    DataType::Class(c_name) => c_name,
-                    // For Any, we have no choice but to assume it's fine and leave it until runtime
-                    DataType::Any           => { return; }
-                    entry_type              => {
-                        errors.push(Error::NonClassProjection{ name: rhs_ident.value.clone(), got: entry_type.clone(), range: lhs.range().clone() });
-                        return;
-                    },
-                };
+            //     // Get the type behind that entry as a ClassType
+            //     let entry: Ref<VarEntry> = var_entry.borrow();
+            //     let c_name: &str = match &entry.data_type {
+            //         DataType::Class(c_name) => c_name,
+            //         // For Any, we have no choice but to assume it's fine and leave it until runtime
+            //         DataType::Any           => { return; }
+            //         entry_type              => {
+            //             errors.push(Error::NonClassProjection{ name: rhs_ident.value.clone(), got: entry_type.clone(), range: lhs.range().clone() });
+            //             return;
+            //         },
+            //     };
 
-                // Attempt to resolve that name in the symbol table
-                let st: Ref<SymbolTable> = symbol_table.borrow();
-                st.get_class(c_name).unwrap()
-            };
+            //     // Attempt to resolve that name in the symbol table
+            //     let st: Ref<SymbolTable> = symbol_table.borrow();
+            //     st.get_class(c_name).unwrap()
+            // };
 
-            // After that whole ordeal, we can now see if the rhs identifier is actually a field in the class
-            let ce: Ref<ClassEntry> = c_entry.borrow();
-            let cst: Ref<SymbolTable> = ce.symbol_table.borrow();
-            if let Some(f_entry) = cst.get(&rhs_ident.value) {
-                // It's a field! Link the projection operator to it.
-                *st_entry = Some(f_entry);
-            } else { errors.push(Error::UnknownField { class_name: ce.signature.name.clone(), name: rhs_ident.value.clone(), range: rhs_ident.range.clone() }); }
+            // // After that whole ordeal, we can now see if the rhs identifier is actually a field in the class
+            // let ce: Ref<ClassEntry> = c_entry.borrow();
+            // let cst: Ref<SymbolTable> = ce.symbol_table.borrow();
+            // if let Some(f_entry) = cst.get(&rhs_ident.value) {
+            //     // It's a field! Link the projection operator to it.
+            //     *st_entry = Some(f_entry);
+            // } else { errors.push(Error::UnknownField { class_name: ce.signature.name.clone(), name: rhs_ident.value.clone(), range: rhs_ident.range.clone() }); }
         },
 
         Instance{ ref mut name, ref mut properties, ref mut st_entry, ref mut range, .. } => {

@@ -4,7 +4,7 @@
 //  Created:
 //    15 Sep 2022, 08:26:20
 //  Last edited:
-//    05 Jan 2023, 13:14:31
+//    06 Feb 2023, 10:10:19
 //  Auto updated?
 //    Yes
 // 
@@ -482,9 +482,10 @@ pub fn pass_stmt(stmt: &mut Stmt, table: &mut TableState, errors: &mut Vec<Error
                 pass_block(alternative, table, errors);
             }  
         },
-        For{ initializer, condition, consequent, .. } => {
-            pass_stmt(initializer, table, errors);
-            pass_expr(condition, table);
+        For{ start, stop, step, consequent, .. } => {
+            pass_expr(start, table);
+            pass_expr(stop, table);
+            if let Some(step) = step { pass_expr(step, table); }
             pass_block(consequent, table, errors);
         },
         While{ condition, consequent, .. } => {

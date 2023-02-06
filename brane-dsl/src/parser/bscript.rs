@@ -4,7 +4,7 @@
 //  Created:
 //    17 Aug 2022, 16:01:41
 //  Last edited:
-//    03 Feb 2023, 16:28:26
+//    06 Feb 2023, 13:45:38
 //  Auto updated?
 //    Yes
 // 
@@ -507,7 +507,7 @@ pub fn declare_func_stmt<'a, E: ParseError<Tokens<'a>> + ContextError<Tokens<'a>
         // Hit the function token first
     let (r, f) = tag_token!(Token::Function).parse(input)?;
     // Parse everything else
-    let (r, ((ident, params), code)) = seq::tuple((
+    let (r, ((ident, params), code)): (Tokens, ((Identifier, Option<(Identifier, Vec<Identifier>)>), Block)) = seq::tuple((
         comb::cut(seq::pair(
             identifier::parse,
             seq::delimited(
@@ -523,10 +523,10 @@ pub fn declare_func_stmt<'a, E: ParseError<Tokens<'a>> + ContextError<Tokens<'a>
     )).parse(r)?;
 
     // Flatten the parameters
-    let params = params.map(|(h, mut e)| {
-        let mut res: Vec<Identifier> = Vec::with_capacity(1 + e.len());
+    let params: Vec<Identifier> = params.map(|(h, e)| {
+        let mut res = Vec::with_capacity(1 + e.len());
         res.push(h);
-        res.append(&mut e);
+        res.extend(e);
         res
     }).unwrap_or_default();
 

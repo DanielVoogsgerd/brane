@@ -4,7 +4,7 @@
 //  Created:
 //    19 Aug 2022, 16:34:16
 //  Last edited:
-//    03 Feb 2023, 17:08:26
+//    06 Feb 2023, 15:06:35
 //  Auto updated?
 //    Yes
 // 
@@ -88,7 +88,7 @@ mod tests {
 
 
 /***** HELPER FUNCTIONS *****/
-/// Inserts a 'forced cast', i.e., makes sure the source type is casteable and then insret a new Cast expresion to make it so (if necessary).
+/// Inserts a 'forced cast', i.e., makes sure the source type is casteable and then insert a new Cast expresion to make it so (if necessary).
 /// 
 /// Note that, for convenience, this function also evaluates the type of the given expression first.
 /// 
@@ -362,7 +362,7 @@ fn pass_stmt(stmt: &mut Stmt, symbol_table: &Rc<RefCell<SymbolTable>>, warnings:
             // Done
             ret_type
         },
-        For{ name, start, stop, step, consequent, st_entry, .. } => {
+        For{ start, stop, step, consequent, st_entry, .. } => {
             // We can hardcode the variable type as an integer
             {
                 let mut entry: RefMut<VarEntry> = st_entry.as_ref().unwrap().borrow_mut();
@@ -487,17 +487,17 @@ fn pass_stmt(stmt: &mut Stmt, symbol_table: &Rc<RefCell<SymbolTable>>, warnings:
             // A LetAssign never returns
             None
         },
-        Assign{ ref mut value, .. } => {
-            // Get the current datatype (should always be resolved, since otherwise it would have been marked as undeclared)
-            let data_type: DataType = {
-                let entry: Ref<VarEntry> = st_entry.as_ref().unwrap().borrow();
-                entry.data_type.clone()
-            };
+        Assign{ var, ref mut value, .. } => {
+            // Get the target datatype
+            let data_type: DataType = pass_expr(var, symbol_table, errors);
 
-            // If the data type is Null or Any, then we might override the value instead of casting
+            // If the data type is Any, then we might update the value instead of casting and forcing it to be like that (useful for future assignments)
             if data_type == DataType::Any {
-                let expr_type: DataType = pass_expr(value, symbol_table, errors);
-                st_entry.as_ref().unwrap().borrow_mut().data_type = expr_type;
+                // It's only sensible if it's 
+                if let brane_dsl::ast::Expr::VarRef{ st_entry, .. } = var {
+                    
+                }
+                update_var_type(var, pass_expr(value, symbol_table, errors));
             } else {
                 // Force a cast to this variable's type on the expression
                 *value = force_cast(value.clone(), data_type, symbol_table, errors);
@@ -809,7 +809,7 @@ fn pass_expr(expr: &mut Expr, symbol_table: &Rc<RefCell<SymbolTable>>, errors: &
                 },
             }
         },
-        Proj{ st_entry, .. } => {
+        Proj{ lhs, rhs, .. } => {
             // Match either a variable or method
             if let Some(entry) = st_entry.as_ref() {
                 match entry {

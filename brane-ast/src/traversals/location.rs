@@ -4,7 +4,7 @@
 //  Created:
 //    05 Sep 2022, 16:27:08
 //  Last edited:
-//    23 Dec 2022, 16:35:49
+//    06 Feb 2023, 10:04:23
 //  Auto updated?
 //    Yes
 // 
@@ -123,10 +123,10 @@ fn pass_stmt(stmt: &mut Stmt, locations: AllowedLocations, reasons: Vec<TextRang
             pass_block(consequent, locations.clone(), reasons.clone(), errors);
             if let Some(alternative) = alternative { pass_block(alternative, locations, reasons, errors) };
         },
-        For{ initializer, condition, increment, consequent, .. } => {
-            pass_stmt(initializer, locations.clone(), reasons.clone(), errors);
-            pass_expr(condition, locations.clone(), reasons.clone(), errors);
-            pass_stmt(increment, locations.clone(), reasons.clone(), errors);
+        For{ start, stop, step, consequent, .. } => {
+            pass_expr(start, locations.clone(), reasons.clone(), errors);
+            pass_expr(stop, locations.clone(), reasons.clone(), errors);
+            if let Some(step) = step { pass_expr(step, locations.clone(), reasons.clone(), errors); }
             pass_block(consequent, locations, reasons, errors);
         },
         While{ condition, consequent, .. } => {

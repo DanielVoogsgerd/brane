@@ -4,7 +4,7 @@
 //  Created:
 //    16 Aug &2022, 14:42:43
 //  Last edited:
-//    03 Feb 2023, 15:08:58
+//    06 Feb 2023, 14:29:51
 //  Auto updated?
 //    Yes
 // 
@@ -18,7 +18,7 @@ use nom::error::{ContextError, ParseError};
 use nom::{branch, combinator as comb, multi, sequence as seq};
 use nom::{IResult, Parser};
 
-use super::ast::{Expr, Identifier, Node, Operator, UnaOp};
+use super::ast::{Expr, Node, Operator, UnaOp};
 use crate::spec::{TextPos, TextRange};
 use crate::parser::{identifier, instance, literal, operator};
 use crate::scanner::{Token, Tokens};
@@ -58,21 +58,24 @@ fn expr_pratt<'a, E: ParseError<Tokens<'a>> + ContextError<Tokens<'a>>>(
     input: Tokens<'a>,
     min_bp: u8,
 ) -> IResult<Tokens, Expr, E> {
-    // Attempt to parse a unary operator first
+    // We can usually parse a normal expression, unless we have some operator that is unary and precedes its operand
     let (mut remainder, mut lhs) = match operator::unary_operator::<E>(input) {
+        // Parse array expressions (not really an operator but marked as such because the index is)
         Ok((r, UnaOp::Idx{ range })) => {
             // Parse the rest as (the rest of) an array
             array_expr(&Some(range)).parse(r)?
         },
-        // Simply parse the expression in between the brackets
+        // Parse parenthesis (not really an operator but marked as such because...? I think because that's convient with the unary_operator function?)
         Ok((r, UnaOp::Prio{ range: _ })) => seq::terminated(self::parse, tag_token!(Token::RightParen)).parse(r)?,
+
+        // Any other operator is parsed as a unary expression
         Ok((r, operator)) => {
-            // Try to find an operator with higher binding power
+            // In any other case, parse an entire expression, where we assume everything to be part of this expression as long as it binds less strongly
             let (_, r_bp) = operator.binding_power();
             let (r, rhs)  = expr_pratt(r, r_bp)?;
             let range: TextRange = TextRange::new(operator.start().clone(), rhs.end().clone());
 
-            // Return the best operator found
+            // That makes the unary operatation
             (
                 r,
                 Expr::new_unaop(
@@ -83,59 +86,89 @@ fn expr_pratt<'a, E: ParseError<Tokens<'a>> + ContextError<Tokens<'a>>>(
                 ),
             )
         },
+
+        // Any other _non-operator_ is parsed as an atomic expression (literals, identifiers, etc).
         _ => expr_atom(input)?,
     };
 
-    // Other operators may be multiple, so start looping and parse (would be a recursion if that was not infinite)
+    // Any other expressions are _after_ the (first) expression, so the idea is to keep popping until we have parsed the whole tree
     loop {
         match operator::parse::<E>(remainder) {
             Ok((r, Operator::Binary(operator))) => {
-                // Recurse until lower binding power is encountered.
+                // Find the right expression for this operator
                 let (left_bp, right_bp) = operator.binding_power();
-                if left_bp < min_bp {
-                    break;
-                }
-                let (remainder_3, rhs) = expr_pratt(r, right_bp)?;
+                // Note that we don't bind if the lefthand side is actually binding stronger (they will steal the LHS expression away, we will get the full expression later).
+                if left_bp < min_bp { break; }
+                let (r, rhs) = expr_pratt(r, right_bp)?;
 
-                // We then return the remainder
-                remainder = remainder_3;
+                // We then return the parsed bit as the new LHS, the unparsed bit is the remainder to-be-parsed part.
                 let range: TextRange = TextRange::new(lhs.start().clone(), rhs.end().clone());
                 lhs = Expr::new_binop(
                     operator,
                     Box::new(lhs),
                     Box::new(rhs),
-
                     range,
                 );
+                remainder = r;
             }
+
+            // This unary operator binds _after_ the expression it binds
             Ok((r, Operator::Unary(operator))) => {
+                // Quit if there is already something that binds our LHS; otherwise, we can bind it
                 let (left_bp, _) = operator.binding_power();
-                if left_bp < min_bp {
-                    break;
-                }
+                if left_bp < min_bp { break; }
 
-                // If the operator happens to be an index, return the special index array one
-                lhs = if let UnaOp::Idx{ .. } = operator {
-                    let (r2, rhs) = self::parse(r)?;
-                    let (r2, bracket) = tag_token!(Token::RightBracket).parse(r2)?;
-                    remainder = r2;
+                // We then return the parsed bit as the new LHS, the unparsed bit is the remainder to-be-parsed part.
+                lhs = match operator {
+                    UnaOp::Idx{ .. } => {
+                        // Array indexing has a custom AST entry because it's essentialy a "dynamically configurable" operator
+                        let (r, rhs) = comb::cut(self::parse)(r)?;
+                        let (r, bracket) = comb::cut(tag_token!(Token::RightBracket))(r)?;
+                        remainder = r;
 
-                    let range: TextRange = TextRange::new(lhs.start().clone(), TextPos::end_of(bracket.tok[0].inner()));
-                    Expr::new_array_index(
-                        Box::new(lhs),
-                        Box::new(rhs),
+                        let range: TextRange = TextRange::new(lhs.start().clone(), TextPos::end_of(bracket.tok[0].inner()));
+                        Expr::new_array_index(
+                            Box::new(lhs),
+                            Box::new(rhs),
 
-                        range,
-                    )
-                } else {
-                    // Otherwise, do the default unary operator
-                    let range: TextRange = TextRange::new(lhs.start().clone(), operator.end().clone());
-                    Expr::new_unaop(
-                        operator,
-                        Box::new(lhs),
+                            range,
+                        )
+                    },
+                    UnaOp::Proj{ .. } => {
+                        // We need to see an identifier first that represents the field to project
+                        let (r, id) = comb::cut(identifier::parse)(r)?;
+                        remainder = r;
 
-                        range,
-                    )
+                        // Then the rest is this operator
+                        let range: TextRange = TextRange::new(lhs.start().clone(), id.end().clone());
+                        Expr::new_proj(Box::new(lhs), id, range)
+                    },
+                    UnaOp::Prio{ .. } => {
+                        // The same goes for a function call as an array index, seeing the arguments as configuration options
+                        let (r, args)  : (_, Vec<Expr>) = comb::cut(multi::separated_list0(tag_token!(Token::Comma), self::parse))(r)?;
+                        let (r, paren) : (_, Tokens)    = comb::cut(tag_token!(Token::LeftParen))(r)?;
+                        remainder = r;
+
+                        // Create the new function call
+                        let range: TextRange = TextRange::new(lhs.start().clone(), TextPos::end_of(paren.tok[0].inner()));
+                        Expr::new_call(
+                            Box::new(lhs),
+                            args.into_iter().map(|a| Box::new(a)).collect(),
+                            range,
+                            AllowedLocations::All,
+                        )
+                    },
+
+                    operator => {
+                        // In the other cases, it's a normal unary expression
+                        let range: TextRange = TextRange::new(lhs.start().clone(), operator.end().clone());
+                        Expr::new_unaop(
+                            operator,
+                            Box::new(lhs),
+
+                            range,
+                        )
+                    }
                 };
             }
             _ => break,
@@ -155,124 +188,15 @@ fn expr_pratt<'a, E: ParseError<Tokens<'a>> + ContextError<Tokens<'a>>>(
 /// 
 /// # Errors
 /// This function returns a nom::Error if it failed to parse an expression.
-pub fn expr_atom<'a, E: ParseError<Tokens<'a>> + ContextError<Tokens<'a>>>(
+fn expr_atom<'a, E: ParseError<Tokens<'a>> + ContextError<Tokens<'a>>>(
     input: Tokens<'a>
 ) -> IResult<Tokens, Expr, E> {
     branch::alt((
         instance::parse,
-        call_expr,
-        comb::map(literal::parse,    |l| Expr::Literal{ literal: l }),
-        proj_expr,
+        comb::map(literal::parse, |l| Expr::Literal{ literal: l }),
         comb::map(identifier::parse, Expr::new_varref),
     ))
     .parse(input)
-}
-
-/// Parses the given token stream as a call expression.
-/// 
-/// TODO: Integrate this in pratt parser? To support, e.g., f()()() ?
-///
-/// # Arguments
-/// - `input`: The input stream of tokens that we use to parse expressions from.
-/// 
-/// # Returns
-/// A tuple of the remaining tokens and a parsed expression if there was an expression on top.
-/// 
-/// # Errors
-/// This function returns a nom::Error if it failed to parse an expression.
-pub fn call_expr<'a, E: ParseError<Tokens<'a>> + ContextError<Tokens<'a>>>(
-    input: Tokens<'a>
-) -> IResult<Tokens, Expr, E> {
-    // Parse optionally annotations
-    let (r, at) = comb::opt(tag_token!(Token::At)).parse(input)?;
-    let (r, annot) = if at.is_some() {
-        let (r, annot) = comb::cut(
-            seq::delimited(
-                tag_token!(Token::LeftBracket),
-                multi::separated_list1(tag_token!(Token::Comma), tag_token!(Token::String)),
-                tag_token!(Token::RightBracket),
-            )
-        ).parse(r)?;
-        (r, Some(annot))
-    } else {
-        (r, None)
-    };
-
-    // Parse the call thingy itself
-    let (r, (expr, args)) = seq::pair(
-        branch::alt((
-            proj_expr,
-            comb::map(
-                identifier::parse,
-                Expr::new_identifier,
-            ),
-        )),
-        seq::preceded(
-            tag_token!(Token::LeftParen),
-            comb::opt(seq::pair(
-                self::parse,
-                multi::many0(seq::preceded(tag_token!(Token::Comma), self::parse)),
-            )),
-        ),
-    ).parse(r)?;
-    // Parse the closing delimiter
-    let (r, paren) = tag_token!(Token::RightParen).parse(r)?;
-
-    // Re-align the arguments to one single vector
-    let args: Vec<Box<Expr>> = match args {
-        Some((head, rest)) => {
-            let mut res: Vec<Box<Expr>> = Vec::with_capacity(rest.len());
-            res.push(Box::new(head));
-            res.append(&mut rest.into_iter().map(Box::new).collect());
-            res
-        },
-        None => Vec::new(),
-    };
-
-    // Put it in an Expr::Call and return
-    let range: TextRange = TextRange::new(at.map(|a| a.tok[0].inner().into()).unwrap_or_else(|| expr.start().clone()), TextPos::end_of(paren.tok[0].inner()));
-    Ok((r, Expr::new_call(
-        Box::new(expr),
-        args,
-
-        range,
-        annot.map(|l| AllowedLocations::Exclusive(l.into_iter().map(|l| l.tok[0].as_string().into()).collect())).unwrap_or(AllowedLocations::All),
-    )))
-}
-
-/// Parses the given token stream as a projection expression.
-///
-/// # Arguments
-/// - `input`: The input stream of tokens that we use to parse expressions from.
-/// 
-/// # Returns
-/// A tuple of the remaining tokens and a parsed expression if there was an expression on top.
-/// 
-/// # Errors
-/// This function returns a nom::Error if it failed to parse an expression.
-fn proj_expr<'a, E: ParseError<Tokens<'a>> + ContextError<Tokens<'a>>>(
-    input: Tokens<'a>
-) -> IResult<Tokens, Expr, E> {
-    // We parse an identifier with dot tentatively
-    let (r, lhs) = seq::terminated(tag_token!(Token::Ident), tag_token!(Token::Dot)).parse(input)?;
-    // If that is successfully, we force a repetition of at least one next token
-    let (r, rhs) = comb::cut(multi::separated_list1(tag_token!(Token::Dot), tag_token!(Token::Ident))).parse(r)?;
-
-    // Rewrite that in a tree of projection expressions
-    let mut expr  : Expr      = Expr::new_varref(Identifier::new(lhs.tok[0].as_string(), lhs.tok[0].inner().into()));
-    let mut range : TextRange = expr.range().clone();
-    for i in rhs {
-        // Encapsulate the existing expr
-        range = TextRange::new(range.start, TextPos::end_of(i.tok[0].inner()));
-        expr = Expr::new_proj(
-            Box::new(expr),
-            Box::new(Expr::new_identifier(Identifier::new(i.tok[0].as_string(), i.tok[0].inner().into()))),
-            range.clone(),
-        )
-    }
-
-    // Return it
-    Ok((r, expr))
 }
 
 /// Parses the given token stream as an array expression.

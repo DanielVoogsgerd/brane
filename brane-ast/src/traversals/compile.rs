@@ -4,7 +4,7 @@
 //  Created:
 //    31 Aug 2022, 11:32:04
 //  Last edited:
-//    23 Jan 2023, 11:51:37
+//    06 Feb 2023, 15:06:45
 //  Auto updated?
 //    Yes
 // 
@@ -21,7 +21,7 @@ use std::rc::Rc;
 use log::warn;
 
 use brane_dsl::spec::MergeStrategy;
-use brane_dsl::symbol_table::{FunctionEntry, VarEntry};
+use brane_dsl::symbol_table::{FunctionEntry, SymbolTableEntry, VarEntry};
 use brane_dsl::ast as dsl;
 
 pub use crate::warnings::CompileWarning as Warning;
@@ -500,14 +500,42 @@ fn pass_stmt(stmt: dsl::Stmt, edges: &mut EdgeBuffer, f_edges: &mut HashMap<usiz
                 });
             }
         },
-        Assign{ value, st_entry, .. } => {
-            // Prepare the stack by writing the expression
-            pass_expr(value, edges, table);
-            // Write the instruction
-            edges.write(ast::Edge::Linear {
-                instrs : vec![ ast::EdgeInstr::VarSet { def: st_entry.unwrap().borrow().index } ],
-                next   : usize::MAX,
-            });
+        Assign{ var, value, st_entry, .. } => {
+            // We switch dependending on 
+            match var {
+                dsl::Expr::VarRef{ st_entry, .. } => {
+                    // Push the value first
+                    pass_expr(value, edges, table);
+                    // Push the instruction that sets that value
+                    edges.write(ast::Edge::Linear {
+                        instrs : vec![ ast::EdgeInstr::VarSet { def: st_entry.unwrap().borrow().index } ],
+                        next   : usize::MAX,
+                    });
+                },
+
+                dsl::Expr::Proj{ st_entry, .. } => {
+                    // Push the value first
+                    pass_expr(value, edges, table);
+                    // Push the instruction that sets that value
+                    edges.write(ast::Edge::Linear {
+                        instrs : vec![ ast::EdgeInstr::VarSet { def: if let SymbolTableEntry::VarEntry(var) = st_entry.unwrap() { var.borrow().index } else { unreachable!(); } } ],
+                        next   : usize::MAX,
+                    });
+                },
+
+                dsl::Expr::ArrayIndex{ .. } => {
+                    // Recurse into the type of
+                    // Push the index computation first
+                    pass_expr()
+                    edges.write(ast::Edge::Linear {
+                        instrs : vec![ ast::EdgeInstr::VarSet { def: st_entry.unwrap().borrow().index } ],
+                        next   : usize::MAX,
+                    });
+                },
+
+                // The rest should have errored in previous traversals
+                _ => { unreachable!(); },
+            }
         },
         Expr{ expr, data_type, .. } => {
             // If the expression's type is any, push the dynamic marker

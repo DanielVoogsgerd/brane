@@ -4,7 +4,7 @@
 //  Created:
 //    31 Aug 2022, 18:00:09
 //  Last edited:
-//    23 Dec 2022, 16:36:08
+//    06 Feb 2023, 11:25:47
 //  Auto updated?
 //    Yes
 // 
@@ -20,7 +20,7 @@ use std::mem;
 
 use brane_dsl::{DataType, TextPos, TextRange};
 use brane_dsl::symbol_table::FunctionEntry;
-use brane_dsl::ast::{Block, Node, Program, Stmt};
+use brane_dsl::ast::{BinOp, Block, Identifier, Literal, Node, Program, Stmt};
 
 pub use crate::errors::PruneError as Error;
 use crate::errors::AstError;
@@ -202,32 +202,69 @@ fn pass_stmt(stmt: Stmt, errors: &mut Vec<Error>) -> (Vec<Stmt>, bool) {
             // This if-statement returns if both blocks return
             (vec![ stmt ], true_returns && false_returns)
         },
-        For{ initializer, condition, increment, consequent, range, .. } => {
-            let initializer : Stmt                      = mem::take(initializer);
-            let condition   : brane_dsl::ast::Expr      = mem::take(condition);
-            let increment   : Stmt                      = mem::take(increment);
-            let mut consequent  : brane_dsl::ast::Block = mem::take(consequent);
-            let range       : TextRange                 = mem::take(range);
+        For{ name, start, stop, step, consequent, st_entry, range, .. } => {
+            use brane_dsl::ast::{Block, Expr};
+
+            let name       : Identifier = mem::take(name);
+            let start      : Expr       = mem::take(start);
+            let stop       : Expr       = mem::take(stop);
+            let step       : Expr       = if let Some(step) = step { mem::take(step) } else { brane_dsl::ast::Expr::Literal{ literal: Literal::Integer{ value: 1, range: TextRange::none() } } };
+            let consequent : Box<Block> = mem::take(consequent);
+            let st_entry   : Option<_>  = mem::take(st_entry);
+            let range      : TextRange  = mem::take(range);
 
             // We transform this for-loop to a while-loop first
-
-            // Step 1: Push the initializer as a previous statement (scope is already resolved, so no worries about pushing it one up).
             let mut stmts: Vec<Stmt> = Vec::with_capacity(2);
-            stmts.push(initializer);
 
-            // Step 2: Add the increment to the end of the consequent
-            consequent.stmts.push(increment);
+            // Step 1: Create the definition of the increment variable
+            stmts.push(Stmt::LetAssign{ name: name.clone(), value: start, st_entry: st_entry.clone(), range: range.clone() });
 
-            // Step 3: Write the condition + updated consequent as a new While loop
+            // Step 2: Create the body of the while-loop, which ends with the increment
+            let mut body: Box<Block> = consequent;
+            body.stmts.push(Stmt::Assign{
+                var   : Expr::VarRef{ name: name.clone(), st_entry: st_entry.clone() },
+                value : Expr::BinOp{
+                    op    : BinOp::Add{ range: TextRange::none() },
+                    lhs   : Box::new(Expr::VarRef{ name: name.clone(), st_entry: st_entry.clone() }),
+                    rhs   : Box::new(step.clone()),
+                    range : TextRange::none(),
+                },
+                st_entry : st_entry.clone(),
+                range    : TextRange::none(),
+            });
+
+            // Step 4: Create the condition, for which we need to know the direction of the equality operator
+            let condition: Expr = if let Expr::Literal{ literal: Literal::Integer{ value, .. } } = step {
+                if value < 0 {
+                    Expr::BinOp {
+                        op    : BinOp::Gt{ range: TextRange::none() },
+                        lhs   : Box::new(Expr::VarRef{ name, st_entry }),
+                        rhs   : Box::new(stop),
+                        range : TextRange::none(),
+                    }
+                } else if value > 0 {
+                    Expr::BinOp {
+                        op    : BinOp::Lt{ range: TextRange::none() },
+                        lhs   : Box::new(Expr::VarRef{ name, st_entry }),
+                        rhs   : Box::new(stop),
+                        range : TextRange::none(),
+                    }
+                } else {
+                    // The resolve traversal should have already errored.
+                    unreachable!();
+                }
+            } else { unreachable!(); };
+
+            // Step 4: Wrap the body in a while-loop
             let while_stmt: Stmt = Stmt::While {
                 condition,
-                consequent : Box::new(consequent),
+                consequent : body,
                 range,
             };
 
-            // Step 4: Analyse as a normal while-loop (increment is not (yet) needed here)
-            let (mut while_stmt, returns): (Vec<Stmt>, bool) = pass_stmt(while_stmt, errors);
-            stmts.append(&mut while_stmt);
+            // Step 5: With the loop complete, we can analyse it as a normal while-loop to examine its body
+            let (while_stmt, returns): (Vec<Stmt>, bool) = pass_stmt(while_stmt, errors);
+            stmts.extend(while_stmt);
 
             // Step 5: Done
             (stmts, returns)

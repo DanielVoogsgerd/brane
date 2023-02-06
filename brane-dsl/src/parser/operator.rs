@@ -4,7 +4,7 @@
 //  Created:
 //    10 Aug 2022, 17:16:11
 //  Last edited:
-//    17 Jan 2023, 15:01:02
+//    06 Feb 2023, 14:24:33
 //  Auto updated?
 //    Yes
 // 
@@ -61,7 +61,7 @@ pub fn binary_operator<'a, E: ParseError<Tokens<'a>> + ContextError<Tokens<'a>>>
         comb::map(tag_token!(Token::LessOrEqual),                            |t| BinOp::Le   { range: TextRange::from(t.tok[0].inner()) }),
         comb::map(tag_token!(Token::Minus),                                  |t| BinOp::Sub  { range: TextRange::from(t.tok[0].inner()) }),
         comb::map(tag_token!(Token::NotEqual),                               |t| BinOp::Ne   { range: TextRange::from(t.tok[0].inner()) }),
-        comb::map(seq::pair(tag_token!(Token::Or), tag_token!(Token::Or)),   |t| BinOp::Or  { range: TextRange::from((t.0.tok[0].inner(), t.1.tok[0].inner())) }),
+        comb::map(seq::pair(tag_token!(Token::Or), tag_token!(Token::Or)),   |t| BinOp::Or   { range: TextRange::from((t.0.tok[0].inner(), t.1.tok[0].inner())) }),
         comb::map(tag_token!(Token::Percentage),                             |t| BinOp::Mod  { range: TextRange::from(t.tok[0].inner()) }),
         comb::map(tag_token!(Token::Plus),                                   |t| BinOp::Add  { range: TextRange::from(t.tok[0].inner()) }),
         comb::map(tag_token!(Token::Slash),                                  |t| BinOp::Div  { range: TextRange::from(t.tok[0].inner()) }),
@@ -85,6 +85,7 @@ pub fn unary_operator<'a, E: ParseError<Tokens<'a>> + ContextError<Tokens<'a>>>(
         comb::map(tag_token!(Token::Minus),       |t| UnaOp::Neg  { range: t.tok[0].inner().into() }),
         comb::map(tag_token!(Token::LeftBracket), |t| UnaOp::Idx  { range: t.tok[0].inner().into() }),
         comb::map(tag_token!(Token::LeftParen),   |t| UnaOp::Prio { range: t.tok[0].inner().into() }),
+        comb::map(tag_token!(Token::Dot),         |t| UnaOp::Proj { range: t.tok[0].inner().into() }),
     ))
     .parse(input)
 }

@@ -4,7 +4,7 @@
 //  Created:
 //    30 Aug 2022, 11:55:49
 //  Last edited:
-//    23 Jan 2023, 10:42:50
+//    06 Feb 2023, 10:17:52
 //  Auto updated?
 //    Yes
 // 
@@ -59,6 +59,17 @@ pub struct Workflow {
     pub funcs : Arc<HashMap<usize, Vec<Edge>>>,
 }
 
+impl Default for Workflow {
+    #[inline]
+    fn default() -> Self {
+        Self {
+            table : Arc::new(SymTable::new()),
+
+            graph : Arc::new(vec![]),
+            funcs : Arc::new(HashMap::new()),
+        }
+    }
+}
 impl Workflow {
     /// Constructor for the Workflow that initializes it to the given contents.
     /// 
@@ -110,18 +121,6 @@ impl Workflow {
     }
 }
 
-impl Default for Workflow {
-    #[inline]
-    fn default() -> Self {
-        Self {
-            table : Arc::new(SymTable::new()),
-
-            graph : Arc::new(vec![]),
-            funcs : Arc::new(HashMap::new()),
-        }
-    }
-}
-
 
 
 /// Defines the SymTable, which is like a symbol table (very much so, even) but now specific to Workflowland.
@@ -140,6 +139,12 @@ pub struct SymTable {
     pub results : HashMap<String, String>,
 }
 
+impl Default for SymTable {
+    #[inline]
+    fn default() -> Self {
+        Self::new()
+    }
+}
 impl SymTable {
     /// Constructor for the SymTable that initializes it to empty.
     /// 
@@ -181,13 +186,6 @@ impl SymTable {
     }
 }
 
-impl Default for SymTable {
-    #[inline]
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 
 
 /// Defines a function that is referenced in the edges.
@@ -223,7 +221,6 @@ pub enum TaskDef {
     #[serde(rename = "trf")]
     Transfer,
 }
-
 impl TaskDef {
     /// Returns the name of the TaskDef.
     #[inline]

@@ -4,7 +4,7 @@
 //  Created:
 //    10 Aug 2022, 14:00:59
 //  Last edited:
-//    03 Feb 2023, 17:11:45
+//    06 Feb 2023, 14:27:26
 //  Auto updated?
 //    Yes
 // 
@@ -23,7 +23,7 @@ use specifications::version::{ParseError, Version};
 use crate::spec::{TextPos, TextRange};
 use crate::data_type::DataType;
 use crate::location::AllowedLocations;
-use crate::symbol_table::{ClassEntry, FunctionEntry, SymbolTable, SymbolTableEntry, VarEntry};
+use crate::symbol_table::{ClassEntry, FunctionEntry, SymbolTable, VarEntry};
 
 
 /***** STATICS *****/
@@ -84,6 +84,19 @@ pub struct Block {
     pub range : TextRange,
 }
 
+impl Default for Block {
+    #[inline]
+    fn default() -> Self {
+        Self {
+            stmts : vec![],
+
+            table    : SymbolTable::new(),
+            ret_type : None,
+
+            range : TextRange::none(),
+        }
+    }
+}
 impl Block {
     /// Constructor for the Block that auto-initializes some auxillary fields.
     /// 
@@ -102,20 +115,6 @@ impl Block {
             ret_type : None,
 
             range,
-        }
-    }
-}
-
-impl Default for Block {
-    #[inline]
-    fn default() -> Self {
-        Self {
-            stmts : vec![],
-
-            table    : SymbolTable::new(),
-            ret_type : None,
-
-            range : TextRange::none(),
         }
     }
 }
@@ -303,6 +302,12 @@ pub enum Stmt {
     Empty {},
 }
 
+impl Default for Stmt {
+    #[inline]
+    fn default() -> Self {
+        Self::Empty{}
+    }
+}
 impl Stmt {
     /// Creates a new Import node with some auxillary fields set to empty.
     /// 
@@ -330,7 +335,7 @@ impl Stmt {
     /// 
     /// # Arguments
     /// - `ident`: The name of the function, as an identifier.
-    /// - `params`: The parameters of the function, as identifiers.
+    /// - `params`: The parameters of the function, as a list of identifiers.
     /// - `code`: The code to execute when running this function.
     /// - `range`: The TextRange that relates this node to the source text.
     /// 
@@ -475,13 +480,6 @@ impl Stmt {
     }
 }
 
-impl Default for Stmt {
-    #[inline]
-    fn default() -> Self {
-        Self::Empty{}
-    }
-}
-
 impl Node for Stmt {
     /// Returns the node's source range.
     #[inline]
@@ -574,7 +572,7 @@ pub enum Expr {
 
     /// A function call.
     Call {
-        /// The thing that we're calling - obviously, this must be something with a function type.
+        /// The thing that we're calling.
         expr : Box<Expr>,
         /// The list of arguments for this call.
         args : Vec<Box<Expr>>,
@@ -648,11 +646,11 @@ pub enum Expr {
     Proj {
         /// The lefthandside expression.
         lhs : Box<Expr>,
-        /// The righthandside expression.
-        rhs : Box<Expr>,
+        /// The righthandside identifier that represents the field.
+        rhs : Identifier,
 
-        /// Reference to the entry that this projection points to.
-        st_entry : Option<SymbolTableEntry>,
+        // /// Reference to the entry that this projection points to.
+        // st_entry : Option<SymbolTableEntry>,
 
         /// The range of the projection-expression in the source text.
         range  : TextRange,
@@ -703,7 +701,6 @@ impl Default for Expr {
         Self::Empty{}
     }
 }
-
 impl Expr {
     /// Creates a new Cast expression with some auxillary fields set to empty.
     /// 
@@ -831,16 +828,17 @@ impl Expr {
     /// 
     /// # Arguments
     /// - `lhs`: The left-hand side expression containing a nested projection or an identifier.
+    /// - `rhs`: The name of the field to project onto the `rhs`.
     /// 
     /// # Returns
     /// A new `Expr::Proj` instance.
     #[inline]
-    pub fn new_proj(lhs: Box<Expr>, rhs: Box<Expr>, range: TextRange) -> Self {
+    pub fn new_proj(lhs: Box<Expr>, rhs: Identifier, range: TextRange) -> Self {
         Self::Proj {
             lhs,
             rhs,
 
-            st_entry : None,
+            // st_entry : None,
 
             range,
         }
@@ -976,7 +974,6 @@ impl Node for Operator {
         }
     }
 }
-
 impl Display for Operator {
     #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
@@ -999,6 +996,8 @@ pub enum UnaOp {
     Not{ range: TextRange },
     /// The `-` operator (negation)
     Neg{ range: TextRange },
+    /// The `.` operator (projection)
+    Proj{ range: TextRange },
     /// The '(' operator (prioritize)
     Prio{ range: TextRange },
 }
@@ -1014,7 +1013,8 @@ impl UnaOp {
             Not{ .. }  => (0, 11),
             Neg{ .. }  => (0, 11),
             Idx{ .. }  => (11, 0),
-            Prio{ .. } => (0, 0), // Handled seperatly by pratt parser.
+            Proj{ .. } => (13, 0),
+            Prio{ .. } => (0, 0),   // Handled seperately by pratt parser.
         }
     }
 }
@@ -1028,11 +1028,11 @@ impl Node for UnaOp {
             Not{ range }  => range,
             Neg{ range }  => range,
             Idx{ range }  => range,
+            Proj{ range } => range,
             Prio{ range } => range,
         }
     }
 }
-
 impl Display for UnaOp {
     #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
@@ -1041,6 +1041,7 @@ impl Display for UnaOp {
             Idx{ .. }  => write!(f, "["),
             Not{ .. }  => write!(f, "!"),
             Neg{ .. }  => write!(f, "-"),
+            Proj{ .. } => write!(f, "."),
             Prio{ .. } => write!(f, "("),
         }
     }
@@ -1079,9 +1080,6 @@ pub enum BinOp {
     Gt{ range: TextRange },
     /// The `>=` operator (greater than or equal to)
     Ge{ range: TextRange },
-
-    // /// The `.` operator (projection)
-    // Proj{ range: TextRange },
 }
 
 impl BinOp {
@@ -1090,14 +1088,15 @@ impl BinOp {
     /// A higher power means that it binds stronger (i.e., has higher precedence).
     #[inline]
     pub fn binding_power(&self) -> (u8, u8) {
+        use BinOp::*;
         match &self {
-            BinOp::And{ .. } | BinOp::Or{ .. }                     => (1, 2),   // Conditional
-            BinOp::Eq{ .. }  | BinOp::Ne{ .. }                     => (3, 4),   // Equality
-            BinOp::Lt{ .. }  | BinOp::Gt{ .. }                     => (5, 6),   // Comparison
-            BinOp::Le{ .. }  | BinOp::Ge{ .. }                     => (5, 6),   // Comparison
-            BinOp::Add{ .. } | BinOp::Sub{ .. }                    => (7, 8),   // Terms
-            BinOp::Mul{ .. } | BinOp::Div{ .. } | BinOp::Mod{ .. } => (9, 10),  // Factors
-            // BinOp::Proj{ .. }                                      => (13, 14), // Nesting
+            And{ .. } | Or{ .. }              => (1, 2),   // Conditional
+            Eq{ .. }  | Ne{ .. }              => (3, 4),   // Equality
+            Lt{ .. }  | Gt{ .. }              => (5, 6),   // Comparison
+            Le{ .. }  | Ge{ .. }              => (5, 6),   // Comparison
+            Add{ .. } | Sub{ .. }             => (7, 8),   // Terms
+            Mul{ .. } | Div{ .. } | Mod{ .. } => (9, 10),  // Factors
+                                                           // Unary operators (see UnaOp)
         }
     }
 }
@@ -1123,12 +1122,9 @@ impl Node for BinOp {
             Le{ range } => range,
             Gt{ range } => range,
             Ge{ range } => range,
-
-            // Proj{ range } => range,
         }
     }
 }
-
 impl Display for BinOp {
     #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
@@ -1149,8 +1145,6 @@ impl Display for BinOp {
             Le{ .. } => write!(f, "<="),
             Gt{ .. } => write!(f, ">"),
             Ge{ .. } => write!(f, ">="),
-
-            // Proj{ .. } => write!(f, "."),
         }
     }
 }
@@ -1186,6 +1180,16 @@ pub struct Identifier {
     pub range : TextRange,
 }
 
+impl Default for Identifier {
+    #[inline]
+    fn default() -> Self {
+        // Mock up a value that can be used for `mem::take`.
+        Self {
+            value : String::new(),
+            range : TextRange::none(),
+        }
+    }
+}
 impl Identifier {
     /// Constructor for the Identifier that pre-initializes it with some things.
     /// 

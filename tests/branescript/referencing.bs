@@ -1,0 +1,63 @@
+// In this file, we enumerate all sorts of references that are used in BraneScript
+
+
+// 1. Variables, plain
+let a := 42;
+let b := a + a;
+println(b);
+
+
+
+// 2. Projection
+class SomeClass {
+    field: int;
+}
+
+let some   := new SomeClass { field := 42 };
+let c      := new SomeClass { field := 42 }.field + 42;
+let d      := some.field + 42;
+some.field := d - 5;
+println(some);
+
+
+
+// 3. Array indexing
+let array := [ 1, 2, 3 ];
+let e     := array[0] + 42;
+let f     := [ 1, 2, 3 ][0] + 42;
+array[0]  := f - 5;
+println(array);
+
+
+
+
+// 4. Mixed
+class AnotherClass {
+    field: SomeClass[];
+}
+
+let another := new AnotherClass{ field := [ new SomeClass{ field := 1 }, new SomeClass{ field := 2 } ] };
+println(another);
+println(another.field);
+println(another.field[0]);
+println(another.field[0].field);
+another.field := [ new SomeClass{ field := 42 } ];
+println(another);
+another.field[0] := new SomeClass{ field := 43 };
+println(another);
+another.field[0].field := 44;
+println(another);
+
+
+
+
+// 5. Other expression
+func new_array() {
+    return [ 1, 2, 3 ];
+}
+
+func new_class() {
+    return new SomeClass{ field := 42 };
+}
+
+print(new_array().field)

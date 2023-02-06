@@ -4,7 +4,7 @@
 //  Created:
 //    10 Aug 2022, 13:52:37
 //  Last edited:
-//    03 Feb 2023, 17:04:36
+//    06 Feb 2023, 11:19:52
 //  Auto updated?
 //    Yes
 // 
@@ -516,10 +516,18 @@ pub enum ResolveError {
 
     /// Failed to parse the merge strategy.
     UnknownMergeStrategy{ raw: String, range: TextRange },
+    /// The for-loop had a non-literal step.
+    ForStepNotALiteral{ range: TextRange },
+    /// The for-loop had a step of 0.
+    ForStepZero{ range: TextRange },
     /// Failed to declare a new variable.
     VariableDefineError{ name: String, err: brane_dsl::errors::SymbolTableError, range: TextRange },
     /// An assignment was given with an illegal expression as its base.
     IllegalAssignExpression{ variant: String, range: TextRange },
+    /// An assignment had a function as LHS.
+    MethodAssign{ range: TextRange },
+    /// An assignment had a temporary value as LHS
+    TemporaryAssign{ range: TextRange },
 
     /// The given function was not declared before.
     UndefinedFunction{ ident: String, range: TextRange },
@@ -570,8 +578,12 @@ impl ResolveError {
             MissingSelf{ range, .. }                                    => prettyprint_err(file, source, self, range),
 
             UnknownMergeStrategy{ range, .. }    => prettyprint_err(file, source, self, range),
+            ForStepNotALiteral{ range, .. }      => prettyprint_err(file, source, self, range),
+            ForStepZero{ range, .. }             => prettyprint_err(file, source, self, range),
             VariableDefineError{ range, .. }     => prettyprint_err(file, source, self, range),
             IllegalAssignExpression{ range, .. } => prettyprint_err(file, source, self, range),
+            MethodAssign{ range, .. }            => prettyprint_err(file, source, self, range),
+            TemporaryAssign{ range, .. }         => prettyprint_err(file, source, self, range),
 
             UndefinedFunction{ range, .. } => prettyprint_err(file, source, self, range),
 
@@ -606,8 +618,12 @@ impl Display for ResolveError {
             MissingSelf{ c_name, name, .. }                => write!(f, "Missing 'self' parameter as first parameter in method '{}' in class {}", name, c_name),
 
             UnknownMergeStrategy{ raw, .. }        => write!(f, "Unknown merge strategy '{}'", raw),
+            ForStepNotALiteral{ .. }               => write!(f, "For-loop step is not a literal integer"),
+            ForStepZero{ .. }                      => write!(f, "For-loop step cannot be 0"),
             VariableDefineError{ name, err, .. }   => write!(f, "Could not define variable '{}': {}", name, err),
             IllegalAssignExpression{ variant, .. } => write!(f, "You can only assign to variables, indexed arrays or class fields; not to {}", variant),
+            MethodAssign{ .. }                     => write!(f, "Cannot assign to a class method"),
+            TemporaryAssign{ .. }                  => write!(f, "Cannot assign to a temporary value; only assign to variables"),
 
             UndefinedFunction{ ident, .. } => write!(f, "Undefined function or method '{}'", ident),
 

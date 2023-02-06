@@ -4,7 +4,7 @@
 //  Created:
 //    25 Oct 2022, 13:34:31
 //  Last edited:
-//    03 Jan 2023, 13:25:24
+//    06 Feb 2023, 10:03:17
 //  Auto updated?
 //    Yes
 // 
@@ -195,11 +195,11 @@ fn pass_stmt(stmt: &mut Stmt, table: &mut DataState, is_branch: bool, scope: &Rc
             //     pass_block(consequent, table)
             // }
         },
-        For{ initializer, condition, increment, consequent, .. } => {
+        For{ start, stop, step, consequent, .. } => {
             // Do the initializer, condition and increment for traversal purposes (the order makes sense, I think - if we ever get weird behaviour, check here)
-            pass_stmt(initializer, table, is_branch, scope);
-            pass_expr(condition, table);
-            pass_stmt(increment, table, is_branch, scope);
+            pass_expr(start, table);
+            pass_expr(stop, table);
+            if let Some(step) = step { pass_expr(step, table); }
 
             // We consider the body to be branching, since the assignment values of variables may change depending on the first or later iterations (as far as data/result input is concerned)
             pass_block(consequent, table, true);

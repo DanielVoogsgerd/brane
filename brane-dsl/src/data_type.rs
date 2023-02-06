@@ -4,7 +4,7 @@
 //  Created:
 //    23 Aug 2022, 20:34:33
 //  Last edited:
-//    17 Jan 2023, 15:14:01
+//    06 Feb 2023, 15:06:10
 //  Auto updated?
 //    Yes
 // 
@@ -166,7 +166,7 @@ impl DataType {
             (t1, Array(t2))        => t1.coercible_to(t2),
             (Class(n1), Class(n2)) => {
                 // We do allow data to be demoted to intermediate results
-                // Note: we do this quick 'n' dirty, ideally we wanna used the defined BuiltinClass for this (but that's in a crate with cyclic dependency, jadda jadda)
+                // Note: we do this quick 'n' dirty, ideally we wanna used the defined BuiltinClass for this (but those are defined in `brane-ast`, and thus that would introduce cyclic dependencies).
                 if n1 == "Data" && n2 == "IntermediateResult" {
                     true
                 } else {

@@ -4,7 +4,7 @@
 //  Created:
 //    19 Dec 2022, 10:04:38
 //  Last edited:
-//    19 Jan 2023, 10:32:24
+//    06 Feb 2023, 10:02:35
 //  Auto updated?
 //    Yes
 // 
@@ -135,10 +135,10 @@ fn pass_stmt(stmt: &mut Stmt, errors: &mut Vec<Error>) {
             pass_block(consequent, errors);
             if let Some(alternative) = alternative { pass_block(alternative, errors); }
         },
-        For{ initializer, condition, increment, consequent, .. } => {
-            pass_stmt(initializer, errors);
-            pass_expr(condition, errors);
-            pass_stmt(increment, errors);
+        For{ start, stop, step, consequent, .. } => {
+            pass_expr(start, errors);
+            pass_expr(stop, errors);
+            if let Some(step) = step { pass_expr(step, errors); }
             pass_block(consequent, errors);
         },
         While{ condition, consequent, .. } => {
@@ -165,6 +165,7 @@ fn pass_stmt(stmt: &mut Stmt, errors: &mut Vec<Error>) {
             }
         },
         Assign{ value, .. } => {
+            // Note that we don't have to crawl the variable, since that's a limited set of expressions anyway
             // We always crawl since null is not allowed
             pass_expr(value, errors);
         },
