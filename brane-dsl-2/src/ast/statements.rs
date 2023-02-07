@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 15:33:27
 //  Last edited:
-//    06 Feb 2023, 16:27:52
+//    07 Feb 2023, 15:02:36
 //  Auto updated?
 //    Yes
 // 
@@ -26,11 +26,11 @@ pub struct Statement {
     /// Any specific implementations of a statement.
     pub kind  : StatementKind,
     /// The range in the source text for this statement.
-    pub range : TextRange,
+    pub range : Option<TextRange>,
 }
 impl Node for Statement {
     #[inline]
-    fn range(&self) -> TextRange { self.range }
+    fn range(&self) -> Option<TextRange> { self.range }
 }
 
 /// Defines the StatementKind, which implements the specifics for each of the various statements.
@@ -126,11 +126,11 @@ pub struct FunctionDef {
     pub body : Block,
 
     /// The range in the source text for this definition (as a whole).
-    pub range : TextRange,
+    pub range : Option<TextRange>,
 }
 impl Node for FunctionDef {
     #[inline]
-    fn range(&self) -> TextRange { self.range }
+    fn range(&self) -> Option<TextRange> { self.range }
 }
 
 /// Defines the definition of a function argument.
@@ -144,11 +144,11 @@ pub struct ArgDef {
     pub var_type : DataType,
 
     /// The range in the source text for this argument definition.
-    pub range : TextRange,
+    pub range : Option<TextRange>,
 }
 impl Node for ArgDef {
     #[inline]
-    fn range(&self) -> TextRange { self.range }
+    fn range(&self) -> Option<TextRange> { self.range }
 }
 
 
@@ -163,7 +163,7 @@ pub enum ClassMemberDef {
 }
 impl Node for ClassMemberDef {
     #[inline]
-    fn range(&self) -> TextRange {
+    fn range(&self) -> Option<TextRange> {
         use ClassMemberDef::*;
         match self {
             Property(prop) => prop.range(),
@@ -183,9 +183,9 @@ pub struct PropertyDef {
     pub var_type : DataType,
 
     /// The TextRange of the property.
-    pub range : TextRange,
+    pub range : Option<TextRange>,
 }
 impl Node for PropertyDef {
     #[inline]
-    fn range(&self) -> TextRange { self.range }
+    fn range(&self) -> Option<TextRange> { self.range }
 }

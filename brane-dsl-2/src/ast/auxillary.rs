@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 15:35:30
 //  Last edited:
-//    06 Feb 2023, 16:24:30
+//    07 Feb 2023, 15:02:48
 //  Auto updated?
 //    Yes
 // 
@@ -24,11 +24,11 @@ pub struct Identifier {
     /// The name given to this identifier.
     pub name  : String,
     /// The range in the source text for this identifier.
-    pub range : TextRange,
+    pub range : Option<TextRange>,
 }
 impl Node for Identifier {
     #[inline]
-    fn range(&self) -> TextRange { self.range }
+    fn range(&self) -> Option<TextRange> { self.range }
 }
 
 
@@ -39,9 +39,9 @@ pub struct DataType {
     /// The data type specified.
     pub data_type : types::DataType,
     /// The range in the source text for this type.
-    pub range     : TextRange,
+    pub range     : Option<TextRange>,
 }
 impl Node for DataType {
     #[inline]
-    fn range(&self) -> TextRange { self.range }
+    fn range(&self) -> Option<TextRange> { self.range }
 }

@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 15:36:16
 //  Last edited:
-//    06 Feb 2023, 16:23:35
+//    07 Feb 2023, 18:58:25
 //  Auto updated?
 //    Yes
 // 
@@ -13,7 +13,7 @@
 //!   (TextRange) or additional enums (MergeStrategy).
 // 
 
-use std::fmt::Debug;
+use std::fmt::{Debug, Display, Formatter, Result as FResult};
 
 use enum_debug::EnumDebug;
 use nom::AsBytes;
@@ -91,19 +91,19 @@ impl TextPos {
         let bs: &[u8] = span.fragment().as_bytes();
 
         // Get the position of the last newline and count them while at it
-        let mut n_nls   : usize = 0;
-        let mut last_nl : usize = usize::MAX;
+        let mut n_nls   : usize         = 0;
+        let mut last_nl : Option<usize> = None;
         for (i, b) in bs.iter().enumerate() {
             if *b == b'\n' {
                 n_nls   += 1;
-                last_nl  = i;
+                last_nl  = Some(i);
             }
         }
 
         // Use those to compute offsets for the lines and columns
         Self {
             line : span.location_line() as usize - 1 + n_nls,
-            col  : if last_nl < usize::MAX { bs.len() - 1 - (last_nl + 1) } else { span.get_column() + bs.len() },
+            col  : if let Some(last_nl) = last_nl { if bs.len() >= 2 + last_nl { bs.len() - 2 - last_nl } else { 0 } } else if !bs.is_empty() { bs.len() - 1 } else { 0 },
         }
     }
 
@@ -183,6 +183,13 @@ impl TextPos {
     pub const fn col1(&self) -> usize { self.col + 1 }
 }
 
+impl Display for TextPos {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
+        write!(f, "{}:{}", self.line + 1, self.col + 1)
+    }
+}
+
 impl AsRef<TextPos> for TextPos {
     #[inline]
     fn as_ref(&self) -> &Self { self }
@@ -242,6 +249,13 @@ impl TextRange {
     }
 }
 
+impl Display for TextRange {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
+        write!(f, "{}-{}", self.start, self.end)
+    }
+}
+
 impl AsRef<TextRange> for TextRange {
     #[inline]
     fn as_ref(&self) -> &Self { self }
@@ -288,6 +302,28 @@ impl<T: AsBytes, X> From<&mut LocatedSpan<T, X>> for TextRange {
 }
 
 
+
+/// Defines the binding power that operators may have.
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub struct BindingPower {
+    /// The binding power on the lefthand-side of the operator. `None` for unary expressions that only bind to the right.
+    pub left  : Option<u32>,
+    /// The binding power on the righthand-side of the operator. `None` for unary expressions that only bind to the left.
+    pub right : Option<u32>,
+}
+impl BindingPower {
+    /// Constructor for the BindingPower that initializes it to "no power set".
+    /// 
+    /// # Returns
+    /// A new BindingPower instance with both fields set to `None`.
+    #[inline]
+    pub const fn none() -> Self {
+        Self {
+            left  : None,
+            right : None,
+        }
+    }
+}
 
 /// Defines merge strategies for the parallel statements.
 #[derive(Clone, Copy, Debug, EnumDebug, Eq, PartialEq, Hash)]
@@ -353,6 +389,6 @@ impl From<&str> for MergeStrategy {
 
 /// Provides a generilizations of AST nodes that allows it to get some common properties.
 pub trait Node: Clone + Debug {
-    /// Returns the internal TextRange of the node.
-    fn range(&self) -> TextRange;
+    /// Returns the internal TextRange of the node if it had any.
+    fn range(&self) -> Option<TextRange>;
 }

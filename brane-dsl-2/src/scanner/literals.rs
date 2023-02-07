@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 16:56:44
 //  Last edited:
-//    06 Feb 2023, 17:08:38
+//    07 Feb 2023, 11:37:54
 //  Auto updated?
 //    Yes
 // 
@@ -151,7 +151,7 @@ fn null<'s, E: Error<'s>>(input: Input<'s>) -> IResult<Input<'s>, Token, E> {
 /// 
 /// # Errors
 /// This function errors if we failed to parse a comment for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
-pub fn parse<'s, E: Error<'s>>(input: Input<'s>) -> IResult<Input<'s>, Token, E> {
+pub(crate) fn parse<'s, E: Error<'s>>(input: Input<'s>) -> IResult<Input<'s>, Token, E> {
     branch::alt((
         boolean,
         integer,

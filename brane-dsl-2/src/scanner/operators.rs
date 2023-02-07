@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 17:32:53
 //  Last edited:
-//    06 Feb 2023, 17:38:05
+//    07 Feb 2023, 11:37:38
 //  Auto updated?
 //    Yes
 // 
@@ -30,7 +30,7 @@ use super::tokens::Token;
 /// 
 /// # Errors
 /// This function errors if we failed to parse a operator for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
-pub fn parse<'s, E: Error<'s>>(input: Input<'s>) -> IResult<Input<'s>, Token, E> {
+pub(crate) fn parse<'s, E: Error<'s>>(input: Input<'s>) -> IResult<Input<'s>, Token, E> {
     branch::alt((
         // Comparison
         comb::map(bc::tag("=="), Token::Eq),

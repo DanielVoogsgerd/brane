@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 16:43:54
 //  Last edited:
-//    06 Feb 2023, 18:01:41
+//    07 Feb 2023, 11:42:52
 //  Auto updated?
 //    Yes
 // 
@@ -27,6 +27,7 @@ mod tests {
     use std::path::PathBuf;
     use enum_debug::EnumDebug as _;
     use brane_shr::utilities::test_on_dsl_files;
+    use crate::errors::{DslError, PrettyError};
     use super::{scan_tokens, Input, Token};
 
 
@@ -39,10 +40,16 @@ mod tests {
             // Scan the tokens
             let tokens: Vec<Token> = match scan_tokens(Input::new(&raw)) {
                 Ok((remain, tokens)) => {
-                    if !remain.is_empty() { panic!("Scanner did not parse all input from '{}': '{}' left", path.display(), remain.fragment()); }
+                    if !remain.is_empty() {
+                        eprintln!("{}", DslError::ScanLeftoverError{ remainder: remain }.display_with_source(&path.display().to_string(), &raw));
+                        panic!("Scanning failed (see above)");
+                    }
                     tokens
                 },
-                Err(err) => { panic!("Scanner failed to scan '{}': {}", path.display(), err); },
+                Err(err) => {
+                    eprintln!("{}", DslError::ScanError{ err }.display_with_source(&path.display().to_string(), &raw));
+                    panic!("Scanning failed (see above)");
+                },
             };
 
             // Show the tokens

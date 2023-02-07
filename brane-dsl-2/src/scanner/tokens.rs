@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 16:33:22
 //  Last edited:
-//    06 Feb 2023, 17:47:59
+//    07 Feb 2023, 19:25:32
 //  Auto updated?
 //    Yes
 // 
@@ -15,7 +15,7 @@
 
 use enum_debug::EnumDebug;
 
-use crate::ast::spec::TextRange;
+use crate::ast::spec::{TextPos, TextRange};
 use super::Input;
 
 
@@ -127,9 +127,8 @@ pub enum Token<'s> {
 }
 
 impl<'s> Token<'s> {
-    /// Returns a range for this roken.
-    #[inline]
-    pub fn range(&self) -> TextRange {
+    /// Returns the span for this token.
+    pub fn span(&self) -> &Input<'s> {
         use Token::*;
         match self {
             Identifier(span) |
@@ -181,7 +180,25 @@ impl<'s> Token<'s> {
             RightBracket(span) |
             LeftBrace(span)    |
             RightBrace(span)   |
-            Hashtag(span)      => { TextRange::from(span) }
+            Hashtag(span)      => span,
         }
+    }
+
+    /// Returns the start position for this token.
+    #[inline]
+    pub fn start_of(&self) -> TextPos {
+        TextPos::start_of(self.span())
+    }
+
+    /// Returns the end position (inclusive) for this token.
+    #[inline]
+    pub fn end_of(&self) -> TextPos {
+        TextPos::end_of(self.span())
+    }
+
+    /// Returns the range for this token.
+    #[inline]
+    pub fn range(&self) -> TextRange {
+        TextRange::from(self.span())
     }
 }

@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 16:30:02
 //  Last edited:
-//    06 Feb 2023, 17:43:25
+//    07 Feb 2023, 12:56:28
 //  Auto updated?
 //    Yes
 // 
@@ -23,12 +23,16 @@ mod literals;
 mod identifiers;
 mod scanner;
 
+// Bring some part of it into the this module's scope
+pub(crate) use tokens::Token;
+pub(crate) use scanner::scan_tokens;
+
 
 // Type aliases for this module
 /// Defines the common input to every function.
-pub type Input<'s> = nom_locate::LocatedSpan<&'s str, ()>;
+pub(crate) type Input<'s> = nom_locate::LocatedSpan<&'s str, ()>;
 
 // Trait aliases for this module
 /// Defines a common error trait for the nom errors we are interested in.
-pub trait Error<'s>: nom::error::ContextError<Input<'s>> + nom::error::ParseError<Input<'s>> {}
+pub(crate) trait Error<'s>: nom::error::ContextError<Input<'s>> + nom::error::ParseError<Input<'s>> {}
 impl<'s, T> Error<'s> for T where T: nom::error::ContextError<Input<'s>> + nom::error::ParseError<Input<'s>> {}
