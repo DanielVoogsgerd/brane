@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 15:35:30
 //  Last edited:
-//    07 Feb 2023, 15:02:48
+//    08 Feb 2023, 12:35:48
 //  Auto updated?
 //    Yes
 // 
@@ -12,6 +12,8 @@
 //!   Defines auxillary AST nodes such as identifiers or property
 //!   definitions.
 // 
+
+use enum_debug::EnumDebug;
 
 use super::spec::{Node, TextRange};
 use super::types;
@@ -41,7 +43,81 @@ pub struct DataType {
     /// The range in the source text for this type.
     pub range     : Option<TextRange>,
 }
+impl DataType {
+    /// Constructor for the DataType that initializes it as a `DataType::Any` that has no link to the source text.
+    /// 
+    /// # Returns
+    /// A new `DataType` that represents an undetermined type.
+    #[inline]
+    pub const fn any() -> Self {
+        Self {
+            data_type : types::DataType::Any,
+            range     : None,
+        }
+    }
+}
 impl Node for DataType {
     #[inline]
     fn range(&self) -> Option<TextRange> { self.range }
 }
+
+
+
+/// Defines merge strategies for the parallel statements. These are kind of identifiers but only a limited set; think of it as very scoped keywords.
+#[derive(Clone, Copy, Debug)]
+pub struct MergeStrategy {
+    /// Defines the specific variant, i.e., the strategy.
+    pub kind  : MergeStrategyKind,
+    /// Defines the range we parsed it from.
+    pub range : Option<TextRange>,
+}
+impl Node for MergeStrategy {
+    #[inline]
+    fn range(&self) -> Option<TextRange> { self.range }
+}
+
+/// Determines the possible merge strategy variants.
+#[derive(Clone, Copy, Debug, EnumDebug)]
+pub enum MergeStrategyKind {
+    /// Take the value that arrived first. The statement will already return as soon as this statement is in, not the rest.
+    First,
+    /// Take the value that arrived first. The statement will still block until all values returned.
+    FirstBlocking,
+    /// Take the value that arrived last.
+    Last,
+
+    /// Add all the resulting values together. This means that they must all be numeric.
+    Sum,
+    /// Multiple all the resulting values together. This means that they must all be numeric.
+    Product,
+
+    /// Take the largest value. Use on booleans to get an 'OR'-effect (i.e., it returns true iff there is at least one true).
+    Max,
+    /// Take the smallest value. Use on booleans to get an 'AND'-effect (i.e., it returns false iff there is at least one false).
+    Min,
+
+    /// Returns all values as an Array.
+    All,
+}
+
+// impl From<&str> for MergeStrategy {
+//     #[inline]
+//     fn from(value: &str) -> Self {
+//         match value.to_lowercase().as_str() {
+//             "first"  => Self::First,
+//             "first*" => Self::FirstBlocking,
+//             "last"   => Self::Last,
+
+//             "+" | "sum"     => Self::Sum,
+//             "*" | "product" => Self::Product,
+
+//             "max" => Self::Max,
+//             "min" => Self::Min,
+
+//             "all" => Self::All,
+
+//             // Should have been avoided by the parser
+//             _ => { unreachable!() },
+//         }
+//     }
+// }

@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 17:10:24
 //  Last edited:
-//    07 Feb 2023, 11:37:48
+//    08 Feb 2023, 11:30:10
 //  Auto updated?
 //    Yes
 // 
@@ -68,5 +68,6 @@ pub(crate) fn parse<'s, E: Error<'s>>(input: Input<'s>) -> IResult<Input<'s>, To
         // Miscellaneous
         comb::map(seq::terminated(bc::tag("let"), comb::peek(separator)), Token::Let),
         comb::map(seq::terminated(bc::tag("new"), comb::peek(separator)), Token::New),
+        comb::map(seq::terminated(bc::tag("as"),  comb::peek(separator)), Token::As),
     ))(input)
 }

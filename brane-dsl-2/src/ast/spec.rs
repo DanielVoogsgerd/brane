@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 15:36:16
 //  Last edited:
-//    07 Feb 2023, 18:58:25
+//    08 Feb 2023, 10:51:48
 //  Auto updated?
 //    Yes
 // 
@@ -15,7 +15,6 @@
 
 use std::fmt::{Debug, Display, Formatter, Result as FResult};
 
-use enum_debug::EnumDebug;
 use nom::AsBytes;
 use nom_locate::LocatedSpan;
 use num_traits::AsPrimitive;
@@ -321,66 +320,6 @@ impl BindingPower {
         Self {
             left  : None,
             right : None,
-        }
-    }
-}
-
-/// Defines merge strategies for the parallel statements.
-#[derive(Clone, Copy, Debug, EnumDebug, Eq, PartialEq, Hash)]
-pub enum MergeStrategy {
-    /// Take the value that arrived first. The statement will already return as soon as this statement is in, not the rest.
-    First,
-    /// Take the value that arrived first. The statement will still block until all values returned.
-    FirstBlocking,
-    /// Take the value that arrived last.
-    Last,
-
-    /// Add all the resulting values together. This means that they must all be numeric.
-    Sum,
-    /// Multiple all the resulting values together. This means that they must all be numeric.
-    Product,
-
-    /// Take the largest value. Use on booleans to get an 'OR'-effect (i.e., it returns true iff there is at least one true).
-    Max,
-    /// Take the smallest value. Use on booleans to get an 'AND'-effect (i.e., it returns false iff there is at least one false).
-    Min,
-
-    /// Returns all values as an Array.
-    All,
-
-    /// No merge strategy needed/defined
-    None,
-}
-
-impl From<String> for MergeStrategy {
-    #[inline]
-    fn from(value: String) -> Self {
-        Self::from(value.as_str())
-    }
-}
-impl From<&String> for MergeStrategy {
-    #[inline]
-    fn from(value: &String) -> Self {
-        Self::from(value.as_str())
-    }
-}
-impl From<&str> for MergeStrategy {
-    #[inline]
-    fn from(value: &str) -> Self {
-        match value.to_lowercase().as_str() {
-            "first"  => Self::First,
-            "first*" => Self::FirstBlocking,
-            "last"   => Self::Last,
-
-            "+" | "sum"     => Self::Sum,
-            "*" | "product" => Self::Product,
-
-            "max" => Self::Max,
-            "min" => Self::Min,
-
-            "all" => Self::All,
-
-            _ => Self::None,
         }
     }
 }

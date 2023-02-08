@@ -4,7 +4,7 @@
 //  Created:
 //    07 Feb 2023, 10:10:18
 //  Last edited:
-//    07 Feb 2023, 12:02:04
+//    08 Feb 2023, 13:44:51
 //  Auto updated?
 //    Yes
 // 
@@ -19,7 +19,8 @@ use console::{style, Style};
 use nom::error::VerboseError;
 
 use crate::ast::spec::TextRange;
-use crate::scanner::Input;
+use crate::scanner::{Input as ScanInput, Token};
+use crate::parser::Input as ParseInput;
 
 
 /***** HELPER FUNCTIONS *****/
@@ -235,9 +236,14 @@ impl<'f, 's, E: Error> Error for ErrContext<'f, 's, E> {}
 #[derive(Debug)]
 pub enum DslError<'s> {
     /// Failed to scan the input.
-    ScanError{ err: nom::Err<VerboseError<Input<'s>>> },
+    ScanError{ err: nom::Err<VerboseError<ScanInput<'s>>> },
+    /// Not all input was able to be scanned.
+    ScanLeftoverError{ remainder: ScanInput<'s> },
+
+    /// Failed to parse the scanned tokens.
+    ParseError{ err: nom::Err<VerboseError<Vec<Token<'s>>>> },
     /// Not all input was able to be parsed.
-    ScanLeftoverError{ remainder: Input<'s> },
+    ParseLeftoverError{ remainder: Vec<Token<'s>> },
 }
 impl<'s> PrettyError for DslError<'s> {
     fn ranges(&self) -> ((String, Option<TextRange>), Vec<(String, TextRange)>) {
@@ -245,6 +251,18 @@ impl<'s> PrettyError for DslError<'s> {
         match self {
             ScanError{ .. }                => ((self.to_string(), None), vec![]),
             ScanLeftoverError{ remainder } => ((self.to_string(), Some(TextRange::from(remainder))), vec![]),
+
+            ParseError{ .. }                => ((self.to_string(), None), vec![]),
+            ParseLeftoverError{ remainder } => (
+                (
+                    self.to_string(),
+                    match (remainder.first(), remainder.last()) {
+                        (Some(start), Some(end)) => Some(TextRange::new(start.start_of(), end.end_of())),
+                        _                        => None,
+                    },
+                ),
+                vec![]
+            ),
         }
     }
 }
@@ -254,7 +272,22 @@ impl<'s> Display for DslError<'s> {
         match self {
             ScanError{ err }        => write!(f, "Syntax error: {}", err),
             ScanLeftoverError{ .. } => write!(f, "Syntax error: Cannot parse remainder of source"),
+
+            ParseError{ err }        => write!(f, "Syntax error: {}", err),
+            ParseLeftoverError{ .. } => write!(f, "Syntax error: Cannot parse remainder of source"),
         }
     }
 }
 impl<'s> Error for DslError<'s> {}
+
+impl<'t, 's> From<nom::Err<VerboseError<ParseInput<'t, 's>>>> for DslError<'s> {
+    #[inline]
+    fn from(value: nom::Err<VerboseError<ParseInput<'t, 's>>>) -> Self {
+        // We match errors but first get ownership of all input token lists
+        match value {
+            nom::Err::Error(VerboseError { errors : errs })   => Self::ParseError{ err: nom::Err::Error(VerboseError{ errors: errs.into_iter().map(|(i, kind)| (i.to_vec(), kind)).collect() }) },
+            nom::Err::Failure(VerboseError { errors : errs }) => Self::ParseError{ err: nom::Err::Failure(VerboseError{ errors: errs.into_iter().map(|(i, kind)| (i.to_vec(), kind)).collect() }) },
+            nom::Err::Incomplete(needed)                      => Self::ParseError{ err: nom::Err::Incomplete(needed) },
+        }
+    }
+}

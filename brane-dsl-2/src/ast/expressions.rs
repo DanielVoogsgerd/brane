@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 15:34:18
 //  Last edited:
-//    07 Feb 2023, 19:51:11
+//    08 Feb 2023, 11:25:10
 //  Auto updated?
 //    Yes
 // 
@@ -14,8 +14,8 @@
 
 use enum_debug::EnumDebug;
 
-use super::spec::{BindingPower, MergeStrategy, Node, TextRange};
-use super::auxillary::{DataType, Identifier};
+use super::spec::{BindingPower, Node, TextRange};
+use super::auxillary::{DataType, Identifier, MergeStrategy};
 use super::statements::Statement;
 
 
@@ -54,7 +54,7 @@ pub enum ExpressionKind {
         /// The branches to execute in parallel.
         branches : Vec<Block>,
         /// The strategy to use to merge the branches once they are done.
-        strategy : MergeStrategy,
+        strategy : Option<MergeStrategy>,
     },
 
 
@@ -122,6 +122,11 @@ pub enum ExpressionKind {
         props : Vec<PropertyExpr>,
     },
 
+    /// Refers to some statically declared variable (which may be a dynamic value).
+    VarRef {
+        /// The name of the variable to which we refer.
+        name : Identifier,
+    },
     /// Refers to some statically declared _local_ function.
     LocalFunctionRef {
         /// The identifier of the function to which we refer.
@@ -133,11 +138,6 @@ pub enum ExpressionKind {
         name    : Identifier,
         /// The name of the package where we can find the function.
         package : Identifier,
-    },
-    /// Refers to some statically declared variable (which may be a dynamic value).
-    VarRef {
-        /// The name of the variable to which we refer.
-        name : Identifier,
     },
 
     /// A literal value to push upon the stack.
@@ -327,11 +327,32 @@ impl BinaryOperatorKind {
 }
 
 /// An extension to a BinaryOperator that defines binding-power enabled operators or other syntax that can postfix expressions.
+#[derive(Clone, Copy, Debug)]
+pub struct ExpressionPostfix {
+    /// The specific variant.
+    pub kind  : ExpressionPostfixKind,
+    /// The range where this postfix originates from.
+    pub range : Option<TextRange>,
+}
+impl ExpressionPostfix {
+    /// Returns the binding power for this postfix operator.
+    /// 
+    /// # Returns
+    /// A `BindingPower` struct that describes the asynchronous binding power for side of the expression.
+    pub fn binding_power(&self) -> BindingPower { self.kind.binding_power() }
+}
+impl Node for ExpressionPostfix {
+    #[inline]
+    fn range(&self) -> Option<TextRange> { self.range }
+}
+
 /// Defines the possible variants of an expression postfix.
 #[derive(Clone, Copy, Debug, EnumDebug)]
 pub enum ExpressionPostfixKind {
     /// A binary operator can always postfix an operator, since it sits in between two.
     BinaryOperator(BinaryOperator),
+    /// A cast operator postfixes an expression.
+    Cast,
     /// An array index postfixes an expression.
     ArrayIndex,
     /// A function call postfixes an expression.
@@ -348,8 +369,9 @@ impl ExpressionPostfixKind {
         use ExpressionPostfixKind::*;
         match self {
             BinaryOperator(op) => op.binding_power(),
-            ArrayIndex         => ,
-            Call               => ,
+            Cast               => BindingPower{ left: Some(11), right: None },
+            ArrayIndex         => BindingPower{ left: Some(13), right: None },
+            Call               => BindingPower{ left: Some(13), right: None },
         }
     }
 }

@@ -4,7 +4,7 @@
 //  Created:
 //    07 Feb 2023, 13:09:48
 //  Last edited:
-//    07 Feb 2023, 13:23:47
+//    08 Feb 2023, 09:33:08
 //  Auto updated?
 //    Yes
 // 
@@ -22,9 +22,9 @@
 /// # Returns
 /// A function that will attempt to parse the token from its input.
 macro_rules! tag_token {
-    (Token::$token:ident) => {
+    ($t:lifetime, $s:lifetime, Token::$token:ident) => {
         // Create the closure that does the work
-        |input: crate::parser::Input| -> nom::IResult<crate::parser::Input, &crate::scanner::Token, E> {
+        |input: crate::parser::Input<$t, $s>| -> nom::IResult<crate::parser::Input<$t, $s>, &$t crate::scanner::Token<$s>, E> {
             // Make sure there is a token to match
             if input.is_empty() { return Err(nom::Err::Incomplete(nom::Needed::Size(std::num::NonZeroUsize::new(1).unwrap()))) }
 

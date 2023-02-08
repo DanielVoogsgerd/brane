@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 15:25:18
 //  Last edited:
-//    07 Feb 2023, 11:38:25
+//    08 Feb 2023, 13:43:59
 //  Auto updated?
 //    Yes
 // 
@@ -38,6 +38,8 @@ pub use errors::DslError as Error;
 /// # Errors
 /// 
 pub fn compile_module(source: &str) -> Result<(), Error> {
+    use nom::error::VerboseError;
+    use ast::toplevel::Program;
     use scanner::tokens::Token;
 
     // Scan the input text to a string of tokens
@@ -47,6 +49,15 @@ pub fn compile_module(source: &str) -> Result<(), Error> {
             tokens
         },
         Err(err) => { return Err(Error::ScanError{ err }); },
+    };
+
+    // Parse the token stream to an AST
+    let ast: Program = match parser::parse_tokens(&tokens) {
+        Ok((rem, ast)) => {
+            if !rem.is_empty() { return Err(Error::ParseLeftoverError{ remainder: rem.into() }); }
+            ast
+        },
+        Err(err) => { return Err(err.into()); }
     };
 
     // Done

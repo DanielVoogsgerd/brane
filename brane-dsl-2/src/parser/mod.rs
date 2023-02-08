@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 16:29:43
 //  Last edited:
-//    07 Feb 2023, 13:09:35
+//    08 Feb 2023, 13:40:30
 //  Auto updated?
 //    Yes
 // 
@@ -16,11 +16,15 @@
 // Declare submodules
 mod utils;
 mod bscript;
+mod parser;
+
+// Bring some part of it into the this module's scope
+pub(crate) use parser::parse_tokens;
 
 
 // Type aliases for this module
 /// Defines the common input to every function.
-pub(crate) type Input<'t, 's: 't> = &'t [crate::scanner::Token<'s>];
+pub(crate) type Input<'t, 's> = &'t [crate::scanner::Token<'s>];
 
 // Trait aliases for this module
 /// Defines a common error trait for the nom errors we are interested in.

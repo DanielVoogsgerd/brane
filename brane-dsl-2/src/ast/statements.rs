@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 15:33:27
 //  Last edited:
-//    07 Feb 2023, 15:02:36
+//    08 Feb 2023, 13:02:02
 //  Auto updated?
 //    Yes
 // 
@@ -16,7 +16,7 @@ use enum_debug::EnumDebug;
 
 use super::spec::{Node, TextRange};
 use super::auxillary::{DataType, Identifier};
-use super::expressions::{Block, Expression};
+use super::expressions::{Block, Expression, Literal};
 
 
 /***** LIBRARY *****/
@@ -40,7 +40,9 @@ pub enum StatementKind {
     /// An import-statement defines an external package.
     Import {
         /// The name of the package which we import.
-        name : Identifier,
+        name    : Identifier,
+        /// An optional version, specified as a (major, minor, patch) triplet of integer literals.
+        version : Option<(Literal, Literal, Literal)>,
     },
 
     /// A definition of a function.
@@ -67,7 +69,7 @@ pub enum StatementKind {
 
 
 
-    // Executable
+    // Control flow
     /// A for-loop defines a series of statements that should be executed in succession, but with a predictable amount.
     For {
         /// The expression that computes the start value.
@@ -75,11 +77,12 @@ pub enum StatementKind {
         /// The expression that computes the stop value.
         stop  : Expression,
         /// The expression that computes the step value.
-        step  : Expression,
+        step  : Option<Literal>,
 
         /// The block of statements to be executed repeatedly.
         block : Block,
     },
+
     /// A while-loop defines a series of statements that should be executed in succession, but with an unpredictable amount.
     While {
         /// The condition to compute at the _start_ of every loop.
@@ -88,14 +91,15 @@ pub enum StatementKind {
         block : Block,
     },
 
-    /// A break-statement escapes from the parent loop.
-    Break,
     /// A return-statement escapes from the parent function or workflow.
     Return {
         /// The (optional) value to return.
         value : Option<Expression>,
     },
 
+
+
+    // Miscellaneous
     /// An assigned assigns a value to some variable.
     Assign {
         /// The name of the variable to assign a value to.
@@ -114,13 +118,11 @@ pub enum StatementKind {
 #[derive(Clone, Debug)]
 pub struct FunctionDef {
     /// The name of the function.
-    pub name   : Identifier,
-    /// Whether this function has a 'self'-argument (and is thus a method).
-    pub method : bool,
+    pub name : Identifier,
     /// The list of arguments for this function.
-    pub args   : Vec<ArgDef>,
+    pub args : Vec<ArgDef>,
     /// The return type for this function.
-    pub ret    : DataType,
+    pub ret  : DataType,
 
     /// The body for this function.
     pub body : Block,
@@ -139,9 +141,9 @@ impl Node for FunctionDef {
 #[derive(Clone, Debug)]
 pub struct ArgDef {
     /// The name of the argument
-    pub name     : Identifier,
-    /// The variable type of this argument.
-    pub var_type : DataType,
+    pub name      : Identifier,
+    /// The data type of this argument.
+    pub data_type : DataType,
 
     /// The range in the source text for this argument definition.
     pub range : Option<TextRange>,
@@ -178,9 +180,9 @@ impl Node for ClassMemberDef {
 #[derive(Clone, Debug)]
 pub struct PropertyDef {
     /// The name of the property.
-    pub name     : Identifier,
-    /// The variable type of the property.
-    pub var_type : DataType,
+    pub name      : Identifier,
+    /// The data type of the property.
+    pub data_type : DataType,
 
     /// The TextRange of the property.
     pub range : Option<TextRange>,

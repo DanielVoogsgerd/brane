@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 16:33:22
 //  Last edited:
-//    07 Feb 2023, 19:25:32
+//    08 Feb 2023, 11:29:57
 //  Auto updated?
 //    Yes
 // 
@@ -68,6 +68,8 @@ pub enum Token<'s> {
     Let(Input<'s>),
     /// 'new'
     New(Input<'s>),
+    /// 'as'
+    As(Input<'s>),
 
     // Operators
     /// `==`
@@ -153,6 +155,7 @@ impl<'s> Token<'s> {
             Return(span)   |
             Let(span)      |
             New(span)      |
+            As(span)       |
             
             Eq(span)     |
             Ne(span)     |
@@ -182,6 +185,12 @@ impl<'s> Token<'s> {
             RightBrace(span)   |
             Hashtag(span)      => span,
         }
+    }
+
+    /// Returns the internal text in the token.
+    #[inline]
+    pub fn fragment(&self) -> &str {
+        *self.span().fragment()
     }
 
     /// Returns the start position for this token.
