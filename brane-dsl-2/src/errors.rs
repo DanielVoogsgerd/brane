@@ -4,7 +4,7 @@
 //  Created:
 //    07 Feb 2023, 10:10:18
 //  Last edited:
-//    08 Feb 2023, 13:44:51
+//    08 Feb 2023, 16:51:51
 //  Auto updated?
 //    Yes
 // 
@@ -16,9 +16,9 @@ use std::error::Error;
 use std::fmt::{Display, Formatter, Result as FResult};
 
 use console::{style, Style};
-use nom::error::VerboseError;
+use nom::error::{VerboseError, VerboseErrorKind};
 
-use crate::ast::spec::TextRange;
+use crate::ast::spec::{TextPos, TextRange};
 use crate::scanner::{Input as ScanInput, Token};
 use crate::parser::Input as ParseInput;
 
@@ -232,6 +232,77 @@ impl<'f, 's, E: Error> Error for ErrContext<'f, 's, E> {}
 
 
 
+/// Defines a trace of DslErrors that may occur during parsing.
+#[derive(Debug)]
+pub struct DslErrorTrace<'f, 's> {
+    /// Reference to the name of the source.
+    pub file   : &'f str,
+    /// Reference to the source itself.
+    pub source : &'s str,
+
+    /// The errors in this trace, ordered by error.
+    pub errs : Vec<DslError<'s>>,
+}
+
+impl<'f, 's> DslErrorTrace<'f, 's> {
+    /// Constructor for the trace that constructs it from the given references and the given nom error.
+    /// 
+    /// # Arguments
+    /// - `file`: The name or other description of the input source.
+    /// - `source`: A reference to the physical source we (attempted to) parsed.
+    /// - `err`: The `nom::error::VerboseError` that contains the trace we want to copy.
+    /// 
+    /// # Returns
+    /// A new `DslErrorTrace` instance.
+    pub fn from_nom(file: &'f str, source: &'s str, err: VerboseError<ScanInput<'s>>) -> Self {
+        // Iterate over the trace in the verbose error
+        let mut errs: Vec<DslError> = Vec::with_capacity(err.errors.len());
+        for (i, (matched, kind)) in err.errors.into_iter().enumerate() {
+            // Match on the found kind
+            match kind {
+                VerboseErrorKind::Char(c) => {
+                    if matched.is_empty() {
+                        // We encountered EOF
+
+                        // Find the last position in the source text, i.e., the last line and the last character within that line
+                        let mut n_lines : usize         = 0;
+                        let mut last_nl : Option<usize> = None;
+                        for (i, c) in source.char_indices() {
+                            if c == '\n' {
+                                n_lines += 1;
+                                last_nl  = Some(i);
+                            }
+                        }
+
+                        // Push the error with a range pointing at the end _if_ there is any input source
+                        // NOTE: We assume that this error never occurs for empty sources.
+                        if source.is_empty() { panic!("Assumption that `source` is never empty, apparently, does not hold..."); }
+                        errs.push(DslError::ScanUnexpectedChar{
+                            expected : c,
+                            got      : None,
+                            range    : TextRange::new(
+                                TextPos::new0(0, 0),
+                                TextPos::new0(
+                                    n_lines,
+                                    self.source.len() - 
+                                )
+                            ),
+                            contexts : ()
+                        });
+                    }
+                },
+            }
+        }
+
+        // Done
+        Self {
+            
+        }
+    }
+}
+
+
+
 /// Defines the most toplevel errors for this crate.
 #[derive(Debug)]
 pub enum DslError<'s> {
@@ -239,6 +310,13 @@ pub enum DslError<'s> {
     ScanError{ err: nom::Err<VerboseError<ScanInput<'s>>> },
     /// Not all input was able to be scanned.
     ScanLeftoverError{ remainder: ScanInput<'s> },
+
+    /// Expected a certain character which we did not find.
+    ScanUnexpectedChar{ expected: char, got: Option<char>, range: TextRange, contexts: Vec<(String, TextRange)> },
+    /// Expected a certain keyword or string which we did not find.
+    ScanUnexpectedTag{ expected: String, got: Option<&'s str>, range: TextRange, contexts: Vec<(String, TextRange)> },
+    /// Some unhandled scanner error happened.
+    ScanUnknownError{ err: VerboseError<ScanInput<'s>> },
 
     /// Failed to parse the scanned tokens.
     ParseError{ err: nom::Err<VerboseError<Vec<Token<'s>>>> },
