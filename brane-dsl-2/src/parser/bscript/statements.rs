@@ -4,7 +4,7 @@
 //  Created:
 //    08 Feb 2023, 10:19:08
 //  Last edited:
-//    08 Feb 2023, 13:17:23
+//    09 Feb 2023, 15:32:07
 //  Auto updated?
 //    Yes
 // 
@@ -16,7 +16,7 @@ use nom::IResult;
 use nom::{branch, combinator as comb, multi, sequence as seq};
 
 use crate::ast::spec::TextRange;
-use crate::ast::auxillary::{DataType, Identifier};
+use crate::ast::auxillary::{Annotation, DataType, Identifier};
 use crate::ast::expressions::{Block, Expression, ExpressionKind, Literal};
 use crate::ast::statements::{ArgDef, ClassMemberDef, FunctionDef, PropertyDef, Statement, StatementKind};
 use crate::scanner::Token;
@@ -26,6 +26,23 @@ use super::{auxillary, blocks, expressions, literals};
 
 
 /***** HELPER SCANNING FUNCTIONS *****/
+/// Parses an optional annotation block.
+/// 
+/// # Arguments
+/// - `input`: The new tokenstream to parse from.
+/// 
+/// # Returns
+/// A tuple of the remaining, unparsed tokenstream and the parsed argument definition.
+/// 
+/// # Errors
+/// This function errors if we failed to parse a definition for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
+fn opt_annots<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Vec<Annotation>, E> {
+    comb::map(
+        comb::opt(auxillary::parse_annots),
+        |annots: Option<Vec<Annotation>>| annots.unwrap_or(vec![]),
+    )(input)
+}
+
 /// Parses an argument definition from the head of the given token stream.
 /// 
 /// # Arguments
@@ -121,6 +138,7 @@ fn member_def<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'
 fn import<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Statement, E> {
     comb::map(
         seq::tuple((
+            opt_annots,
             tag_token!('t, 's, Token::Import),
             nom::error::context("import statement", comb::cut(
                 seq::pair(
@@ -143,12 +161,13 @@ fn import<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, '
             )),
             tag_token!('t, 's, Token::Semicolon),
         )),
-        |(import, (package, version), semicolon): (&Token, (Identifier, Option<(Literal, (Literal, Literal))>), &Token)| {
+        |(annots, import, (package, version), semicolon): (Vec<Annotation>, &Token, (Identifier, Option<(Literal, (Literal, Literal))>), &Token)| {
             Statement {
                 kind : StatementKind::Import {
                     name    : package,
                     version : version.map(|(major, (minor, patch))| (major, minor, patch)),
                 },
+                annots,
                 range : Some(TextRange::new(import.start_of(), semicolon.end_of())),
             }
         },
@@ -211,7 +230,8 @@ fn func_def<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t,
 /// This function errors if we failed to parse a definition for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
 fn class_def<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Statement, E> {
     comb::map(
-        seq::pair(
+        seq::tuple((
+            opt_annots,
             tag_token!('t, 's, Token::Class),
             nom::error::context("class definition", comb::cut(
                 seq::tuple((
@@ -223,13 +243,14 @@ fn class_def<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t
                     tag_token!('t, 's, Token::RightBrace),
                 ))
             )),
-        ),
-        |(class, (name, members, rbrace)): (&Token, (Identifier, Vec<ClassMemberDef>, &Token))| {
+        )),
+        |(annots, class, (name, members, rbrace)): (Vec<Annotation>, &Token, (Identifier, Vec<ClassMemberDef>, &Token))| {
             Statement {
                 kind : StatementKind::ClassDef {
                     name,
                     defs : members,
                 },
+                annots,
                 range : Some(TextRange::new(class.start_of(), rbrace.end_of())),
             }
         }
@@ -248,7 +269,8 @@ fn class_def<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t
 /// This function errors if we failed to parse a definition for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
 fn var_def<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Statement, E> {
     comb::map(
-        seq::pair(
+        seq::tuple((
+            opt_annots,
             tag_token!('t, 's, Token::Let),
             nom::error::context("variable definition/let assign", comb::cut(
                 seq::tuple((
@@ -264,14 +286,15 @@ fn var_def<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 
                     tag_token!('t, 's, Token::Semicolon),
                 )),
             )),
-        ),
-        |(let_kw, (name, data_type, value, semicolon)): (&Token, (Identifier, Option<DataType>, Option<Expression>, &Token))| {
+        )),
+        |(annots, let_kw, (name, data_type, value, semicolon)): (Vec<Annotation>, &Token, (Identifier, Option<DataType>, Option<Expression>, &Token))| {
             Statement {
                 kind : StatementKind::VarDef {
                     name,
                     data_type : data_type.unwrap_or_else(DataType::any),
                     value,
                 },
+                annots,
                 range : Some(TextRange::new(let_kw.start_of(), semicolon.end_of())),
             }
         }

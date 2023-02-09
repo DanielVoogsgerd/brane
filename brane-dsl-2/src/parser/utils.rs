@@ -4,7 +4,7 @@
 //  Created:
 //    07 Feb 2023, 13:09:48
 //  Last edited:
-//    08 Feb 2023, 09:33:08
+//    09 Feb 2023, 14:17:18
 //  Auto updated?
 //    Yes
 // 
@@ -26,7 +26,7 @@ macro_rules! tag_token {
         // Create the closure that does the work
         |input: crate::parser::Input<$t, $s>| -> nom::IResult<crate::parser::Input<$t, $s>, &$t crate::scanner::Token<$s>, E> {
             // Make sure there is a token to match
-            if input.is_empty() { return Err(nom::Err::Incomplete(nom::Needed::Size(std::num::NonZeroUsize::new(1).unwrap()))) }
+            if input.is_empty() { return Err(nom::Err::Error(E::from_error_kind(input, nom::error::ErrorKind::Tag))) }
 
             // See if the head matches
             if matches!(input[0], crate::scanner::Token::$token(_)) {

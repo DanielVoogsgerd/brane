@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 16:56:44
 //  Last edited:
-//    07 Feb 2023, 11:37:54
+//    09 Feb 2023, 14:36:49
 //  Auto updated?
 //    Yes
 // 
@@ -107,12 +107,14 @@ fn real<'s, E: Error<'s>>(input: Input<'s>) -> IResult<Input<'s>, Token, E> {
 /// This function errors if we could not parse the literal token.
 fn string<'s, E: Error<'s>>(input: Input<'s>) -> IResult<Input<'s>, Token, E> {
     nom::error::context("string", comb::map(
-        seq::preceded(
-            cc::char('\"'),
-            comb::cut(seq::terminated(
-                bc::escaped(bc::is_not("\"\\"), '\\', cc::one_of("\"ntr\\\'")),
+        comb::recognize(
+            seq::preceded(
                 cc::char('\"'),
-            )),
+                comb::cut(seq::terminated(
+                    bc::escaped(bc::is_not("\"\\"), '\\', cc::one_of("\"ntr\\\'")),
+                    cc::char('\"'),
+                )),
+            )
         ),
         Token::String,
     ))(input)

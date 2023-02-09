@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 15:35:30
 //  Last edited:
-//    08 Feb 2023, 12:35:48
+//    09 Feb 2023, 15:04:28
 //  Auto updated?
 //    Yes
 // 
@@ -17,9 +17,36 @@ use enum_debug::EnumDebug;
 
 use super::spec::{Node, TextRange};
 use super::types;
+use super::expressions::Expression;
 
 
 /***** LIBRARY *****/
+/// An annotation is an additional bit of information that the compiler can use to do stuff.
+#[derive(Clone, Debug)]
+pub struct Annotation {
+    /// The specific form of annotation
+    pub kind  : AnnotationKind,
+    /// The range where we found the annotation
+    pub range : Option<TextRange>,
+}
+impl Node for Annotation {
+    #[inline]
+    fn range(&self) -> Option<TextRange> { self.range }
+}
+
+/// Specifies the allows annotation variants.
+#[derive(Clone, Debug, EnumDebug)]
+pub enum AnnotationKind {
+    /// It's a separate identifier.
+    Identifier(Identifier),
+    /// It's a key/value pair.
+    KeyValue(Identifier, Expression),
+    /// It's a key/list pair.
+    KeyList(Identifier, Vec<Annotation>),
+}
+
+
+
 /// An identifier is a simply, well, identifier that the user has defined.
 #[derive(Clone, Debug)]
 pub struct Identifier {
@@ -99,25 +126,3 @@ pub enum MergeStrategyKind {
     /// Returns all values as an Array.
     All,
 }
-
-// impl From<&str> for MergeStrategy {
-//     #[inline]
-//     fn from(value: &str) -> Self {
-//         match value.to_lowercase().as_str() {
-//             "first"  => Self::First,
-//             "first*" => Self::FirstBlocking,
-//             "last"   => Self::Last,
-
-//             "+" | "sum"     => Self::Sum,
-//             "*" | "product" => Self::Product,
-
-//             "max" => Self::Max,
-//             "min" => Self::Min,
-
-//             "all" => Self::All,
-
-//             // Should have been avoided by the parser
-//             _ => { unreachable!() },
-//         }
-//     }
-// }

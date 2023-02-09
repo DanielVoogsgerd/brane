@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 15:25:18
 //  Last edited:
-//    09 Feb 2023, 08:37:33
+//    09 Feb 2023, 13:31:34
 //  Auto updated?
 //    Yes
 // 
@@ -23,7 +23,7 @@ mod parser;
 mod compiler;
 
 // Define some useful abstraction over a DslError
-pub use errors::DslError as Error;
+pub use errors::{DslError as Error, ErrorTrace};
 
 
 
@@ -38,27 +38,26 @@ pub use errors::DslError as Error;
 /// 
 /// # Errors
 /// 
-pub fn compile_module(source: &str) -> Result<(), Error> {
-    use nom::error::VerboseError;
+pub fn compile_module<'f, 's>(file: &'f str, source: &'s str) -> Result<(), ErrorTrace<'f, 's>> {
     use ast::toplevel::Program;
     use scanner::tokens::Token;
 
     // Scan the input text to a string of tokens
     let tokens: Vec<Token> = match scanner::scan_tokens(scanner::Input::new(&source)) {
         Ok((rem, tokens)) => {
-            if !rem.is_empty() { return Err(Error::ScanLeftoverError{ remainder: rem }); }
+            if !rem.is_empty() { return Err(ErrorTrace::from_error(file, source, Error::ScanLeftoverError{ remainder: rem })); }
             tokens
         },
-        Err(err) => { return Err(Error::ScanError{ err }); },
+        Err(err) => { return Err(ErrorTrace::from_nom_err_scan(file, source, err)); },
     };
 
     // Parse the token stream to an AST
     let ast: Program = match parser::parse_tokens(&tokens) {
         Ok((rem, ast)) => {
-            if !rem.is_empty() { return Err(Error::ParseLeftoverError{ remainder: rem.into() }); }
+            if !rem.is_empty() { return Err(ErrorTrace::from_error(file, source, Error::ParseLeftoverError{ remainder: rem.into() })); }
             ast
         },
-        Err(err) => { return Err(err.into()); }
+        Err(err) => { return Err(ErrorTrace::from_nom_err_parse(file, source, err)); }
     };
 
     // Done

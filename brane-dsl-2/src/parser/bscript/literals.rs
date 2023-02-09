@@ -4,7 +4,7 @@
 //  Created:
 //    07 Feb 2023, 15:04:30
 //  Last edited:
-//    08 Feb 2023, 09:34:39
+//    09 Feb 2023, 14:24:19
 //  Auto updated?
 //    Yes
 // 
@@ -23,6 +23,49 @@ use crate::parser::{Error, Input};
 use crate::parser::utils::tag_token;
 
 
+/***** HELPER FUNCTIONS *****/
+/// Processes the matched string to get a value that has escaped characters already resolved.
+/// 
+/// # Arguments
+/// - `raw`: The raw string that was matched.
+/// 
+/// # Returns
+/// The compatible value for the string.
+fn process_string_value(raw: &str) -> String {
+    // Loop to add
+    let mut res     : String = String::with_capacity(raw.len());
+    let mut escaped : bool   = false;
+    for c in raw.chars() {
+        // Check if escaped
+        if escaped {
+            // We are; match a specific set of characters
+            if c == 'n' {
+                res.push('\n');
+            } else if c == 'r' {
+                res.push('\r');
+            } else if c == 't' {
+                res.push('\t');
+            } else {
+                // Other characters are just passed "as-is", but without the slash (unless this is a slash aof course).
+                res.push(c);
+            }
+            escaped = false;
+        } else if c == '\\' {
+            // Going into escape mode
+            escaped = true;
+        } else {
+            res.push(c);
+        }
+    }
+
+    // Done
+    res
+}
+
+
+
+
+
 /***** LIBRARY *****/
 /// Parses a literal from the head of the given token stream.
 /// 
@@ -39,6 +82,6 @@ pub(crate) fn parse<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<I
         comb::map(tag_token!('t, 's, Token::Boolean), |t| Literal{ kind: LiteralKind::Boolean{ value: bool::from_str(t.span().fragment()).unwrap() }, range: Some(TextRange::from(t.span())) }),
         comb::map(tag_token!('t, 's, Token::Integer), |t| Literal{ kind: LiteralKind::Integer{ value: i64::from_str(t.span().fragment()).unwrap() }, range: Some(TextRange::from(t.span())) }),
         comb::map(tag_token!('t, 's, Token::Real),    |t| Literal{ kind: LiteralKind::Real{ value: f64::from_str(t.span().fragment()).unwrap() }, range: Some(TextRange::from(t.span())) }),
-        comb::map(tag_token!('t, 's, Token::String),  |t| Literal{ kind: LiteralKind::String{ value: (*t.span().fragment()).into() }, range: Some(TextRange::from(t.span())) }),
+        comb::map(tag_token!('t, 's, Token::String),  |t| Literal{ kind: LiteralKind::String{ value: process_string_value(*t.span().fragment()) }, range: Some(TextRange::from(t.span())) }),
     ))(input)
 }

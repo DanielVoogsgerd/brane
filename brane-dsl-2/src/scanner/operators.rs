@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 17:32:53
 //  Last edited:
-//    07 Feb 2023, 11:37:38
+//    09 Feb 2023, 15:00:26
 //  Auto updated?
 //    Yes
 // 
@@ -54,5 +54,6 @@ pub(crate) fn parse<'s, E: Error<'s>>(input: Input<'s>) -> IResult<Input<'s>, To
 
         // Miscellaneous
         comb::map(bc::tag(":="), Token::Assign),
+        comb::map(bc::tag("="),  Token::Equals),
     ))(input)
 }

@@ -4,7 +4,7 @@
 //  Created:
 //    08 Feb 2023, 13:28:35
 //  Last edited:
-//    08 Feb 2023, 13:45:13
+//    09 Feb 2023, 14:17:49
 //  Auto updated?
 //    Yes
 // 
@@ -25,7 +25,7 @@ use super::bscript::toplevel;
 mod tests {
     use std::path::PathBuf;
     use brane_shr::utilities::test_on_dsl_files;
-    use crate::errors::{DslError, PrettyError};
+    use crate::errors::{DslError, ErrorTrace, PrettyError as _};
     use crate::ast::Program;
     use crate::scanner::{scan_tokens, Input as ScanInput};
     use super::parse_tokens;
@@ -47,13 +47,13 @@ mod tests {
                     ast
                 },
                 Err(err) => {
-                    eprintln!("{}", DslError::from(err).display_with_source(&path.display().to_string(), &raw));
+                    eprintln!("{}", ErrorTrace::from_nom_err_parse(&path.display().to_string(), &raw, err).display());
                     panic!("Scanning failed (see above)");
                 },
             };
 
             // Show the tokens
-            println!("{:?}", ast);
+            println!("{:#?}", ast);
             println!("{}\n\n", (0..80).map(|_| '-').collect::<String>());
         });
     }

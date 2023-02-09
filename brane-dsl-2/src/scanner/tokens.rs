@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 16:33:22
 //  Last edited:
-//    08 Feb 2023, 11:29:57
+//    09 Feb 2023, 14:59:56
 //  Auto updated?
 //    Yes
 // 
@@ -100,6 +100,8 @@ pub enum Token<'s> {
     Div(Input<'s>),
     /// `%`
     Mod(Input<'s>),
+    /// Equals
+    Equals(Input<'s>),
     /// `:=`
     Assign(Input<'s>),
 
@@ -172,6 +174,7 @@ impl<'s> Token<'s> {
             Div(span)    |
             Mod(span)    |
             Assign(span) |
+            Equals(span) |
 
             Dot(span)          |
             Comma(span)        |

@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 16:43:54
 //  Last edited:
-//    07 Feb 2023, 11:42:52
+//    09 Feb 2023, 13:30:53
 //  Auto updated?
 //    Yes
 // 
@@ -27,7 +27,7 @@ mod tests {
     use std::path::PathBuf;
     use enum_debug::EnumDebug as _;
     use brane_shr::utilities::test_on_dsl_files;
-    use crate::errors::{DslError, PrettyError};
+    use crate::errors::{DslError, ErrorTrace, PrettyError as _};
     use super::{scan_tokens, Input, Token};
 
 
@@ -47,7 +47,7 @@ mod tests {
                     tokens
                 },
                 Err(err) => {
-                    eprintln!("{}", DslError::ScanError{ err }.display_with_source(&path.display().to_string(), &raw));
+                    eprintln!("{}", ErrorTrace::from_nom_err_scan(&path.display().to_string(), &raw, err).display());
                     panic!("Scanning failed (see above)");
                 },
             };

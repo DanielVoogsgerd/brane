@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 15:33:27
 //  Last edited:
-//    08 Feb 2023, 13:02:02
+//    09 Feb 2023, 15:09:58
 //  Auto updated?
 //    Yes
 // 
@@ -15,7 +15,7 @@
 use enum_debug::EnumDebug;
 
 use super::spec::{Node, TextRange};
-use super::auxillary::{DataType, Identifier};
+use super::auxillary::{Annotation, DataType, Identifier};
 use super::expressions::{Block, Expression, Literal};
 
 
@@ -24,9 +24,11 @@ use super::expressions::{Block, Expression, Literal};
 #[derive(Clone, Debug)]
 pub struct Statement {
     /// Any specific implementations of a statement.
-    pub kind  : StatementKind,
+    pub kind   : StatementKind,
+    /// Any annotations that are applied to this statement.
+    pub annots : Vec<Annotation>,
     /// The range in the source text for this statement.
-    pub range : Option<TextRange>,
+    pub range  : Option<TextRange>,
 }
 impl Node for Statement {
     #[inline]

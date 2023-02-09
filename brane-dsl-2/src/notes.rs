@@ -4,7 +4,7 @@
 //  Created:
 //    09 Feb 2023, 08:37:07
 //  Last edited:
-//    09 Feb 2023, 08:47:48
+//    09 Feb 2023, 13:15:20
 //  Auto updated?
 //    Yes
 // 
@@ -63,8 +63,17 @@ impl<'n, 'f, 's> Display for PrettyNoteFormatter<'n, 'f, 's> {
 /// A trait very similar to the `std::error::Error` trait except for Notes.
 pub trait Note: Debug + Display {}
 
+/// A helper trait that we can use to cast a PrettyNote-implemented (sized) type to a `&dyn PrettyNote`.
+pub trait PrettyNoteAsDyn {
+    /// Returns this struct as a type-erased dynamic trait object reference.
+    fn as_dyn(&self) -> &dyn PrettyNote;
+}
+impl<T: PrettyNote + Sized> PrettyNoteAsDyn for T {
+    fn as_dyn(&self) -> &dyn PrettyNote { self }
+}
+
 /// A trait very similar to the `PrettyError` trait in `errors.rs`, but for Notes.
-pub trait PrettyNote: Note {
+pub trait PrettyNote: Note + PrettyNoteAsDyn {
     // Child-implemented
     /// Returns the message and range that this note concerns itself with.
     /// 
@@ -83,7 +92,7 @@ pub trait PrettyNote: Note {
     /// # Returns
     /// A `PrettyNoteFormatter` that implements Display.
     #[inline]
-    fn display_with_source<'n, 'f, 's>(&'n self, file: &'f str, source: &'s str) -> PrettyNoteFormatter<'n, 'f, 's> where Self: Sized { PrettyNoteFormatter{ note: self, file, source } }
+    fn display_with_source<'n, 'f, 's>(&'n self, file: &'f str, source: &'s str) -> PrettyNoteFormatter<'n, 'f, 's> { PrettyNoteFormatter{ note: self.as_dyn(), file, source } }
 }
 
 
@@ -96,12 +105,15 @@ pub trait PrettyNote: Note {
 pub enum NomNote {
     /// A piece of context given during scanning.
     ScanContext{ context: &'static str, range: TextRange },
+    /// A piece of context given during parsing.
+    ParseContext{ context: &'static str, range: Option<TextRange> },
 }
 impl Display for NomNote {
     fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
         use NomNote::*;
         match self {
-            ScanContext{ context, .. } => write!(f, "The above occurred while scanning {}", context),
+            ScanContext{ context, .. }  => write!(f, "The above occurred while scanning {}", context),
+            ParseContext{ context, .. } => write!(f, "The above occurred while parsing {}", context),
         }
     }
 }
@@ -110,7 +122,8 @@ impl PrettyNote for NomNote {
     fn ranges(&self) -> (String, Option<TextRange>) {
         use NomNote::*;
         match self {
-            ScanContext{ range, .. } => (self.to_string(), Some(*range)),
+            ScanContext{ range, .. }  => (self.to_string(), Some(*range)),
+            ParseContext{ range, .. } => (self.to_string(), *range),
         }
     }
 }

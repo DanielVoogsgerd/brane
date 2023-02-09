@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 15:36:16
 //  Last edited:
-//    08 Feb 2023, 10:51:48
+//    09 Feb 2023, 14:41:59
 //  Auto updated?
 //    Yes
 // 
@@ -18,6 +18,7 @@ use std::fmt::{Debug, Display, Formatter, Result as FResult};
 use nom::AsBytes;
 use nom_locate::LocatedSpan;
 use num_traits::AsPrimitive;
+use unicode_segmentation::UnicodeSegmentation as _;
 
 
 /***** LIBRARY *****/
@@ -90,19 +91,23 @@ impl TextPos {
         let bs: &[u8] = span.fragment().as_bytes();
 
         // Get the position of the last newline and count them while at it
-        let mut n_nls   : usize         = 0;
-        let mut last_nl : Option<usize> = None;
-        for (i, b) in bs.iter().enumerate() {
-            if *b == b'\n' {
-                n_nls   += 1;
-                last_nl  = Some(i);
+        let mut line : usize = span.location_line() as usize - 1;
+        let mut col  : usize = span.get_column() - 1;
+        for c in String::from_utf8_lossy(bs).graphemes(true).skip(1) {
+            if c == "\n" {
+                // Move to the next line
+                line += 1;
+                col   = 0;
+            } else {
+                // Normal character
+                col += 1;
             }
         }
 
         // Use those to compute offsets for the lines and columns
         Self {
-            line : span.location_line() as usize - 1 + n_nls,
-            col  : if let Some(last_nl) = last_nl { if bs.len() >= 2 + last_nl { bs.len() - 2 - last_nl } else { 0 } } else if !bs.is_empty() { bs.len() - 1 } else { 0 },
+            line,
+            col,
         }
     }
 
