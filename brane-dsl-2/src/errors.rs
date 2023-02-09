@@ -4,7 +4,7 @@
 //  Created:
 //    07 Feb 2023, 10:10:18
 //  Last edited:
-//    09 Feb 2023, 14:45:14
+//    09 Feb 2023, 18:41:31
 //  Auto updated?
 //    Yes
 // 
@@ -603,7 +603,7 @@ impl<'s> PrettyError for DslError<'s> {
             ScanIncompleteError{ range, .. } => *range,
 
             ParseUnexpectedTag{ range, .. } |
-            ParseUnknownError{ range, .. }  => { println!("{:?}", range); *range },
+            ParseUnknownError{ range, .. }  => *range,
             ParseLeftoverError{ remainder } => match (remainder.first(), remainder.last()) {
                 (Some(start), Some(end)) => Some(TextRange::new(start.start_of(), end.end_of())),
                 _                        => None,

@@ -4,7 +4,7 @@
 //  Created:
 //    07 Feb 2023, 19:02:01
 //  Last edited:
-//    09 Feb 2023, 15:06:39
+//    09 Feb 2023, 18:43:41
 //  Auto updated?
 //    Yes
 // 
@@ -62,18 +62,6 @@ pub(crate) fn parse_annots<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IR
 /// This function errors if we failed to parse a definition for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
 fn annot<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Annotation, E> {
     branch::alt((
-        // It's a single identifier
-        comb::map(
-            parse_ident,
-            |ident: Identifier| {
-                let range: Option<TextRange> = ident.range;
-                Annotation {
-                    kind : AnnotationKind::Identifier(ident),
-                    range,
-                }
-            },
-        ),
-
         // It's an identifier/expression pair
         comb::map(
             seq::separated_pair(
@@ -118,7 +106,19 @@ fn annot<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 's
                     range,
                 }
             },
-        )
+        ),
+
+        // It's a single identifier
+        comb::map(
+            parse_ident,
+            |ident: Identifier| {
+                let range: Option<TextRange> = ident.range;
+                Annotation {
+                    kind : AnnotationKind::Identifier(ident),
+                    range,
+                }
+            },
+        ),
     ))(input)
 }
 
