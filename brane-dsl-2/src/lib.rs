@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 15:25:18
 //  Last edited:
-//    08 Feb 2023, 13:43:59
+//    09 Feb 2023, 08:37:33
 //  Auto updated?
 //    Yes
 // 
@@ -16,6 +16,7 @@
 
 // Declare modules
 pub mod errors;
+pub mod notes;
 pub mod ast;
 mod scanner;
 mod parser;

@@ -4,7 +4,7 @@
 //  Created:
 //    07 Feb 2023, 10:10:18
 //  Last edited:
-//    08 Feb 2023, 16:51:51
+//    09 Feb 2023, 09:07:19
 //  Auto updated?
 //    Yes
 // 
@@ -16,8 +16,10 @@ use std::error::Error;
 use std::fmt::{Display, Formatter, Result as FResult};
 
 use console::{style, Style};
-use nom::error::{VerboseError, VerboseErrorKind};
+use nom::error::{ErrorKind, VerboseError, VerboseErrorKind};
+use unicode_segmentation::UnicodeSegmentation as _;
 
+use crate::notes::{NomNote, PrettyNote};
 use crate::ast::spec::{TextPos, TextRange};
 use crate::scanner::{Input as ScanInput, Token};
 use crate::parser::Input as ParseInput;
@@ -65,7 +67,7 @@ fn pad_num<N: Copy + Into<usize>>(n: N, l: usize) -> String {
 /// 
 /// # Errors
 /// This function errors if we failed to write to the given writer.
-fn print_range(f: &mut Formatter<'_>, range: TextRange, source: &str, colour: Style) -> FResult {
+pub(crate) fn print_range(f: &mut Formatter<'_>, range: TextRange, source: &str, colour: Style) -> FResult {
     // Find the start of the range in the source text
     let mut line_i     : usize        = 0;
     let mut line_start : usize        = 0;
@@ -111,6 +113,20 @@ fn print_range(f: &mut Formatter<'_>, range: TextRange, source: &str, colour: St
 
     // Done
     Ok(())
+}
+
+
+
+
+
+/***** HELPER ENUMS *****/
+/// Abstraction over errors or notes.
+#[derive(Debug)]
+enum TraceElem<'s> {
+    /// It's a hard error
+    Error(DslError<'s>),
+    /// It's a note providing context to some error.
+    Note(NomNote),
 }
 
 
@@ -163,20 +179,33 @@ impl<'e, 'f, 's> Display for PrettyErrorFormatter<'e, 'f, 's> {
     }
 }
 
+/// The pretty formatter for the error trace.
+#[derive(Debug)]
+pub struct DslErrorTraceFormatter<'t, 'f, 's> {
+    /// The trace to format.
+    trace : &'t [TraceElem<'s>],
+
+    /// The name (or other description) for the source.
+    file   : &'f str,
+    /// The source text itself.
+    source : &'s str,
+}
+impl<'t, 'f, 's> Display for DslErrorTraceFormatter<'t, 'f, 's> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
+        /* TODO */
+    }
+}
+
 
 
 /// Trait for an error that can print itself very prettily from some source text.
 pub trait PrettyError: Error {
     // Child-implemented
-    /// Returns the ranges that this error concerns itself with.
-    /// 
-    /// Specifically, it can return one "main error range", and then zero or more "note ranges" that provide additional context.
+    /// Returns the range in this error, and then any notes that this error might wants to add as explanation or context.
     /// 
     /// # Returns
-    /// A tuple with the main error range (if any) and the vector with note texts and note ranges, respectively.
-    /// 
-    /// Note that an empty main error range implies this error variant does not relate to source.
-    fn ranges(&self) -> ((String, Option<TextRange>), Vec<(String, TextRange)>);
+    /// A tuple with the error's range and a list of notes to return. If there is no range associated with this error (i.e., it does not relate to the source), then `None` is returned instead.
+    fn ranges(&self) -> (Option<TextRange>, Vec<Box<dyn PrettyNote>>);
 
 
     // Globally provided
@@ -197,42 +226,7 @@ pub trait PrettyError: Error {
 
 
 /***** LIBRARY *****/
-/// Wraps any pretty error to show context without having to explicitly mention the filename or the source name.
-#[derive(Debug)]
-pub struct ErrContext<'f, 's, E> {
-    /// The error to wrap.
-    err : E,
-
-    /// Some name for the source text.
-    file   : &'f str,
-    /// The source text.
-    source : &'s str,
-}
-impl<'f, 's, E: PrettyError> ErrContext<'f, 's, E> {
-    /// Returns a formatter for an Error that writes it to stderr with some additional context information attached to it.
-    /// 
-    /// # Returns
-    /// A `PrettyErrorFormatter` that implements Display.
-    #[inline]
-    pub fn display<'e>(&'e self) -> PrettyErrorFormatter<'e, 'f, 's> { PrettyErrorFormatter{ err: &self.err, file: self.file, source: self.source } }
-}
-impl<'f, 's, E: PrettyError> PrettyError for ErrContext<'f, 's, E> {
-    #[inline]
-    fn ranges(&self) -> ((String, Option<TextRange>), Vec<(String, TextRange)>) {
-        self.err.ranges()
-    }
-}
-impl<'f, 's, E: Display> Display for ErrContext<'f, 's, E> {
-    #[inline]
-    fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
-        write!(f, "{}", self.err)
-    }
-}
-impl<'f, 's, E: Error> Error for ErrContext<'f, 's, E> {}
-
-
-
-/// Defines a trace of DslErrors that may occur during parsing.
+/// Defines a trace of DslErrors and NomNotes that may occur during scanning or parsing.
 #[derive(Debug)]
 pub struct DslErrorTrace<'f, 's> {
     /// Reference to the name of the source.
@@ -240,10 +234,9 @@ pub struct DslErrorTrace<'f, 's> {
     /// Reference to the source itself.
     pub source : &'s str,
 
-    /// The errors in this trace, ordered by error.
-    pub errs : Vec<DslError<'s>>,
+    /// The errors and notes in this trace.
+    pub trace : Vec<TraceElem<'s>>,
 }
-
 impl<'f, 's> DslErrorTrace<'f, 's> {
     /// Constructor for the trace that constructs it from the given references and the given nom error.
     /// 
@@ -254,12 +247,13 @@ impl<'f, 's> DslErrorTrace<'f, 's> {
     /// 
     /// # Returns
     /// A new `DslErrorTrace` instance.
-    pub fn from_nom(file: &'f str, source: &'s str, err: VerboseError<ScanInput<'s>>) -> Self {
+    pub fn from_nom_scan(file: &'f str, source: &'s str, err: VerboseError<ScanInput<'s>>) -> Self {
         // Iterate over the trace in the verbose error
-        let mut errs: Vec<DslError> = Vec::with_capacity(err.errors.len());
+        let mut trace: Vec<TraceElem> = Vec::with_capacity(err.errors.len());
         for (i, (matched, kind)) in err.errors.into_iter().enumerate() {
             // Match on the found kind
             match kind {
+                // Something about expecting a character but seeing something else
                 VerboseErrorKind::Char(c) => {
                     if matched.is_empty() {
                         // We encountered EOF
@@ -277,28 +271,85 @@ impl<'f, 's> DslErrorTrace<'f, 's> {
                         // Push the error with a range pointing at the end _if_ there is any input source
                         // NOTE: We assume that this error never occurs for empty sources.
                         if source.is_empty() { panic!("Assumption that `source` is never empty, apparently, does not hold..."); }
-                        errs.push(DslError::ScanUnexpectedChar{
+                        trace.push(TraceElem::Error(DslError::ScanUnexpectedChar{
                             expected : c,
                             got      : None,
                             range    : TextRange::new(
                                 TextPos::new0(0, 0),
                                 TextPos::new0(
                                     n_lines,
-                                    self.source.len() - 
+                                    if let Some(last_nl) = last_nl {
+                                        source.len() - 1 - last_nl
+                                    } else {
+                                        source.len() - 1
+                                    }
                                 )
                             ),
-                            contexts : ()
-                        });
+                        }));
+                    } else {
+                        // We encountered some character
+
+                        // Get the character and a range pointing to it
+                        let got   : &str      = matched.fragment().graphemes(true).next().unwrap();
+                        let range : TextRange = TextRange::new(TextPos::start_of(&matched), TextPos::start_of(&matched));
+
+                        // Wrap that in an error and Bobert's your father's brother
+                        trace.push(TraceElem::Error(DslError::ScanUnexpectedChar {
+                            expected : c,
+                            got      : Some(got),
+                            range,
+                        }));
                     }
+                },
+
+                // Some nom combinator failed in such a way we need to report to the user
+                VerboseErrorKind::Nom(kind) => {
+                    // Match to find a kind we know what to do with
+                    let err: DslError = match kind {
+                        ErrorKind::Tag => {
+                            // We simply match the matched match based on if we have anything or not (EOF, in that case).
+                            DslError::ScanUnexpectedTag {
+                                got   : if !matched.is_empty() { Some(*matched.fragment()) } else { None },
+                                range : TextRange::from(&matched),
+                            }
+                        },
+
+                        // Otherwise, mark as unknown error
+                        kind => DslError::ScanUnknownError{ kind, range: TextRange::from(&matched) },
+                    };
+
+                    // Don't forget to add it to the list
+                    trace.push(TraceElem::Error(err));
+                },
+
+                // It's some context, we which can interpret as a note
+                VerboseErrorKind::Context(context) => {
+                    // We add it as a context note
+                    trace.push(TraceElem::Note(NomNote::ScanContext {
+                        context,
+                        range : TextRange::from(&matched),
+                    }));
                 },
             }
         }
 
-        // Done
+        // Done, we can use that to return a full trace
         Self {
-            
+            file,
+            source,
+
+            trace,
         }
     }
+
+
+
+    /// Returns a formatter that can pretty-print all of the errors and notes in the DslErrorTrace.
+    /// 
+    /// # Returns
+    /// A new DslErrorTraceFormatter that implements Display.
+    #[inline]
+    pub fn display<'t>(&'t self) -> DslErrorTraceFormatter<'t, 'f, 's> { DslErrorTraceFormatter{ trace: &self.trace, file: self.file, source: self.source } }
 }
 
 
@@ -306,30 +357,38 @@ impl<'f, 's> DslErrorTrace<'f, 's> {
 /// Defines the most toplevel errors for this crate.
 #[derive(Debug)]
 pub enum DslError<'s> {
-    /// Failed to scan the input.
-    ScanError{ err: nom::Err<VerboseError<ScanInput<'s>>> },
-    /// Not all input was able to be scanned.
-    ScanLeftoverError{ remainder: ScanInput<'s> },
-
     /// Expected a certain character which we did not find.
-    ScanUnexpectedChar{ expected: char, got: Option<char>, range: TextRange, contexts: Vec<(String, TextRange)> },
+    /// 
+    /// We say 'char', by the way, but since we iterate over graphemes we use a '&str' at `got` too.
+    ScanUnexpectedChar{ expected: char, got: Option<&'s str>, range: TextRange },
     /// Expected a certain keyword or string which we did not find.
-    ScanUnexpectedTag{ expected: String, got: Option<&'s str>, range: TextRange, contexts: Vec<(String, TextRange)> },
+    ScanUnexpectedTag{ got: Option<&'s str>, range: TextRange },
     /// Some unhandled scanner error happened.
-    ScanUnknownError{ err: VerboseError<ScanInput<'s>> },
+    ScanUnknownError{ kind: ErrorKind, range: TextRange },
 
     /// Failed to parse the scanned tokens.
     ParseError{ err: nom::Err<VerboseError<Vec<Token<'s>>>> },
     /// Not all input was able to be parsed.
     ParseLeftoverError{ remainder: Vec<Token<'s>> },
 }
+impl<'s> Display for DslError<'s> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
+        use DslError::*;
+        match self {
+            ScanUnexpectedChar{ expected, got, .. } => write!(f, "Expected character '{}', got {}", expected, if let Some(got) = got { format!("'{}'", got) } else { "EOF".into() }),
+            ScanUnexpectedTag{ got, .. }            => write!(f, "Unexpected token '{}'", got.unwrap_or("EOF")),
+            ScanUnknownError{ kind, .. }            => write!(f, "Parser returned unknown error '{:?}'", kind),
+
+            ParseError{ err }        => write!(f, "Syntax error: {}", err),
+            ParseLeftoverError{ .. } => write!(f, "Syntax error: Cannot parse remainder of source"),
+        }
+    }
+}
+impl<'s> Error for DslError<'s> {}
 impl<'s> PrettyError for DslError<'s> {
     fn ranges(&self) -> ((String, Option<TextRange>), Vec<(String, TextRange)>) {
         use DslError::*;
         match self {
-            ScanError{ .. }                => ((self.to_string(), None), vec![]),
-            ScanLeftoverError{ remainder } => ((self.to_string(), Some(TextRange::from(remainder))), vec![]),
-
             ParseError{ .. }                => ((self.to_string(), None), vec![]),
             ParseLeftoverError{ remainder } => (
                 (
@@ -341,31 +400,6 @@ impl<'s> PrettyError for DslError<'s> {
                 ),
                 vec![]
             ),
-        }
-    }
-}
-impl<'s> Display for DslError<'s> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
-        use DslError::*;
-        match self {
-            ScanError{ err }        => write!(f, "Syntax error: {}", err),
-            ScanLeftoverError{ .. } => write!(f, "Syntax error: Cannot parse remainder of source"),
-
-            ParseError{ err }        => write!(f, "Syntax error: {}", err),
-            ParseLeftoverError{ .. } => write!(f, "Syntax error: Cannot parse remainder of source"),
-        }
-    }
-}
-impl<'s> Error for DslError<'s> {}
-
-impl<'t, 's> From<nom::Err<VerboseError<ParseInput<'t, 's>>>> for DslError<'s> {
-    #[inline]
-    fn from(value: nom::Err<VerboseError<ParseInput<'t, 's>>>) -> Self {
-        // We match errors but first get ownership of all input token lists
-        match value {
-            nom::Err::Error(VerboseError { errors : errs })   => Self::ParseError{ err: nom::Err::Error(VerboseError{ errors: errs.into_iter().map(|(i, kind)| (i.to_vec(), kind)).collect() }) },
-            nom::Err::Failure(VerboseError { errors : errs }) => Self::ParseError{ err: nom::Err::Failure(VerboseError{ errors: errs.into_iter().map(|(i, kind)| (i.to_vec(), kind)).collect() }) },
-            nom::Err::Incomplete(needed)                      => Self::ParseError{ err: nom::Err::Incomplete(needed) },
         }
     }
 }
