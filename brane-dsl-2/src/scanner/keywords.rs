@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 17:10:24
 //  Last edited:
-//    08 Feb 2023, 11:30:10
+//    10 Feb 2023, 11:49:17
 //  Auto updated?
 //    Yes
 // 
@@ -58,7 +58,7 @@ pub(crate) fn parse<'s, E: Error<'s>>(input: Input<'s>) -> IResult<Input<'s>, To
         comb::map(seq::terminated(bc::tag("if"),       comb::peek(separator)), Token::If),
         comb::map(seq::terminated(bc::tag("else"),     comb::peek(separator)), Token::Else),
         comb::map(seq::terminated(bc::tag("for"),      comb::peek(separator)), Token::For),
-        comb::map(seq::terminated(bc::tag("in"),       comb::peek(separator)), Token::In),
+        comb::map(seq::terminated(bc::tag("from"),     comb::peek(separator)), Token::From),
         comb::map(seq::terminated(bc::tag("to"),       comb::peek(separator)), Token::To),
         comb::map(seq::terminated(bc::tag("step"),     comb::peek(separator)), Token::Step),
         comb::map(seq::terminated(bc::tag("while"),    comb::peek(separator)), Token::While),

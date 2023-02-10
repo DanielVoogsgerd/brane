@@ -4,7 +4,7 @@
 //  Created:
 //    07 Feb 2023, 10:10:18
 //  Last edited:
-//    10 Feb 2023, 08:37:56
+//    10 Feb 2023, 11:56:04
 //  Auto updated?
 //    Yes
 // 
@@ -17,7 +17,8 @@ use std::fmt::{Display, Formatter, Result as FResult};
 
 use console::{style, Style};
 use enum_debug::EnumDebug;
-use nom::error::{ErrorKind, VerboseError, VerboseErrorKind};
+use log::debug;
+use nom::error::{ContextError, ErrorKind, FromExternalError, ParseError as NomParseError, VerboseError, VerboseErrorKind};
 use unicode_segmentation::UnicodeSegmentation as _;
 
 use crate::notes::{NomNote, PrettyNote};
@@ -448,24 +449,24 @@ impl<'f, 's> ErrorTrace<'f, 's> {
     /// # Arguments
     /// - `file`: The name or other description of the input source.
     /// - `source`: A reference to the physical source we (attempted to) parsed.
-    /// - `err`: The `nom::error::VerboseError` that contains the trace we want to copy.
+    /// - `err`: The `nom::error::NomError` that contains the trace we want to copy.
     /// 
     /// # Returns
     /// A new `ErrorTrace` instance.
-    pub fn from_nom_parse<'t>(file: &'f str, source: &'s str, err: VerboseError<ParseInput<'t, 's>>) -> Self {
+    pub fn from_nom_parse<'t>(file: &'f str, source: &'s str, err: NomError<'s, ParseInput<'t, 's>>) -> Self {
         // Iterate over the trace in the verbose error
         let mut trace: Vec<TraceElem> = Vec::with_capacity(err.errors.len());
         for (matched, kind) in err.errors {
             // Match on the found kind
             match kind {
                 // Something about expecting a character but seeing something else
-                VerboseErrorKind::Char(_) => {
+                NomErrorKind::Char(_) => {
                     // This should NEVER happen, since we're dealing with tokens
                     unreachable!();
                 },
 
                 // Some nom combinator failed in such a way we need to report to the user
-                VerboseErrorKind::Nom(kind) => {
+                NomErrorKind::Nom(kind) => {
                     // Derive a range covering the entire matched range
                     let range: Option<TextRange> = match (matched.first(), matched.last()) {
                         (Some(start), Some(end)) => Some(TextRange::new(start.start_of(), end.end_of())),
@@ -473,26 +474,45 @@ impl<'f, 's> ErrorTrace<'f, 's> {
                     };
 
                     // Match to find a kind we know what to do with
-                    let err: DslError = match kind {
+                    match kind {
                         ErrorKind::Tag => {
                             // We simply match the matched match based on if we have anything or not (EOF, in that case).
                             let token: Option<&Token> = matched.first();
-                            DslError::ParseUnexpectedTag {
+                            trace.push(TraceElem::Error(Box::new(DslError::ParseUnexpectedTag {
                                 got   : token.map(|t| *t),
                                 range : token.map(|t| t.range()),
-                            }
+                            })));
+                        },
+                        ErrorKind::Alt => {
+                            // We replace anything we have with an "unexpected" error
+                            debug!("Was actually an AST error");
+                            let token: Option<&Token> = matched.first();
+                            trace = vec![ TraceElem::Error(Box::new(DslError::ParseUnexpectedTag {
+                                got   : token.map(|t| *t),
+                                range : token.map(|t| t.range()),
+                            })) ];
+                        },
+
+                        // It's our own error
+                        ErrorKind::MapRes => {
+                            // Extract the error
+                            // ...?
+
+                            // Return an error there
+                            let token: Option<&Token> = matched.first();
+                            trace.push(TraceElem::Error(Box::new(DslError::ParseUnexpectedTag {
+                                got   : token.map(|t| *t),
+                                range : token.map(|t| t.range()),
+                            })));
                         },
 
                         // Otherwise, mark as unknown error
-                        kind => DslError::ParseUnknownError{ kind, range },
-                    };
-
-                    // Don't forget to add it to the list
-                    trace.push(TraceElem::Error(Box::new(err)));
+                        kind => trace.push(TraceElem::Error(Box::new(DslError::ParseUnknownError{ kind, range }))),
+                    }
                 },
 
                 // It's some context, we which can interpret as a note
-                VerboseErrorKind::Context(context) => {
+                NomErrorKind::Context(context) => {
                     // Derive a range covering the entire matched range
                     let range: Option<TextRange> = match (matched.first(), matched.last()) {
                         (Some(start), Some(end)) => Some(TextRange::new(start.start_of(), end.end_of())),
@@ -504,6 +524,18 @@ impl<'f, 's> ErrorTrace<'f, 's> {
                         context,
                         range,
                     })));
+                },
+
+                // An external error occurred
+                NomErrorKind::External(kind, err) => {
+                    // We push the normal error first
+                    trace.push(TraceElem::Error(Box::new(DslError::ParseExternalError {
+                        err,
+                        range : matched.first().map(|t| t.range()),
+                    })));
+
+                    // Then push a nomerror that is only a kind
+                    trace.extend(Self::from_nom_parse(file, source, NomError{ errors: vec![ (matched, NomErrorKind::Nom(kind)) ] }).trace);
                 },
             }
         }
@@ -524,11 +556,11 @@ impl<'f, 's> ErrorTrace<'f, 's> {
     /// # Arguments
     /// - `file`: The name or other description of the input source.
     /// - `source`: A reference to the physical source we (attempted to) parsed.
-    /// - `err`: The `nom::Err<nom::error::VerboseError>` that contains the trace we want to copy.
+    /// - `err`: The `nom::Err<nom::error::NomError>` that contains the trace we want to copy.
     /// 
     /// # Returns
     /// A new `ErrorTrace` instance.
-    pub fn from_nom_err_parse<'t>(file: &'f str, source: &'s str, err: nom::Err<VerboseError<ParseInput<'t, 's>>>) -> Self {
+    pub fn from_nom_err_parse<'t>(file: &'f str, source: &'s str, err: nom::Err<NomError<'s, ParseInput<'t, 's>>>) -> Self {
         // Match the outer err, then go to `Self::from_nom_parse()` to do the actual work
         match err {
             nom::Err::Error(err)    |
@@ -545,6 +577,60 @@ impl<'f, 's> ErrorTrace<'f, 's> {
     /// A new ErrorTraceFormatter that implements Display.
     #[inline]
     pub fn display<'t>(&'t self) -> ErrorTraceFormatter<'t, 'f, 's> { ErrorTraceFormatter{ trace: &self.trace, file: self.file, source: self.source } }
+}
+
+
+
+/// A replacement for a `nom::error::VerboseError` that does store external errors.
+#[derive(Debug)]
+pub struct NomError<'s, I> {
+    /// The list of errors that occurred.
+    pub(crate) errors : Vec<(I, NomErrorKind<'s>)>,
+}
+impl<'s, I> NomParseError<I> for NomError<'s, I> {
+    fn from_error_kind(input: I, kind: ErrorKind) -> Self {
+        Self {
+            errors: vec![(input, NomErrorKind::Nom(kind))],
+        }
+    }
+
+    fn append(input: I, kind: ErrorKind, mut other: Self) -> Self {
+        other.errors.push((input, NomErrorKind::Nom(kind)));
+        other
+    }
+
+    fn from_char(input: I, c: char) -> Self {
+        Self {
+            errors: vec![(input, NomErrorKind::Char(c))],
+        }
+    }
+}
+impl<'s, I> ContextError<I> for NomError<'s, I> {
+    fn add_context(input: I, ctx: &'static str, mut other: Self) -> Self {
+        other.errors.push((input, NomErrorKind::Context(ctx)));
+        other
+    }
+}
+impl<'s, I> FromExternalError<I, ParseError<'s>> for NomError<'s, I> {
+    /// Create a new error from an input position and an external error
+    fn from_external_error(input: I, kind: ErrorKind, err: ParseError<'s>) -> Self {
+        Self {
+            errors : vec![ (input, NomErrorKind::External(kind, err)) ],
+        }
+    }
+}
+
+/// Specifies the variants of the NomError.
+#[derive(Debug, EnumDebug)]
+pub enum NomErrorKind<'s> {
+    /// Static string added by the `context` function
+    Context(&'static str),
+    /// Indicates which character was expected by the `char` function
+    Char(char),
+    /// Error kind given by various nom parsers
+    Nom(ErrorKind),
+    /// An external error matching some error kind.
+    External(ErrorKind, ParseError<'s>),
 }
 
 
@@ -567,6 +653,8 @@ pub enum DslError<'s> {
 
     /// Expected a certain (string of) tokens which we did not find.
     ParseUnexpectedTag{ got: Option<Token<'s>>, range: Option<TextRange> },
+    /// There was some non-nom error that failed.
+    ParseExternalError{ err: ParseError<'s>, range: Option<TextRange> },
     /// Some unhandled parser error happened.
     ParseUnknownError{ kind: ErrorKind, range: Option<TextRange> },
     /// Not all input was able to be parsed.
@@ -585,6 +673,7 @@ impl<'s> Display for DslError<'s> {
             ScanIncompleteError{ .. }               => write!(f, "Syntax error: Unexpected end-of-file (did you close all brackets, added all semicolons?)"),
 
             ParseUnexpectedTag{ got, .. } => write!(f, "Syntax error: Unexpected {}", if let Some(got) = got { got.variant().to_string() } else { "EOF".into() }),
+            ParseExternalError{ err, .. } => write!(f, "Syntax error: {}", err),
             ParseUnknownError{ kind, .. } => write!(f, "Syntax error: Parser returned unknown error '{:?}'", kind),
             ParseLeftoverError{ .. }      => write!(f, "Syntax error: Failed to parse input"),
             ParseIncompleteError{ .. }    => write!(f, "Syntax error: Unexpected end-of-file (did you close all brackets, added all semicolons?)"),
@@ -608,6 +697,7 @@ impl<'s> PrettyError for DslError<'s> {
                 (Some(start), Some(end)) => Some(TextRange::new(start.start_of(), end.end_of())),
                 _                        => None,
             },
+            ParseExternalError{ range, .. }   |
             ParseIncompleteError{ range, .. } => *range,
         }
     }
@@ -615,3 +705,37 @@ impl<'s> PrettyError for DslError<'s> {
     #[inline]
     fn notes(&self) -> Vec<Box<dyn PrettyNote>> { vec![] }
 }
+
+
+
+/// Defines any additiona parser errors that may occur during parsing.
+#[derive(Debug)]
+pub enum ParseError<'s> {
+    /// Failed to parse a boolean from the given string.
+    BoolParseError{ raw: &'s str, err: std::str::ParseBoolError },
+    /// Failed to parse an integer from the given string.
+    IntParseError{ raw: &'s str, err: std::num::ParseIntError },
+    /// Failed to parse a real from the given string.
+    RealParseError{ raw: &'s str, err: std::num::ParseFloatError },
+
+    /// The merge strategy was unknown.
+    /// 
+    /// Note: we don't take by reference to avoid the situation that is extending a slice to cover two slices
+    UnknownMergeStrategy{ raw: String },
+    /// No merge strategy given.
+    NoMergeStrategy,
+}
+impl<'s> Display for ParseError<'s> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
+        use ParseError::*;
+        match self {
+            BoolParseError{ raw, err } => write!(f, "Cannot parse '{}' as a boolean: {}", raw, err),
+            IntParseError{ raw, err }  => write!(f, "Cannot parse '{}' as an integer: {}", raw, err),
+            RealParseError{ raw, err } => write!(f, "Cannot parse '{}' as a real: {}", raw, err),
+
+            UnknownMergeStrategy{ raw } => write!(f, "Unknown merge strategy '{}'", raw),
+            NoMergeStrategy             => write!(f, "Specify a merge strategy, or omit the brackets"),
+        }
+    }
+}
+impl<'s> Error for ParseError<'s> {}

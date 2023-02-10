@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 15:34:18
 //  Last edited:
-//    10 Feb 2023, 09:01:21
+//    10 Feb 2023, 11:30:52
 //  Auto updated?
 //    Yes
 // 
@@ -245,8 +245,8 @@ impl UnaryOperatorKind {
         // Also see `BinaryOperator::binding_power()` and `ExpressionPostfix::binding_power()`.
         use UnaryOperatorKind::*;
         match self {
-            Not => BindingPower{ left: None, right: Some(12) },
-            Neg => BindingPower{ left: None, right: Some(12) },
+            Not => BindingPower{ left: None, right: Some(16) },
+            Neg => BindingPower{ left: None, right: Some(16) },
         }
     }
 }
@@ -303,6 +303,9 @@ pub enum BinaryOperatorKind {
     Gt,
     /// Smaller than or equal to
     Ge,
+
+    /// Assignment
+    Assign,
 }
 impl BinaryOperatorKind {
     /// Returns the binding power for this operator.
@@ -314,21 +317,23 @@ impl BinaryOperatorKind {
         // Also see `UnaryOperator::binding_power()` and `ExpressionPostfix::binding_power()`.
         use BinaryOperatorKind::*;
         match self {
-            Add => BindingPower{ left: Some(7), right: Some(8) },
-            Sub => BindingPower{ left: Some(7), right: Some(8) },
-            Mul => BindingPower{ left: Some(9), right: Some(10) },
-            Div => BindingPower{ left: Some(9), right: Some(10) },
-            Mod => BindingPower{ left: Some(9), right: Some(10) },
+            Add => BindingPower{ left: Some(11), right: Some(12) },
+            Sub => BindingPower{ left: Some(11), right: Some(12) },
+            Mul => BindingPower{ left: Some(13), right: Some(14) },
+            Div => BindingPower{ left: Some(13), right: Some(14) },
+            Mod => BindingPower{ left: Some(13), right: Some(14) },
 
-            Or  => BindingPower{ left: Some(1), right: Some(2) },
-            And => BindingPower{ left: Some(1), right: Some(2) },
+            Or  => BindingPower{ left: Some(3), right: Some(4) },
+            And => BindingPower{ left: Some(5), right: Some(6) },
 
-            Eq => BindingPower{ left: Some(3), right: Some(4) },
-            Ne => BindingPower{ left: Some(3), right: Some(4) },
-            Lt => BindingPower{ left: Some(5), right: Some(6) },
-            Le => BindingPower{ left: Some(5), right: Some(6) },
-            Gt => BindingPower{ left: Some(5), right: Some(6) },
-            Ge => BindingPower{ left: Some(5), right: Some(6) },
+            Eq => BindingPower{ left: Some(7), right: Some(8) },
+            Ne => BindingPower{ left: Some(7), right: Some(8) },
+            Lt => BindingPower{ left: Some(9), right: Some(10) },
+            Le => BindingPower{ left: Some(9), right: Some(10) },
+            Gt => BindingPower{ left: Some(9), right: Some(10) },
+            Ge => BindingPower{ left: Some(9), right: Some(10) },
+
+            Assign => BindingPower{ left: Some(2), right: Some(1) },
         }
     }
 }
@@ -379,10 +384,10 @@ impl ExpressionPostfixKind {
         use ExpressionPostfixKind::*;
         match self {
             BinaryOperator(op) => op.binding_power(),
-            Cast               => BindingPower{ left: Some(11), right: None },
-            ArrayIndex         => BindingPower{ left: Some(13), right: None },
-            Call               => BindingPower{ left: Some(13), right: None },
-            Proj               => BindingPower{ left: Some(13), right: None },
+            Cast               => BindingPower{ left: Some(15), right: None },
+            ArrayIndex         => BindingPower{ left: Some(17), right: None },
+            Call               => BindingPower{ left: Some(17), right: None },
+            Proj               => BindingPower{ left: Some(17), right: None },
         }
     }
 }
@@ -443,8 +448,6 @@ pub enum LiteralKind {
         value : String,
     },
 
-
-
-    /// Defines a void literal.
-    Void {},
+    /// Defines a null literal.
+    Null,
 }

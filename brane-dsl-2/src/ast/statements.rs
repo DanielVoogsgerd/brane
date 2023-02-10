@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 15:33:27
 //  Last edited:
-//    10 Feb 2023, 09:03:55
+//    10 Feb 2023, 11:49:34
 //  Auto updated?
 //    Yes
 // 
@@ -74,6 +74,8 @@ pub enum StatementKind {
     // Control flow
     /// A for-loop defines a series of statements that should be executed in succession, but with a predictable amount.
     For {
+        /// The name of the loop identifier.
+        name  : Identifier,
         /// The expression that computes the start value.
         start : Expression,
         /// The expression that computes the stop value.

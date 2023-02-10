@@ -4,7 +4,7 @@
 //  Created:
 //    07 Feb 2023, 19:02:01
 //  Last edited:
-//    10 Feb 2023, 09:05:40
+//    10 Feb 2023, 11:41:04
 //  Auto updated?
 //    Yes
 // 
@@ -16,8 +16,10 @@
 use nom::IResult;
 use nom::{branch, combinator as comb, multi, sequence as seq};
 
+use crate::errors::ParseError;
 use crate::ast::spec::TextRange;
 use crate::ast::auxillary::{Annotation, AnnotationKind, DataType, Identifier, MergeStrategy, MergeStrategyKind};
+use crate::ast::types;
 use crate::ast::expressions::Expression;
 use crate::scanner::Token;
 use crate::parser::{Error, Input};
@@ -36,7 +38,7 @@ use super::expressions;
 /// 
 /// # Errors
 /// This function errors if we failed to parse a definition for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
-pub(crate) fn parse_annots<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Vec<Annotation>, E> {
+pub(crate) fn parse_annots<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Vec<Annotation>, Error<'t, 's>> {
     nom::error::context("an annotation", seq::preceded(
         tag_token!('t, 's, Token::Hashtag),
         comb::cut(seq::delimited(
@@ -60,7 +62,7 @@ pub(crate) fn parse_annots<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IR
 /// 
 /// # Errors
 /// This function errors if we failed to parse a definition for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
-fn annot<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Annotation, E> {
+fn annot<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Annotation, Error<'t, 's>> {
     branch::alt((
         // It's an identifier/expression pair
         comb::map(
@@ -135,7 +137,7 @@ fn annot<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 's
 /// # Errors
 /// This function errors if we failed to parse an identifier for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
 #[inline]
-pub(crate) fn parse_ident<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Identifier, E> {
+pub(crate) fn parse_ident<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Identifier, Error<'t, 's>> {
     comb::map(tag_token!('t, 's, Token::Identifier), |i| Identifier {
         name  : i.span().fragment().to_string(),
         range : Some(i.range()),
@@ -153,11 +155,36 @@ pub(crate) fn parse_ident<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IRe
 /// # Errors
 /// This function errors if we failed to parse a data type for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
 #[inline]
-pub(crate) fn parse_type<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, DataType, E> {
-    comb::map(tag_token!('t, 's, Token::DataType), |i| DataType {
-        data_type : crate::ast::types::DataType::from(*i.span().fragment()),
-        range     : Some(i.range()),
-    })(input)
+pub(crate) fn parse_type<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, DataType, Error<'t, 's>> {
+    nom::error::context("a data type", branch::alt((
+        // The type is infix to the array brackets (`[`, type, `]`)
+        comb::map(
+            seq::pair(
+                tag_token!('t, 's, Token::LeftBracket),
+                comb::cut(seq::pair(
+                    parse_type,
+                    tag_token!('t, 's, Token::RightBracket),
+                )),
+            ),
+            |(lbrack, (data_type, rbrack)): (&Token, (DataType, &Token))| {
+                DataType {
+                    data_type : types::DataType::Array(Box::new(data_type.data_type)),
+                    range     : Some(TextRange::new(lbrack.start_of(), rbrack.end_of())),
+                }
+            },
+        ),
+
+        // Otherwise, it's either a class identifier or an identifier postfixed with `[]`.
+        comb::map(
+            parse_ident,
+            |ident: Identifier| {
+                DataType {
+                    data_type : types::DataType::from(ident.name),
+                    range     : ident.range,
+                }
+            }
+        ),
+    )))(input)
 }
 
 
@@ -172,9 +199,9 @@ pub(crate) fn parse_type<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IRes
 /// /// 
 /// # Errors
 /// This function errors if we failed to parse a data type for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
-pub(crate) fn parse_merge<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, MergeStrategy, E> {
+pub(crate) fn parse_merge<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, MergeStrategy, Error<'t, 's>> {
     // Expect a very weird set of tokens, just to make the identifiers we expect
-    comb::map_parser(
+    comb::map_res(
         seq::pair(
             comb::opt(tag_token!('t, 's, Token::Identifier)),
             comb::opt(branch::alt((
@@ -188,9 +215,9 @@ pub(crate) fn parse_merge<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IRe
                 (Some(text), Some(plus_star)) => {
                     // Match the text
                     if text.fragment() == "first" && plus_star.fragment() == "*" {
-                        Ok(((Some(text), Some(plus_star)), MergeStrategy{ kind: MergeStrategyKind::FirstBlocking, range: Some(TextRange::new(text.start_of(), plus_star.end_of())) }))
+                        Ok(MergeStrategy{ kind: MergeStrategyKind::FirstBlocking, range: Some(TextRange::new(text.start_of(), plus_star.end_of())) })
                     } else {
-                        Err(nom::Err::Error(E::from_error_kind(input, nom::error::ErrorKind::Complete)))
+                        Err(ParseError::UnknownMergeStrategy{ raw: format!("{}{}", text.fragment(), plus_star.fragment()) })
                     }
                 },
 
@@ -204,17 +231,14 @@ pub(crate) fn parse_merge<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IRe
                         "max"     => MergeStrategyKind::Max,
                         "min"     => MergeStrategyKind::Min,
                         "all"     => MergeStrategyKind::All,
-                        _         => { return Err(nom::Err::Error(E::append(input, nom::error::ErrorKind::Alt, E::from_error_kind(input, nom::error::ErrorKind::Tag)))); },
+                        _         => { return Err(ParseError::UnknownMergeStrategy{ raw: text.fragment().into() }); },
                     };
 
                     // Return the strat
-                    Ok((
-                        (Some(text), None),
-                        MergeStrategy {
-                            kind,
-                            range : Some(text.range()),
-                        },
-                    ))
+                    Ok(MergeStrategy {
+                        kind,
+                        range : Some(text.range()),
+                    })
                 },
 
                 (None, Some(plus_star)) => {
@@ -222,21 +246,18 @@ pub(crate) fn parse_merge<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IRe
                     let kind: MergeStrategyKind = match plus_star.fragment() {
                         "+" => MergeStrategyKind::Sum,
                         "*" => MergeStrategyKind::Product,
-                        _   => { return Err(nom::Err::Error(E::append(input, nom::error::ErrorKind::Alt, E::from_error_kind(input, nom::error::ErrorKind::Tag)))); },
+                        _   => { return Err(ParseError::UnknownMergeStrategy{ raw: plus_star.fragment().into() }); },
                     };
 
                     // Return the strat
-                    Ok((
-                        (None, Some(plus_star)),
-                        MergeStrategy {
-                            kind,
-                            range : Some(plus_star.range()),
-                        },
-                    ))
+                    Ok(MergeStrategy {
+                        kind,
+                        range : Some(plus_star.range()),
+                    })
                 },
 
                 // We do expect at least any of them
-                (None, None) => Err(nom::Err::Error(E::from_error_kind(input, nom::error::ErrorKind::Alt))),
+                (None, None) => Err(ParseError::NoMergeStrategy),
             }
         },
     )(input)

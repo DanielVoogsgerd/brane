@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 16:56:44
 //  Last edited:
-//    10 Feb 2023, 08:53:34
+//    10 Feb 2023, 10:56:17
 //  Auto updated?
 //    Yes
 // 
@@ -156,8 +156,8 @@ fn null<'s, E: Error<'s>>(input: Input<'s>) -> IResult<Input<'s>, Token, E> {
 pub(crate) fn parse<'s, E: Error<'s>>(input: Input<'s>) -> IResult<Input<'s>, Token, E> {
     branch::alt((
         boolean,
-        integer,
         real,
+        integer,
         string,
         null,
     ))(input)

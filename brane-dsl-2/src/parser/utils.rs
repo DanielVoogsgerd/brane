@@ -4,7 +4,7 @@
 //  Created:
 //    07 Feb 2023, 13:09:48
 //  Last edited:
-//    09 Feb 2023, 14:17:18
+//    10 Feb 2023, 11:42:49
 //  Auto updated?
 //    Yes
 // 
@@ -24,16 +24,18 @@
 macro_rules! tag_token {
     ($t:lifetime, $s:lifetime, Token::$token:ident) => {
         // Create the closure that does the work
-        |input: crate::parser::Input<$t, $s>| -> nom::IResult<crate::parser::Input<$t, $s>, &$t crate::scanner::Token<$s>, E> {
+        |input: crate::parser::Input<$t, $s>| -> nom::IResult<crate::parser::Input<$t, $s>, &$t crate::scanner::Token<$s>, Error<'t, 's>> {
+            use nom::error::ParseError as _;
+
             // Make sure there is a token to match
-            if input.is_empty() { return Err(nom::Err::Error(E::from_error_kind(input, nom::error::ErrorKind::Tag))) }
+            if input.is_empty() { return Err(nom::Err::Error(Error::from_error_kind(input, nom::error::ErrorKind::Tag))) }
 
             // See if the head matches
             if matches!(input[0], crate::scanner::Token::$token(_)) {
                 // Return it
                 Ok((&input[1..], &input[0]))
             } else {
-                Err(nom::Err::Error(E::from_error_kind(input, nom::error::ErrorKind::Tag)))
+                Err(nom::Err::Error(Error::from_error_kind(input, nom::error::ErrorKind::Tag)))
             }
         }
     };

@@ -35,7 +35,7 @@ use super::{auxillary, expressions};
 /// 
 /// # Errors
 /// This function errors if we failed to parse an instance expression for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
-fn prop_expr<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, PropertyExpr, E> {
+fn prop_expr<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, PropertyExpr, Error<'t, 's>> {
     comb::map(
         nom::error::context("a property/field expression", seq::pair(
             auxillary::parse_ident,
@@ -76,7 +76,7 @@ fn prop_expr<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t
 /// 
 /// # Errors
 /// This function errors if we failed to parse an instance expression for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
-pub(crate) fn parse<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Expression, E> {
+pub(crate) fn parse<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Expression, Error<'t, 's>> {
     comb::map(
         nom::error::context("an instance expression", seq::pair(
             tag_token!('t, 's, Token::New),

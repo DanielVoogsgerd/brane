@@ -1,12 +1,18 @@
 // Test a for-loop
-for (let i := 0; i < 10; i := i + 1) {
+for (i in 0 to 10) {
     print(i);
     println(") It's dancing time!");
 }
 
+// With step
+for (i in 0 to 10 step 2) {
+    print(i);
+    println(") It's DOUBLE dancing time!");
+}
+
 
 // Let's do a harder case where we declare a variable every loop
-for (let i := 0; i < 10; i := i + 1) {
+for (i in 0 to 10) {
     let a := 42;
     println(a + i);
 }

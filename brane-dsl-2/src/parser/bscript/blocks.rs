@@ -36,7 +36,7 @@ use super::statements;
 /// 
 /// # Errors
 /// This function errors if we failed to parse a block for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
-pub(crate) fn parse<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Block, E> {
+pub(crate) fn parse<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Block, Error<'t, 's>> {
     // A block is separated by curly brackets
     comb::map(
         nom::error::context("a block", seq::pair(

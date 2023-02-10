@@ -33,7 +33,7 @@ println(array);
 
 // 4. Mixed
 class AnotherClass {
-    field: SomeClass[];
+    field: [SomeClass];
 }
 
 let another := new AnotherClass{ field := [ new SomeClass{ field := 1 }, new SomeClass{ field := 2 } ] };

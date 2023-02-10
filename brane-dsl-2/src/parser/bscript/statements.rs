@@ -4,7 +4,7 @@
 //  Created:
 //    08 Feb 2023, 10:19:08
 //  Last edited:
-//    10 Feb 2023, 09:05:00
+//    10 Feb 2023, 11:49:40
 //  Auto updated?
 //    Yes
 // 
@@ -36,7 +36,7 @@ use super::{auxillary, blocks, expressions, literals};
 /// 
 /// # Errors
 /// This function errors if we failed to parse a definition for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
-fn arg_def<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, ArgDef, E> {
+fn arg_def<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, ArgDef, Error<'t, 's>> {
     comb::map(
         nom::error::context("an argument definition", seq::pair(
             auxillary::parse_ident,
@@ -72,7 +72,7 @@ fn arg_def<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 
 /// 
 /// # Errors
 /// This function errors if we failed to parse a definition for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
-fn member_def<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, ClassMemberDef, E> {
+fn member_def<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, ClassMemberDef, Error<'t, 's>> {
     nom::error::context("class member definition", branch::alt((
         // A field/property
         comb::map(
@@ -115,11 +115,7 @@ fn member_def<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'
 /// 
 /// # Returns
 /// A new closure that parses the import statement á lá nom.
-fn import<'t, 's, 'a, E>(annots: &'a [Annotation]) -> impl 'a + FnMut(Input<'t, 's>) -> IResult<Input<'t, 's>, Statement, E>
-where
-    's: 't,
-    E: Error<'t, 's>,
-{
+fn import<'t, 's: 't, 'a>(annots: &'a [Annotation]) -> impl 'a + FnMut(Input<'t, 's>) -> IResult<Input<'t, 's>, Statement, Error<'t, 's>> {
     |input| {
         comb::map(
             nom::error::context("import statement", seq::tuple((
@@ -169,10 +165,7 @@ where
 /// 
 /// # Errors
 /// This function errors if we failed to parse a definition for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
-fn func_def<'t, 's, E>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, FunctionDef, E>
-where
-    E: Error<'t, 's>,
-{
+fn func_def<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, FunctionDef, Error<'t, 's>> {
     comb::map(
         nom::error::context("a function definition", seq::pair(
             tag_token!('t, 's, Token::Func),
@@ -213,11 +206,7 @@ where
 /// 
 /// # Returns
 /// A new closure that parses the import statement á lá nom.
-fn class_def<'t, 's, 'a, E>(annots: &'a [Annotation]) -> impl 'a + FnMut(Input<'t, 's>) -> IResult<Input<'t, 's>, Statement, E>
-where
-    's: 't,
-    E: Error<'t, 's>,
-{
+fn class_def<'t, 's: 't, 'a>(annots: &'a [Annotation]) -> impl 'a + FnMut(Input<'t, 's>) -> IResult<Input<'t, 's>, Statement, Error<'t, 's>> {
     |input| {
         comb::map(
             nom::error::context("a class definition", seq::pair(
@@ -254,11 +243,7 @@ where
 /// 
 /// # Returns
 /// A new closure that parses the import statement á lá nom.
-fn var_def<'t, 's, 'a, E>(annots: &'a [Annotation]) -> impl 'a + FnMut(Input<'t, 's>) -> IResult<Input<'t, 's>, Statement, E>
-where
-    's: 't,
-    E: Error<'t, 's>,
-{
+fn var_def<'t, 's: 't, 'a>(annots: &'a [Annotation]) -> impl 'a + FnMut(Input<'t, 's>) -> IResult<Input<'t, 's>, Statement, Error<'t, 's>> {
     |input| {
         comb::map(
             nom::error::context("a variable definition/let assign-statement", seq::pair(
@@ -301,11 +286,7 @@ where
 /// 
 /// # Returns
 /// A new closure that parses the import statement á lá nom.
-fn for_loop<'t, 's, 'a, E>(annots: &'a [Annotation]) -> impl 'a + FnMut(Input<'t, 's>) -> IResult<Input<'t, 's>, Statement, E>
-where
-    's: 't,
-    E: Error<'t, 's>,
-{
+fn for_loop<'t, 's: 't, 'a>(annots: &'a [Annotation]) -> impl 'a + FnMut(Input<'t, 's>) -> IResult<Input<'t, 's>, Statement, Error<'t, 's>> {
     |input| {
         comb::map(
             nom::error::context("a for-loop", seq::pair(
@@ -314,9 +295,13 @@ where
                     seq::pair(
                         seq::delimited(
                             tag_token!('t, 's, Token::LeftParen),
-                            seq::pair(
-                                seq::separated_pair(
+                            seq::tuple((
+                                auxillary::parse_ident,
+                                seq::preceded(
+                                    tag_token!('t, 's, Token::From),
                                     expressions::parse,
+                                ),
+                                seq::preceded(
                                     tag_token!('t, 's, Token::To),
                                     expressions::parse,
                                 ),
@@ -324,17 +309,18 @@ where
                                     tag_token!('t, 's, Token::Step),
                                     literals::parse,
                                 )),
-                            ),
+                            )),
                             tag_token!('t, 's, Token::RightParen),
                         ),
                         blocks::parse,
                     ),
                 ),
             )),
-            |(for_kw, (((start, stop), step), body)): (&Token, (((Expression, Expression), Option<Literal>), Block))| {
+            |(for_kw, ((name, start, stop, step), body)): (&Token, ((Identifier, Expression, Expression, Option<Literal>), Block))| {
                 let range: Option<TextRange> = body.range.map(|r| TextRange::new(for_kw.start_of(), r.end));
                 Statement {
                     kind : StatementKind::For {
+                        name,
                         start,
                         stop,
                         step,
@@ -356,11 +342,7 @@ where
 /// 
 /// # Returns
 /// A new closure that parses the import statement á lá nom.
-fn while_loop<'t, 's, 'a, E>(annots: &'a [Annotation]) -> impl 'a + FnMut(Input<'t, 's>) -> IResult<Input<'t, 's>, Statement, E>
-where
-    's: 't,
-    E: Error<'t, 's>,
-{
+fn while_loop<'t, 's: 't, 'a>(annots: &'a [Annotation]) -> impl 'a + FnMut(Input<'t, 's>) -> IResult<Input<'t, 's>, Statement, Error<'t, 's>> {
     |input| {
         comb::map(
             nom::error::context("a while-loop", seq::pair(
@@ -398,11 +380,7 @@ where
 /// 
 /// # Returns
 /// A new closure that parses the import statement á lá nom.
-fn return_stmt<'t, 's, 'a, E>(annots: &'a [Annotation]) -> impl 'a + FnMut(Input<'t, 's>) -> IResult<Input<'t, 's>, Statement, E>
-where
-    's: 't,
-    E: Error<'t, 's>,
-{
+fn return_stmt<'t, 's: 't, 'a>(annots: &'a [Annotation]) -> impl 'a + FnMut(Input<'t, 's>) -> IResult<Input<'t, 's>, Statement, Error<'t, 's>> {
     |input| {
         comb::map(
             nom::error::context("a return statement", seq::pair(
@@ -429,42 +407,6 @@ where
 
 
 
-/// Creates a parser for assign-statements that incorporates the given annotations.
-/// 
-/// # Arguments
-/// - `annots`: The list of parsed annotations to add to the this statement.
-/// 
-/// # Returns
-/// A new closure that parses the import statement á lá nom.
-fn assign_stmt<'t, 's, 'a, E>(annots: &'a [Annotation]) -> impl 'a + FnMut(Input<'t, 's>) -> IResult<Input<'t, 's>, Statement, E>
-where
-    's: 't,
-    E: Error<'t, 's>,
-{
-    |input| {
-        comb::map(
-            nom::error::context("an assign-statement", seq::pair(
-                seq::pair(
-                    seq::terminated(
-                        expressions::parse,
-                        tag_token!('t, 's, Token::Assign),
-                    ),
-                    comb::cut(expressions::parse),
-                ),
-                tag_token!('t, 's, Token::Semicolon),
-            )),
-            |((name, value), semicolon): ((Expression, Expression), &Token)| {
-                let range: Option<TextRange> = name.range.map(|r| TextRange::new(r.start, semicolon.end_of()));
-                Statement {
-                    kind   : StatementKind::Assign { name, value },
-                    annots : annots.into(),
-                    range,
-                }
-            }
-        )(input)
-    }
-}
-
 /// Creates a parser for bare expressions that incorporates the given annotations.
 /// 
 /// # Arguments
@@ -472,11 +414,7 @@ where
 /// 
 /// # Returns
 /// A new closure that parses the import statement á lá nom.
-fn expr<'t, 's, 'a, E>(annots: &'a [Annotation]) -> impl 'a + FnMut(Input<'t, 's>) -> IResult<Input<'t, 's>, Statement, E>
-where
-    's: 't,
-    E: Error<'t, 's>,
-{
+fn expr<'t, 's: 't, 'a>(annots: &'a [Annotation]) -> impl 'a + FnMut(Input<'t, 's>) -> IResult<Input<'t, 's>, Statement, Error<'t, 's>> {
     |input| {
         comb::map(
             nom::error::context("an expression-statement", seq::pair(
@@ -517,7 +455,7 @@ where
 /// 
 /// # Errors
 /// This function errors if we failed to parse a statement for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
-pub(crate) fn parse<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Statement, E> {
+pub(crate) fn parse<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Statement, Error<'t, 's>> {
     // Parse the annotations matching this statement
     let (rem, annots): (Input, Vec<Annotation>) = comb::map(multi::many0(auxillary::parse_annots), |a| a.into_iter().flatten().collect())(input)?;
 
@@ -538,7 +476,6 @@ pub(crate) fn parse<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<I
         return_stmt(&annots),
 
         // Miscellaneous
-        assign_stmt(&annots),
         expr(&annots),
     ))(rem)?;
 

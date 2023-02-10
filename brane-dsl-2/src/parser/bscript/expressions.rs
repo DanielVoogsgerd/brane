@@ -4,7 +4,7 @@
 //  Created:
 //    07 Feb 2023, 12:54:14
 //  Last edited:
-//    10 Feb 2023, 09:01:44
+//    10 Feb 2023, 12:51:39
 //  Auto updated?
 //    Yes
 // 
@@ -35,15 +35,17 @@ use super::{auxillary, blocks, instances, literals, operators};
 /// 
 /// # Returns
 /// A function that implements the pratt parser using the given minimum binding power.
-fn pratt_parser<'t, 's: 't, E: Error<'t, 's>>(min_bp: BindingPower) -> impl FnMut(Input<'t, 's>) -> IResult<Input<'t, 's>, Expression, E> {
-    move |input: Input<'t, 's>| -> IResult<Input<'t, 's>, Expression, E> {
-        // First step: parse the main expression, either directory or through an operator if there is one
+fn pratt_parser<'t, 's: 't>(min_bp: BindingPower) -> impl FnMut(Input<'t, 's>) -> IResult<Input<'t, 's>, Expression, Error<'t, 's>> {
+    nom::error::context("an expression", move |input: Input<'t, 's>| -> IResult<Input<'t, 's>, Expression, Error<'t, 's>> {
+        println!("Parsing {}", input.first().map(|t| t.variant().to_string()).unwrap_or("EOF".into()));
+
+        // First step: parse the main expression, either directly or through an operator if there is one
         let (mut rem, mut lhs): (Input, Expression) = match operators::unary(input) {
             Ok((rem, operator)) => {
                 // It's an operator; now parse again using that operator's binding power.
                 let bp: BindingPower = operator.binding_power();
                 if bp.right.is_none() { panic!("Encountered a prefix unary operator that does not bind to the right"); }
-                let (r, expr): (Input, Expression) = nom::error::context("an unary operator", comb::cut(pratt_parser(bp)))(rem)?;
+                let (r, expr): (Input, Expression) = nom::error::context("a unary operator", comb::cut(pratt_parser(bp)))(rem)?;
 
                 // Find the range if we can
                 let range: Option<TextRange> = match (operator.range, expr.range) {
@@ -51,7 +53,7 @@ fn pratt_parser<'t, 's: 't, E: Error<'t, 's>>(min_bp: BindingPower) -> impl FnMu
                     _                                                          => None,
                 };
 
-                // Return them wrapped in the operator expression
+                // Return it wrapped in the operator expression
                 (
                     r,
                     Expression {
@@ -64,7 +66,7 @@ fn pratt_parser<'t, 's: 't, E: Error<'t, 's>>(min_bp: BindingPower) -> impl FnMu
                 )
             },
 
-            // We did not find an iterator, so instead retry as an simple expression
+            // We did not find an operator, so instead retry as a simple expression
             Err(nom::Err::Error(_)) => atomic(input)?,
 
             // Otherwise, fatal error
@@ -72,7 +74,11 @@ fn pratt_parser<'t, 's: 't, E: Error<'t, 's>>(min_bp: BindingPower) -> impl FnMu
         };
 
         // Loop to find any operators
+        let mut i: usize = 0;
         loop {
+            println!("Test {}", i);
+            i += 1;
+
             // Attempt to read one
             match operators::postfix(rem) {
                 Ok((r, operator)) => {
@@ -92,8 +98,10 @@ fn pratt_parser<'t, 's: 't, E: Error<'t, 's>>(min_bp: BindingPower) -> impl FnMu
                     match operator.kind {
                         BinaryOperator(op) => {
                             // We already yielded to operators with stronger binding power; so now recurse to found our RHS
-                            let (r, rhs): (Input, Expression) = nom::error::context("a binary operator", comb::cut(pratt_parser(bp)))(r)?;
+                            println!("Parsing RHS for {}", op.kind.variant());
+                            let (r, rhs): (Input, Expression) = nom::error::context("the righthand-side of a binary operator", comb::cut(pratt_parser(bp)))(r)?;
                             rem = r;
+                            println!("Finished RHS for {}", op.kind.variant());
 
                             // Find the range for this expression
                             let range: Option<TextRange> = match (lhs.range, rhs.range) {
@@ -114,7 +122,7 @@ fn pratt_parser<'t, 's: 't, E: Error<'t, 's>>(min_bp: BindingPower) -> impl FnMu
 
                         Cast => {
                             // Parse te 'as', then the type
-                            let (r, data_type): (Input, DataType) = nom::error::context("a typecast", comb::cut(auxillary::parse_type))(r)?;
+                            let (r, data_type): (Input, DataType) = nom::error::context("the type in a typecast", comb::cut(auxillary::parse_type))(r)?;
                             rem = r;
 
                             // Find the range for this expression
@@ -135,7 +143,7 @@ fn pratt_parser<'t, 's: 't, E: Error<'t, 's>>(min_bp: BindingPower) -> impl FnMu
 
                         ArrayIndex => {
                             // Parse the index expression
-                            let (r, (index, rbrack)): (Input, (Expression, &Token)) = nom::error::context("an array index", comb::cut(
+                            let (r, (index, rbrack)): (Input, (Expression, &Token)) = nom::error::context("the index in an array index", comb::cut(
                                 seq::pair(
                                     pratt_parser(BindingPower::none()),
                                     tag_token!('t, 's, Token::RightBracket),
@@ -158,7 +166,7 @@ fn pratt_parser<'t, 's: 't, E: Error<'t, 's>>(min_bp: BindingPower) -> impl FnMu
 
                         Call => {
                             // Parse the arguments in the call
-                            let (r, (args, rparen)): (Input, (Vec<Expression>, &Token)) = nom::error::context("a function call", comb::cut(
+                            let (r, (args, rparen)): (Input, (Vec<Expression>, &Token)) = nom::error::context("the arguments in a function call", comb::cut(
                                 seq::pair(
                                     multi::separated_list0(tag_token!('t, 's, Token::Comma), pratt_parser(BindingPower::none())),
                                     tag_token!('t, 's, Token::RightParen),
@@ -181,7 +189,7 @@ fn pratt_parser<'t, 's: 't, E: Error<'t, 's>>(min_bp: BindingPower) -> impl FnMu
 
                         Proj => {
                             // Parse the identifier that determines the field
-                            let (r, ident): (Input, Identifier) = nom::error::context("a projection", comb::cut(auxillary::parse_ident))(r)?;
+                            let (r, ident): (Input, Identifier) = nom::error::context("the field of a projection", comb::cut(auxillary::parse_ident))(r)?;
                             rem = r;
 
                             // Find the range for this expression
@@ -191,6 +199,7 @@ fn pratt_parser<'t, 's: 't, E: Error<'t, 's>>(min_bp: BindingPower) -> impl FnMu
                             };
 
                             // Return the expression
+                            println!("Adding projection");
                             lhs = Expression {
                                 kind : ExpressionKind::Proj {
                                     to_proj : Box::new(lhs),
@@ -212,7 +221,7 @@ fn pratt_parser<'t, 's: 't, E: Error<'t, 's>>(min_bp: BindingPower) -> impl FnMu
                 }
             }
         }
-    }
+    })
 }
 
 /// Parses an "atomic" expression, which is an expression that does not bind like an operator.
@@ -225,7 +234,7 @@ fn pratt_parser<'t, 's: 't, E: Error<'t, 's>>(min_bp: BindingPower) -> impl FnMu
 /// 
 /// # Errors
 ///  This function errors if we failed to parse an expression for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
-fn atomic<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Expression, E> {
+fn atomic<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Expression, Error<'t, 's>> {
     branch::alt((
         // Literals
         comb::map(literals::parse, |l| {
@@ -267,7 +276,7 @@ fn atomic<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, '
 /// 
 /// # Errors
 /// This function errors if we failed to parse a reference for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
-fn reference<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Expression, E> {
+fn reference<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Expression, Error<'t, 's>> {
     comb::map(
         nom::error::context("a reference", seq::pair(
             auxillary::parse_ident,
@@ -318,7 +327,7 @@ fn reference<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t
 /// 
 /// # Errors
 /// This function errors if we failed to parse an paranethesis-wrapped expression for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
-fn paren<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Expression, E> {
+fn paren<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Expression, Error<'t, 's>> {
     comb::map(
         nom::error::context("a parenthesis expression", seq::pair(
             tag_token!('t, 's, Token::LeftParen),
@@ -346,7 +355,7 @@ fn paren<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 's
 /// 
 /// # Errors
 /// This function errors if we failed to parse an array for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
-fn array<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Expression, E> {
+fn array<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Expression, Error<'t, 's>> {
     comb::map(
         nom::error::context("an array expression", seq::pair(
             tag_token!('t, 's, Token::LeftBracket),
@@ -376,7 +385,7 @@ fn array<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 's
 /// 
 /// # Errors
 /// This function errors if we failed to parse an if-statement for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
-fn if_stmt<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Expression, E> {
+fn if_stmt<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Expression, Error<'t, 's>> {
     comb::map(
         nom::error::context("an if statement", seq::pair(
             tag_token!('t, 's, Token::If),
@@ -419,7 +428,7 @@ fn if_stmt<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 
 /// 
 /// # Errors
 /// This function errors if we failed to parse an parallel-statement for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
-fn parallel_stmt<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Expression, E> {
+fn parallel_stmt<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Expression, Error<'t, 's>> {
     comb::map(
         nom::error::context("parallel statement", seq::tuple((
             tag_token!('t, 's, Token::Parallel),
@@ -466,6 +475,6 @@ fn parallel_stmt<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Inpu
 /// # Errors
 ///  This function errors if we failed to parse an expression for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
 #[inline]
-pub(crate) fn parse<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Expression, E> {
+pub(crate) fn parse<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Expression, Error<'t, 's>> {
     pratt_parser(BindingPower::none())(input)
 }

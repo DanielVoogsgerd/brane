@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 16:43:54
 //  Last edited:
-//    10 Feb 2023, 09:08:41
+//    10 Feb 2023, 09:54:19
 //  Auto updated?
 //    Yes
 // 
@@ -82,7 +82,6 @@ fn scan_token<'s, E: Error<'s>>(input: Input<'s>) -> IResult<Input<'s>, Option<T
         comb::map(punctuation::parse, Some),
         comb::map(keywords::parse, Some),
         comb::map(literals::parse, Some),
-        comb::map(auxillary::parse_array_type, Some),
         comb::map(auxillary::parse_ident, Some),
         comb::value(None, whitespace),
     ))(input)

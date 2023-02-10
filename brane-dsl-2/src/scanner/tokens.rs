@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 16:33:22
 //  Last edited:
-//    10 Feb 2023, 09:08:57
+//    10 Feb 2023, 11:49:06
 //  Auto updated?
 //    Yes
 // 
@@ -26,8 +26,6 @@ pub enum Token<'s> {
     // Identifiers
     /// Represents an identifier.
     Identifier(Input<'s>),
-    /// Represents an array data type.
-    ArrayType(Input<'s>),
 
     // Literals
     /// A boolean value
@@ -54,8 +52,8 @@ pub enum Token<'s> {
     Else(Input<'s>),
     /// 'for'
     For(Input<'s>),
-    /// 'in'
-    In(Input<'s>),
+    /// 'from'
+    From(Input<'s>),
     /// 'to'
     To(Input<'s>),
     /// 'step'
@@ -151,7 +149,7 @@ impl<'s> Token<'s> {
             If(span)       |
             Else(span)     |
             For(span)      |
-            In(span)       |
+            From(span)     |
             To(span)       |
             Step(span)     |
             While(span)    |
@@ -194,7 +192,7 @@ impl<'s> Token<'s> {
 
     /// Returns the internal text in the token.
     #[inline]
-    pub fn fragment(&self) -> &str {
+    pub fn fragment(&self) -> &'s str {
         *self.span().fragment()
     }
 

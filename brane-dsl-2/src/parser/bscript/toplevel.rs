@@ -4,7 +4,7 @@
 //  Created:
 //    08 Feb 2023, 13:20:01
 //  Last edited:
-//    08 Feb 2023, 13:27:09
+//    10 Feb 2023, 11:41:10
 //  Auto updated?
 //    Yes
 // 
@@ -33,7 +33,7 @@ use super::statements;
 /// 
 /// # Errors
 /// This function errors if we failed to parse a program for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
-pub(crate) fn parse<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Program, E> {
+pub(crate) fn parse<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Program, Error<'t, 's>> {
     comb::map(
         multi::many0(statements::parse),
         |stmts: Vec<Statement>| {

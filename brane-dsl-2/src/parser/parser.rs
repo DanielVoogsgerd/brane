@@ -4,7 +4,7 @@
 //  Created:
 //    08 Feb 2023, 13:28:35
 //  Last edited:
-//    09 Feb 2023, 14:17:49
+//    10 Feb 2023, 11:15:46
 //  Auto updated?
 //    Yes
 // 
@@ -13,8 +13,8 @@
 // 
 
 use nom::IResult;
-use nom::error::VerboseError;
 
+use crate::errors::NomError;
 use crate::ast::Program;
 use super::Input;
 use super::bscript::toplevel;
@@ -73,8 +73,8 @@ mod tests {
 /// A tuple with any input we failed to tokenize, and the toplevel Program node.
 /// 
 /// # Errors
-/// This function errors with a VerboseError if we failed to parse something.
+/// This function errors with a NomError if we failed to parse something.
 #[inline]
-pub fn parse_tokens<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Program, VerboseError<Input<'t, 's>>> {
+pub fn parse_tokens<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Program, NomError<'s, Input<'t, 's>>> {
     toplevel::parse(input)
 }
