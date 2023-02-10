@@ -4,7 +4,7 @@
 //  Created:
 //    07 Feb 2023, 19:02:01
 //  Last edited:
-//    10 Feb 2023, 11:41:04
+//    10 Feb 2023, 19:03:46
 //  Auto updated?
 //    Yes
 // 
@@ -14,7 +14,7 @@
 // 
 
 use nom::IResult;
-use nom::{branch, combinator as comb, multi, sequence as seq};
+use nom::{branch, combinator as comb, sequence as seq};
 
 use crate::errors::ParseError;
 use crate::ast::spec::TextRange;
@@ -23,7 +23,7 @@ use crate::ast::types;
 use crate::ast::expressions::Expression;
 use crate::scanner::Token;
 use crate::parser::{Error, Input};
-use crate::parser::utils::tag_token;
+use crate::parser::utils::{self, tag_token};
 use super::expressions;
 
 
@@ -43,7 +43,7 @@ pub(crate) fn parse_annots<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's
         tag_token!('t, 's, Token::Hashtag),
         comb::cut(seq::delimited(
             tag_token!('t, 's, Token::LeftBracket),
-            multi::separated_list0(
+            utils::separated_list0(
                 tag_token!('t, 's, Token::Comma),
                 annot,
             ),
@@ -93,7 +93,7 @@ fn annot<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Annotation, Err
                 seq::pair(
                     seq::preceded(
                         tag_token!('t, 's, Token::LeftParen),
-                        multi::separated_list1(
+                        utils::separated_list1(
                             tag_token!('t, 's, Token::Comma),
                             annot,
                         ),

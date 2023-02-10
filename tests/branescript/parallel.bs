@@ -25,6 +25,7 @@ println(sum);
 
 parallel [{
     println("Running somewhere randomly!");
-}, on "specific_location" {
+}, {
+    #[on = "specific_location"]
     println("Running somewhere specific but in parallel!");
 }];

@@ -4,7 +4,7 @@
 //  Created:
 //    07 Feb 2023, 12:54:14
 //  Last edited:
-//    10 Feb 2023, 12:51:39
+//    10 Feb 2023, 19:22:25
 //  Auto updated?
 //    Yes
 // 
@@ -16,14 +16,14 @@
 
 use enum_debug::EnumDebug;
 use nom::IResult;
-use nom::{branch, combinator as comb, multi, sequence as seq};
+use nom::{branch, combinator as comb, sequence as seq};
 
 use crate::ast::spec::{BindingPower, TextRange};
 use crate::ast::auxillary::{DataType, Identifier, MergeStrategy};
 use crate::ast::expressions::{Block, ExpressionPostfixKind, Expression, ExpressionKind};
 use crate::scanner::Token;
 use crate::parser::{Error, Input};
-use crate::parser::utils::tag_token;
+use crate::parser::utils::{self, tag_token};
 use super::{auxillary, blocks, instances, literals, operators};
 
 
@@ -37,8 +37,6 @@ use super::{auxillary, blocks, instances, literals, operators};
 /// A function that implements the pratt parser using the given minimum binding power.
 fn pratt_parser<'t, 's: 't>(min_bp: BindingPower) -> impl FnMut(Input<'t, 's>) -> IResult<Input<'t, 's>, Expression, Error<'t, 's>> {
     nom::error::context("an expression", move |input: Input<'t, 's>| -> IResult<Input<'t, 's>, Expression, Error<'t, 's>> {
-        println!("Parsing {}", input.first().map(|t| t.variant().to_string()).unwrap_or("EOF".into()));
-
         // First step: parse the main expression, either directly or through an operator if there is one
         let (mut rem, mut lhs): (Input, Expression) = match operators::unary(input) {
             Ok((rem, operator)) => {
@@ -74,11 +72,7 @@ fn pratt_parser<'t, 's: 't>(min_bp: BindingPower) -> impl FnMut(Input<'t, 's>) -
         };
 
         // Loop to find any operators
-        let mut i: usize = 0;
         loop {
-            println!("Test {}", i);
-            i += 1;
-
             // Attempt to read one
             match operators::postfix(rem) {
                 Ok((r, operator)) => {
@@ -86,7 +80,7 @@ fn pratt_parser<'t, 's: 't>(min_bp: BindingPower) -> impl FnMut(Input<'t, 's>) -
                     let bp: BindingPower = operator.binding_power();
                     match (min_bp.right, bp.left) {
                         // The other operator might bind stronger
-                        (Some(right), Some(left)) => { if left < right { return Ok((r, lhs)); } },
+                        (Some(right), Some(left)) => { if left < right { return Ok((rem, lhs)); } },
                         // It's very weird if we don't bind to the left since what are we doing here then
                         (_, None) => { panic!("Expression postfix {} does not bind to the left, but here we are", operator.kind.variant()); },
                         // The rest means that the guy does not bind but we do, so that's easy
@@ -98,10 +92,8 @@ fn pratt_parser<'t, 's: 't>(min_bp: BindingPower) -> impl FnMut(Input<'t, 's>) -
                     match operator.kind {
                         BinaryOperator(op) => {
                             // We already yielded to operators with stronger binding power; so now recurse to found our RHS
-                            println!("Parsing RHS for {}", op.kind.variant());
                             let (r, rhs): (Input, Expression) = nom::error::context("the righthand-side of a binary operator", comb::cut(pratt_parser(bp)))(r)?;
                             rem = r;
-                            println!("Finished RHS for {}", op.kind.variant());
 
                             // Find the range for this expression
                             let range: Option<TextRange> = match (lhs.range, rhs.range) {
@@ -168,7 +160,7 @@ fn pratt_parser<'t, 's: 't>(min_bp: BindingPower) -> impl FnMut(Input<'t, 's>) -
                             // Parse the arguments in the call
                             let (r, (args, rparen)): (Input, (Vec<Expression>, &Token)) = nom::error::context("the arguments in a function call", comb::cut(
                                 seq::pair(
-                                    multi::separated_list0(tag_token!('t, 's, Token::Comma), pratt_parser(BindingPower::none())),
+                                    utils::separated_list0(tag_token!('t, 's, Token::Comma), pratt_parser(BindingPower::none())),
                                     tag_token!('t, 's, Token::RightParen),
                                 )
                             ))(r)?;
@@ -199,7 +191,6 @@ fn pratt_parser<'t, 's: 't>(min_bp: BindingPower) -> impl FnMut(Input<'t, 's>) -
                             };
 
                             // Return the expression
-                            println!("Adding projection");
                             lhs = Expression {
                                 kind : ExpressionKind::Proj {
                                     to_proj : Box::new(lhs),
@@ -360,7 +351,7 @@ fn array<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Expression, Err
         nom::error::context("an array expression", seq::pair(
             tag_token!('t, 's, Token::LeftBracket),
             comb::cut(seq::pair(
-                multi::separated_list1(tag_token!('t, 's, Token::Comma), pratt_parser(BindingPower::none())),
+                utils::separated_list1(tag_token!('t, 's, Token::Comma), pratt_parser(BindingPower::none())),
                 tag_token!('t, 's, Token::RightBracket),
             )),
         )),
@@ -435,14 +426,14 @@ fn parallel_stmt<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Express
             comb::cut(seq::tuple((
                 comb::opt(nom::error::context("merge strategy", seq::preceded(
                     tag_token!('t, 's, Token::LeftBracket),
-                    comb::cut(seq::terminated(
+                    seq::terminated(
                         auxillary::parse_merge,
-                        tag_token!('t, 's, Token::RightBracket),
-                    ))),
+                        comb::cut(tag_token!('t, 's, Token::RightBracket)),
+                    )),
                 )),
                 seq::preceded(
                     tag_token!('t, 's, Token::LeftBracket),
-                    multi::separated_list0(tag_token!('t, 's, Token::Comma), blocks::parse),
+                    utils::separated_list0(tag_token!('t, 's, Token::Comma), blocks::parse),
                 ),
                 tag_token!('t, 's, Token::RightBracket),
             )),

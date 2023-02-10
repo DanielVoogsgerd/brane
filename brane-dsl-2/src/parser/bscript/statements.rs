@@ -4,7 +4,7 @@
 //  Created:
 //    08 Feb 2023, 10:19:08
 //  Last edited:
-//    10 Feb 2023, 11:49:40
+//    10 Feb 2023, 19:04:58
 //  Auto updated?
 //    Yes
 // 
@@ -21,7 +21,7 @@ use crate::ast::expressions::{Block, Expression, Literal};
 use crate::ast::statements::{ArgDef, ClassMemberDef, FunctionDef, PropertyDef, Statement, StatementKind};
 use crate::scanner::Token;
 use crate::parser::{Error, Input};
-use crate::parser::utils::tag_token;
+use crate::parser::utils::{self, tag_token};
 use super::{auxillary, blocks, expressions, literals};
 
 
@@ -174,7 +174,7 @@ fn func_def<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, FunctionDef,
                     auxillary::parse_ident,
                     seq::delimited(
                         tag_token!('t, 's, Token::LeftParen),
-                        multi::separated_list0(tag_token!('t, 's, Token::Comma), arg_def),
+                        utils::separated_list0(tag_token!('t, 's, Token::Comma), arg_def),
                         tag_token!('t, 's, Token::RightParen),
                     ),
                     comb::opt(seq::preceded(

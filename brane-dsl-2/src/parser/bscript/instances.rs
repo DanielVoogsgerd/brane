@@ -4,7 +4,7 @@
 //  Created:
 //    07 Feb 2023, 19:07:08
 //  Last edited:
-//    10 Feb 2023, 08:45:44
+//    10 Feb 2023, 19:04:43
 //  Auto updated?
 //    Yes
 // 
@@ -13,14 +13,14 @@
 // 
 
 use nom::IResult;
-use nom::{combinator as comb, multi, sequence as seq};
+use nom::{combinator as comb, sequence as seq};
 
 use crate::ast::spec::TextRange;
 use crate::ast::auxillary::Identifier;
 use crate::ast::expressions::{Expression, ExpressionKind, PropertyExpr};
 use crate::scanner::Token;
 use crate::parser::{Error, Input};
-use crate::parser::utils::tag_token;
+use crate::parser::utils::{self, tag_token};
 use super::{auxillary, expressions};
 
 
@@ -85,7 +85,7 @@ pub(crate) fn parse<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Expr
                     auxillary::parse_ident,
                     tag_token!('t, 's, Token::LeftBrace),
                 ),
-                multi::separated_list0(tag_token!('t, 's, Token::Comma), prop_expr),
+                utils::separated_list0(tag_token!('t, 's, Token::Comma), prop_expr),
                 tag_token!('t, 's, Token::RightBrace),
             ))),
         )),
