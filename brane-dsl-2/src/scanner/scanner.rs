@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 16:43:54
 //  Last edited:
-//    09 Feb 2023, 13:30:53
+//    10 Feb 2023, 09:08:41
 //  Auto updated?
 //    Yes
 // 
@@ -18,7 +18,7 @@ use nom::error::VerboseError;
 
 use super::{Error, Input};
 use super::tokens::Token;
-use super::{comments, identifiers, literals, keywords, operators, punctuation};
+use super::{comments, auxillary, literals, keywords, operators, punctuation};
 
 
 /***** TESTS *****/
@@ -82,7 +82,8 @@ fn scan_token<'s, E: Error<'s>>(input: Input<'s>) -> IResult<Input<'s>, Option<T
         comb::map(punctuation::parse, Some),
         comb::map(keywords::parse, Some),
         comb::map(literals::parse, Some),
-        comb::map(identifiers::parse, Some),
+        comb::map(auxillary::parse_array_type, Some),
+        comb::map(auxillary::parse_ident, Some),
         comb::value(None, whitespace),
     ))(input)
 }

@@ -4,7 +4,7 @@
 //  Created:
 //    07 Feb 2023, 19:02:01
 //  Last edited:
-//    09 Feb 2023, 18:43:41
+//    10 Feb 2023, 09:05:40
 //  Auto updated?
 //    Yes
 // 
@@ -37,17 +37,17 @@ use super::expressions;
 /// # Errors
 /// This function errors if we failed to parse a definition for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
 pub(crate) fn parse_annots<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Vec<Annotation>, E> {
-    seq::preceded(
+    nom::error::context("an annotation", seq::preceded(
         tag_token!('t, 's, Token::Hashtag),
-        nom::error::context("an annotation", comb::cut(seq::delimited(
+        comb::cut(seq::delimited(
             tag_token!('t, 's, Token::LeftBracket),
             multi::separated_list0(
                 tag_token!('t, 's, Token::Comma),
                 annot,
             ),
             tag_token!('t, 's, Token::RightBracket),
-        ))),
-    )(input)
+        )),
+    ))(input)
 }
 
 /// Parses an annotation from the head of the given token stream.
@@ -154,7 +154,7 @@ pub(crate) fn parse_ident<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IRe
 /// This function errors if we failed to parse a data type for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
 #[inline]
 pub(crate) fn parse_type<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, DataType, E> {
-    comb::map(tag_token!('t, 's, Token::Identifier), |i| DataType {
+    comb::map(tag_token!('t, 's, Token::DataType), |i| DataType {
         data_type : crate::ast::types::DataType::from(*i.span().fragment()),
         range     : Some(i.range()),
     })(input)

@@ -4,7 +4,7 @@
 //  Created:
 //    08 Feb 2023, 10:17:31
 //  Last edited:
-//    08 Feb 2023, 10:29:16
+//    10 Feb 2023, 08:42:19
 //  Auto updated?
 //    Yes
 // 
@@ -39,13 +39,13 @@ use super::statements;
 pub(crate) fn parse<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Block, E> {
     // A block is separated by curly brackets
     comb::map(
-        seq::pair(
+        nom::error::context("a block", seq::pair(
             tag_token!('t, 's, Token::LeftBrace),
-            nom::error::context("block", comb::cut(seq::pair(
+            comb::cut(seq::pair(
                 multi::many0(statements::parse),
                 tag_token!('t, 's, Token::RightBrace),
-            ))),
-        ),
+            )),
+        )),
         |(lbrace, (stmts, rbrace)): (&Token, (Vec<Statement>, &Token))| {
             Block {
                 stmts,

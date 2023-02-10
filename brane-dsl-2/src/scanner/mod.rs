@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 16:30:02
 //  Last edited:
-//    07 Feb 2023, 12:56:28
+//    10 Feb 2023, 09:07:27
 //  Auto updated?
 //    Yes
 // 
@@ -20,7 +20,7 @@ mod punctuation;
 mod operators;
 mod keywords;
 mod literals;
-mod identifiers;
+mod auxillary;
 mod scanner;
 
 // Bring some part of it into the this module's scope

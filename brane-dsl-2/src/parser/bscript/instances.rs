@@ -4,7 +4,7 @@
 //  Created:
 //    07 Feb 2023, 19:07:08
 //  Last edited:
-//    08 Feb 2023, 10:44:22
+//    10 Feb 2023, 08:45:44
 //  Auto updated?
 //    Yes
 // 
@@ -37,13 +37,13 @@ use super::{auxillary, expressions};
 /// This function errors if we failed to parse an instance expression for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
 fn prop_expr<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, PropertyExpr, E> {
     comb::map(
-        seq::pair(
+        nom::error::context("a property/field expression", seq::pair(
             auxillary::parse_ident,
-            nom::error::context("property expression", comb::cut(seq::preceded(
+            comb::cut(seq::preceded(
                 tag_token!('t, 's, Token::Assign),
                 expressions::parse,
-            ))),
-        ),
+            )),
+        )),
         |(name, value): (Identifier, Expression)| {
             // Compute the range
             let range: Option<TextRange> = match (name.range, value.range) {
@@ -78,17 +78,17 @@ fn prop_expr<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t
 /// This function errors if we failed to parse an instance expression for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
 pub(crate) fn parse<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Expression, E> {
     comb::map(
-        seq::pair(
+        nom::error::context("an instance expression", seq::pair(
             tag_token!('t, 's, Token::New),
-            nom::error::context("instance expression", comb::cut(seq::tuple((
+            comb::cut(seq::tuple((
                 seq::terminated(
                     auxillary::parse_ident,
                     tag_token!('t, 's, Token::LeftBrace),
                 ),
                 multi::separated_list0(tag_token!('t, 's, Token::Comma), prop_expr),
                 tag_token!('t, 's, Token::RightBrace),
-            )))),
-        ),
+            ))),
+        )),
         |(new, (ident, props, rbrace)): (&Token, (Identifier, Vec<PropertyExpr>, &Token))| {
             Expression {
                 kind : ExpressionKind::Instance {

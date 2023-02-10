@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 15:34:18
 //  Last edited:
-//    08 Feb 2023, 11:25:10
+//    10 Feb 2023, 09:01:21
 //  Auto updated?
 //    Yes
 // 
@@ -74,6 +74,13 @@ pub enum ExpressionKind {
         to_index : Box<Expression>,
         /// The expression that computes the index.
         index    : Box<Expression>,
+    },
+    /// Projects some object, typically a Class.
+    Proj {
+        /// The expression of the thing to project on.
+        to_proj : Box<Expression>,
+        /// The identifier that is the field to project.
+        field   : Identifier,
     },
     /// Calls some object, typically a(n external) Function.
     Call {
@@ -357,6 +364,9 @@ pub enum ExpressionPostfixKind {
     ArrayIndex,
     /// A function call postfixes an expression.
     Call,
+    // My comments are the best
+    /// And (wait for it) a projection operator _also_ postfixes an expression.
+    Proj,
 }
 impl ExpressionPostfixKind {
     /// Returns the binding power for this postfix operator.
@@ -372,6 +382,7 @@ impl ExpressionPostfixKind {
             Cast               => BindingPower{ left: Some(11), right: None },
             ArrayIndex         => BindingPower{ left: Some(13), right: None },
             Call               => BindingPower{ left: Some(13), right: None },
+            Proj               => BindingPower{ left: Some(13), right: None },
         }
     }
 }

@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 15:33:27
 //  Last edited:
-//    09 Feb 2023, 15:09:58
+//    10 Feb 2023, 09:03:55
 //  Auto updated?
 //    Yes
 // 
@@ -104,8 +104,8 @@ pub enum StatementKind {
     // Miscellaneous
     /// An assigned assigns a value to some variable.
     Assign {
-        /// The name of the variable to assign a value to.
-        name  : Identifier,
+        /// The expression that will give us the variable to assign something to.
+        name  : Expression,
         /// The value to assign to it.
         value : Expression,
     },

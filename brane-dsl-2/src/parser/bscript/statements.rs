@@ -4,7 +4,7 @@
 //  Created:
 //    08 Feb 2023, 10:19:08
 //  Last edited:
-//    09 Feb 2023, 18:44:38
+//    10 Feb 2023, 09:05:00
 //  Auto updated?
 //    Yes
 // 
@@ -17,7 +17,7 @@ use nom::{branch, combinator as comb, multi, sequence as seq};
 
 use crate::ast::spec::TextRange;
 use crate::ast::auxillary::{Annotation, DataType, Identifier};
-use crate::ast::expressions::{Block, Expression, ExpressionKind, Literal};
+use crate::ast::expressions::{Block, Expression, Literal};
 use crate::ast::statements::{ArgDef, ClassMemberDef, FunctionDef, PropertyDef, Statement, StatementKind};
 use crate::scanner::Token;
 use crate::parser::{Error, Input};
@@ -38,13 +38,13 @@ use super::{auxillary, blocks, expressions, literals};
 /// This function errors if we failed to parse a definition for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
 fn arg_def<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, ArgDef, E> {
     comb::map(
-        seq::pair(
+        nom::error::context("an argument definition", seq::pair(
             auxillary::parse_ident,
             comb::opt(seq::preceded(
                 tag_token!('t, 's, Token::Colon),
-                nom::error::context("argument definition", comb::cut(auxillary::parse_type)),
+                comb::cut(auxillary::parse_type),
             )),
-        ),
+        )),
         |(name, data_type): (Identifier, Option<DataType>)| {
             // Compute the range
             let range: Option<TextRange> = match (name.range, &data_type) {
@@ -73,19 +73,19 @@ fn arg_def<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 
 /// # Errors
 /// This function errors if we failed to parse a definition for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
 fn member_def<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, ClassMemberDef, E> {
-    branch::alt((
+    nom::error::context("class member definition", branch::alt((
         // A field/property
         comb::map(
-            seq::pair(
+            nom::error::context("a property/field definition", seq::pair(
                 auxillary::parse_ident,
-                nom::error::context("property definition", comb::cut(seq::pair(
+                comb::cut(seq::pair(
                     seq::preceded(
                         tag_token!('t, 's, Token::Colon),
                         auxillary::parse_type,
                     ),
                     tag_token!('t, 's, Token::Semicolon),
-                ))),
-            ),
+                )),
+            )),
             |(name, (data_type, semicolon)): (Identifier, (DataType, &Token))| {
                 let range: Option<TextRange> = name.range.map(|r| TextRange::new(r.start, semicolon.end_of()));
                 ClassMemberDef::Property(PropertyDef {
@@ -100,7 +100,7 @@ fn member_def<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'
             func_def,
             |def: FunctionDef| ClassMemberDef::Method(def),
         ),
-    ))(input)
+    )))(input)
 }
 
 
@@ -122,9 +122,9 @@ where
 {
     |input| {
         comb::map(
-            seq::tuple((
+            nom::error::context("import statement", seq::tuple((
                 tag_token!('t, 's, Token::Import),
-                nom::error::context("import statement", comb::cut(
+                comb::cut(
                     seq::pair(
                         auxillary::parse_ident,
                         // Parse the optional (major, minor, patch)-triplet
@@ -142,9 +142,9 @@ where
                             tag_token!('t, 's, Token::RightBracket),
                         )),
                     )
-                )),
+                ),
                 tag_token!('t, 's, Token::Semicolon),
-            )),
+            ))),
             |(import, (package, version), semicolon): (&Token, (Identifier, Option<(Literal, (Literal, Literal))>), &Token)| {
                 Statement {
                     kind : StatementKind::Import {
@@ -174,9 +174,9 @@ where
     E: Error<'t, 's>,
 {
     comb::map(
-        seq::pair(
+        nom::error::context("a function definition", seq::pair(
             tag_token!('t, 's, Token::Func),
-            nom::error::context("function definition", comb::cut(
+            comb::cut(
                 seq::tuple((
                     auxillary::parse_ident,
                     seq::delimited(
@@ -190,8 +190,8 @@ where
                     )),
                     blocks::parse,
                 )),
-            )),
-        ),
+            ),
+        )),
         |(func, (name, args, ret_type, body)): (&Token, (Identifier, Vec<ArgDef>, Option<DataType>, Block))| {
             let range: Option<TextRange> = body.range.map(|r| TextRange::new(func.start_of(), r.end));
             FunctionDef {
@@ -220,9 +220,9 @@ where
 {
     |input| {
         comb::map(
-            seq::pair(
+            nom::error::context("a class definition", seq::pair(
                 tag_token!('t, 's, Token::Class),
-                nom::error::context("class definition", comb::cut(
+                comb::cut(
                     seq::tuple((
                         auxillary::parse_ident,
                         seq::preceded(
@@ -231,8 +231,8 @@ where
                         ),
                         tag_token!('t, 's, Token::RightBrace),
                     ))
-                )),
-            ),
+                ),
+            )),
             |(class, (name, members, rbrace)): (&Token, (Identifier, Vec<ClassMemberDef>, &Token))| {
                 Statement {
                     kind : StatementKind::ClassDef {
@@ -261,9 +261,9 @@ where
 {
     |input| {
         comb::map(
-            seq::pair(
+            nom::error::context("a variable definition/let assign-statement", seq::pair(
                 tag_token!('t, 's, Token::Let),
-                nom::error::context("variable definition/let assign", comb::cut(
+                comb::cut(
                     seq::tuple((
                         auxillary::parse_ident,
                         comb::opt(seq::preceded(
@@ -276,8 +276,8 @@ where
                         )),
                         tag_token!('t, 's, Token::Semicolon),
                     )),
-                )),
-            ),
+                ),
+            )),
             |(let_kw, (name, data_type, value, semicolon)): (&Token, (Identifier, Option<DataType>, Option<Expression>, &Token))| {
                 Statement {
                     kind : StatementKind::VarDef {
@@ -308,9 +308,9 @@ where
 {
     |input| {
         comb::map(
-            seq::pair(
+            nom::error::context("a for-loop", seq::pair(
                 tag_token!('t, 's, Token::For),
-                nom::error::context("for-loop", comb::cut(
+                comb::cut(
                     seq::pair(
                         seq::delimited(
                             tag_token!('t, 's, Token::LeftParen),
@@ -329,8 +329,8 @@ where
                         ),
                         blocks::parse,
                     ),
-                )),
-            ),
+                ),
+            )),
             |(for_kw, (((start, stop), step), body)): (&Token, (((Expression, Expression), Option<Literal>), Block))| {
                 let range: Option<TextRange> = body.range.map(|r| TextRange::new(for_kw.start_of(), r.end));
                 Statement {
@@ -363,9 +363,9 @@ where
 {
     |input| {
         comb::map(
-            seq::pair(
+            nom::error::context("a while-loop", seq::pair(
                 tag_token!('t, 's, Token::While),
-                nom::error::context("while-loop", comb::cut(
+                comb::cut(
                     seq::pair(
                         seq::delimited(
                             tag_token!('t, 's, Token::LeftParen),
@@ -374,8 +374,8 @@ where
                         ),
                         blocks::parse,
                     ),
-                )),
-            ),
+                ),
+            )),
             |(for_kw, (cond, body)): (&Token, (Expression, Block))| {
                 let range: Option<TextRange> = body.range.map(|r| TextRange::new(for_kw.start_of(), r.end));
                 Statement {
@@ -405,15 +405,15 @@ where
 {
     |input| {
         comb::map(
-            seq::pair(
+            nom::error::context("a return statement", seq::pair(
                 tag_token!('t, 's, Token::Return),
-                nom::error::context("return statement", comb::cut(
+                comb::cut(
                     seq::pair(
                         comb::opt(expressions::parse),
                         tag_token!('t, 's, Token::Semicolon),
                     ),
-                )),
-            ),
+                ),
+            )),
             |(return_kw, (value, semicolon)): (&Token, (Option<Expression>, &Token))| {
                 Statement {
                     kind : StatementKind::Return {
@@ -443,17 +443,17 @@ where
 {
     |input| {
         comb::map(
-            seq::pair(
+            nom::error::context("an assign-statement", seq::pair(
                 seq::pair(
                     seq::terminated(
-                        auxillary::parse_ident,
+                        expressions::parse,
                         tag_token!('t, 's, Token::Assign),
                     ),
-                    nom::error::context("assign statement", comb::cut(expressions::parse)),
+                    comb::cut(expressions::parse),
                 ),
                 tag_token!('t, 's, Token::Semicolon),
-            ),
-            |((name, value), semicolon): ((Identifier, Expression), &Token)| {
+            )),
+            |((name, value), semicolon): ((Expression, Expression), &Token)| {
                 let range: Option<TextRange> = name.range.map(|r| TextRange::new(r.start, semicolon.end_of()));
                 Statement {
                     kind   : StatementKind::Assign { name, value },
@@ -478,33 +478,27 @@ where
     E: Error<'t, 's>,
 {
     |input| {
-        // First, always parse an expression...
-        let (rem, expr): (Input, Expression) = expressions::parse(input)?;
+        comb::map(
+            nom::error::context("an expression-statement", seq::pair(
+                expressions::parse,
+                comb::opt(tag_token!('t, 's, Token::Semicolon)),
+            )),
+            |(expression, semicolon): (Expression, Option<&Token>)| {
+                // Find the range for the statement
+                let range: Option<TextRange> = expression.range.map(|r| TextRange::new(r.start, if let Some(semicolon) = semicolon {
+                    semicolon.end_of()
+                } else {
+                    r.end
+                }));
 
-        // In some cases, do _not_ expect a closing semicolon (toplevel block, if-statement or parallel statement)
-        let (rem, range): (Input, Option<TextRange>) = match &expr.kind {
-            // The exceptions (no semicolon)
-            ExpressionKind::Block(_)       |
-            ExpressionKind::If{ .. }       |
-            ExpressionKind::Parallel{ .. } => (rem, expr.range),
-
-            // The regular ones
-            _ => {
-                // Parse the additional semicolon, then return the remaining tokens and the updated range
-                let (rem, semicolon): (Input, &Token) = nom::error::context("expression statement", comb::cut(tag_token!('t, 's, Token::Semicolon)))(rem)?;
-                (rem, expr.range.map(|r| TextRange::new(r.start, semicolon.end_of())))
-            }
-        };
-
-        // Checks out
-        Ok((
-            rem,
-            Statement {
-                kind   : StatementKind::Expression(expr),
-                annots : annots.into(),
-                range,
+                // Return it
+                Statement {
+                    kind   : StatementKind::Expression(expression),
+                    annots : annots.into(),
+                    range,
+                }
             },
-        ))
+        )(input)
     }
 }
 

@@ -4,7 +4,7 @@
 //  Created:
 //    07 Feb 2023, 12:54:14
 //  Last edited:
-//    08 Feb 2023, 14:02:18
+//    10 Feb 2023, 09:01:44
 //  Auto updated?
 //    Yes
 // 
@@ -43,7 +43,7 @@ fn pratt_parser<'t, 's: 't, E: Error<'t, 's>>(min_bp: BindingPower) -> impl FnMu
                 // It's an operator; now parse again using that operator's binding power.
                 let bp: BindingPower = operator.binding_power();
                 if bp.right.is_none() { panic!("Encountered a prefix unary operator that does not bind to the right"); }
-                let (r, expr): (Input, Expression) = nom::error::context("unary operator", comb::cut(pratt_parser(bp)))(rem)?;
+                let (r, expr): (Input, Expression) = nom::error::context("an unary operator", comb::cut(pratt_parser(bp)))(rem)?;
 
                 // Find the range if we can
                 let range: Option<TextRange> = match (operator.range, expr.range) {
@@ -92,7 +92,7 @@ fn pratt_parser<'t, 's: 't, E: Error<'t, 's>>(min_bp: BindingPower) -> impl FnMu
                     match operator.kind {
                         BinaryOperator(op) => {
                             // We already yielded to operators with stronger binding power; so now recurse to found our RHS
-                            let (r, rhs): (Input, Expression) = nom::error::context("binary operator", comb::cut(pratt_parser(bp)))(r)?;
+                            let (r, rhs): (Input, Expression) = nom::error::context("a binary operator", comb::cut(pratt_parser(bp)))(r)?;
                             rem = r;
 
                             // Find the range for this expression
@@ -114,7 +114,7 @@ fn pratt_parser<'t, 's: 't, E: Error<'t, 's>>(min_bp: BindingPower) -> impl FnMu
 
                         Cast => {
                             // Parse te 'as', then the type
-                            let (r, data_type): (Input, DataType) = nom::error::context("typecast", comb::cut(auxillary::parse_type))(r)?;
+                            let (r, data_type): (Input, DataType) = nom::error::context("a typecast", comb::cut(auxillary::parse_type))(r)?;
                             rem = r;
 
                             // Find the range for this expression
@@ -135,7 +135,7 @@ fn pratt_parser<'t, 's: 't, E: Error<'t, 's>>(min_bp: BindingPower) -> impl FnMu
 
                         ArrayIndex => {
                             // Parse the index expression
-                            let (r, (index, rbrack)): (Input, (Expression, &Token)) = nom::error::context("array index", comb::cut(
+                            let (r, (index, rbrack)): (Input, (Expression, &Token)) = nom::error::context("an array index", comb::cut(
                                 seq::pair(
                                     pratt_parser(BindingPower::none()),
                                     tag_token!('t, 's, Token::RightBracket),
@@ -158,7 +158,7 @@ fn pratt_parser<'t, 's: 't, E: Error<'t, 's>>(min_bp: BindingPower) -> impl FnMu
 
                         Call => {
                             // Parse the arguments in the call
-                            let (r, (args, rparen)): (Input, (Vec<Expression>, &Token)) = nom::error::context("function call", comb::cut(
+                            let (r, (args, rparen)): (Input, (Vec<Expression>, &Token)) = nom::error::context("a function call", comb::cut(
                                 seq::pair(
                                     multi::separated_list0(tag_token!('t, 's, Token::Comma), pratt_parser(BindingPower::none())),
                                     tag_token!('t, 's, Token::RightParen),
@@ -174,6 +174,27 @@ fn pratt_parser<'t, 's: 't, E: Error<'t, 's>>(min_bp: BindingPower) -> impl FnMu
                                 kind : ExpressionKind::Call {
                                     to_call : Box::new(lhs),
                                     args,
+                                },
+                                range,
+                            }
+                        },
+
+                        Proj => {
+                            // Parse the identifier that determines the field
+                            let (r, ident): (Input, Identifier) = nom::error::context("a projection", comb::cut(auxillary::parse_ident))(r)?;
+                            rem = r;
+
+                            // Find the range for this expression
+                            let range: Option<TextRange> = match (lhs.range, ident.range) {
+                                (Some(TextRange{ start, .. }), Some(TextRange{ end, .. })) => Some(TextRange::new(start, end)),
+                                _                                                          => None,
+                            };
+
+                            // Return the expression
+                            lhs = Expression {
+                                kind : ExpressionKind::Proj {
+                                    to_proj : Box::new(lhs),
+                                    field   : ident,
                                 },
                                 range,
                             }
@@ -248,13 +269,13 @@ fn atomic<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, '
 /// This function errors if we failed to parse a reference for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
 fn reference<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Expression, E> {
     comb::map(
-        seq::pair(
+        nom::error::context("a reference", seq::pair(
             auxillary::parse_ident,
             comb::opt(seq::preceded(
                 seq::pair(tag_token!('t, 's, Token::Colon), tag_token!('t, 's, Token::Colon)),
-                nom::error::context("external function reference", comb::cut(auxillary::parse_ident)),
+                comb::cut(auxillary::parse_ident),
             )),
-        ),
+        )),
         |(first, second): (Identifier, Option<Identifier>)| {
             // It's a variable reference if there is only one identifier, else it's an external function reference
             match (first, second) {
@@ -299,13 +320,13 @@ fn reference<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t
 /// This function errors if we failed to parse an paranethesis-wrapped expression for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
 fn paren<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Expression, E> {
     comb::map(
-        seq::pair(
+        nom::error::context("a parenthesis expression", seq::pair(
             tag_token!('t, 's, Token::LeftParen),
-            nom::error::context("parenthesis", comb::cut(seq::pair(
+            comb::cut(seq::pair(
                 pratt_parser(BindingPower::none()),
                 tag_token!('t, 's, Token::RightParen)
-            ))),
-        ),
+            )),
+        )),
         |(lparen, (expr, rparen)): (&Token, (Expression, &Token))| {
             Expression {
                 kind  : expr.kind,
@@ -327,13 +348,13 @@ fn paren<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 's
 /// This function errors if we failed to parse an array for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
 fn array<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Expression, E> {
     comb::map(
-        seq::pair(
-            tag_token!('t, 's, Token::LeftBrace),
-            nom::error::context("array expression", comb::cut(seq::pair(
+        nom::error::context("an array expression", seq::pair(
+            tag_token!('t, 's, Token::LeftBracket),
+            comb::cut(seq::pair(
                 multi::separated_list1(tag_token!('t, 's, Token::Comma), pratt_parser(BindingPower::none())),
-                tag_token!('t, 's, Token::RightBrace)
-            ))),
-        ),
+                tag_token!('t, 's, Token::RightBracket),
+            )),
+        )),
         |(l, (elems, r)): (&Token<'s>, (Vec<Expression>, &Token<'s>))| -> Expression {
             // The range of the array expression is that of the braces
             let range: Option<TextRange> = Some(TextRange::new(l.start_of(), r.end_of()));
@@ -357,17 +378,17 @@ fn array<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 's
 /// This function errors if we failed to parse an if-statement for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
 fn if_stmt<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Expression, E> {
     comb::map(
-        seq::pair(
+        nom::error::context("an if statement", seq::pair(
             tag_token!('t, 's, Token::If),
-            nom::error::context("if statement", comb::cut(seq::tuple((
+            comb::cut(seq::tuple((
                 seq::delimited(tag_token!('t, 's, Token::LeftParen), pratt_parser(BindingPower::none()), tag_token!('t, 's, Token::RightParen)),
                 blocks::parse,
                 comb::opt(seq::preceded(
                     tag_token!('t, 's, Token::Else),
                     blocks::parse,
                 )),
-            )))),
-        ),
+            ))),
+        )),
         |(if_kw, (cond, block, block_else)): (&Token, (Expression, Block, Option<Block>))| {
             // Find the range of the if-statement, where end at either the false block or the true block.
             let range: Option<TextRange> = match &block_else {
@@ -400,23 +421,23 @@ fn if_stmt<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 
 /// This function errors if we failed to parse an parallel-statement for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
 fn parallel_stmt<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Expression, E> {
     comb::map(
-        seq::tuple((
+        nom::error::context("parallel statement", seq::tuple((
             tag_token!('t, 's, Token::Parallel),
-            nom::error::context("parallel statement", comb::cut(seq::tuple((
-                comb::opt(seq::preceded(
+            comb::cut(seq::tuple((
+                comb::opt(nom::error::context("merge strategy", seq::preceded(
                     tag_token!('t, 's, Token::LeftBracket),
-                    nom::error::context("merge strategy", comb::cut(seq::terminated(
+                    comb::cut(seq::terminated(
                         auxillary::parse_merge,
                         tag_token!('t, 's, Token::RightBracket),
-                    )))),
-                ),
+                    ))),
+                )),
                 seq::preceded(
                     tag_token!('t, 's, Token::LeftBracket),
                     multi::separated_list0(tag_token!('t, 's, Token::Comma), blocks::parse),
                 ),
                 tag_token!('t, 's, Token::RightBracket),
-            ))),
-        ))),
+            )),
+        )))),
         |(parallel, (merge, branches, rbrack)): (&Token, (Option<MergeStrategy>, Vec<Block>, &Token))| {
             Expression {
                 kind : ExpressionKind::Parallel {

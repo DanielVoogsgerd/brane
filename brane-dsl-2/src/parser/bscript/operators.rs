@@ -4,7 +4,7 @@
 //  Created:
 //    07 Feb 2023, 13:05:29
 //  Last edited:
-//    08 Feb 2023, 11:31:06
+//    10 Feb 2023, 09:02:53
 //  Auto updated?
 //    Yes
 // 
@@ -92,6 +92,8 @@ pub(crate) fn postfix<'t, 's, E: Error<'t, 's>>(input: Input<'t, 's>) -> IResult
         comb::map(tag_token!('t, 's, Token::LeftBracket), |b| ExpressionPostfix{ kind: ExpressionPostfixKind::ArrayIndex, range: Some(b.range()) }),
         // Function calls (i.e., `(`)
         comb::map(tag_token!('t, 's, Token::LeftParen), |p| ExpressionPostfix{ kind: ExpressionPostfixKind::Call, range: Some(p.range()) }),
+        // Projections (i.e., `.`)
+        comb::map(tag_token!('t, 's, Token::Dot), |d| ExpressionPostfix{ kind: ExpressionPostfixKind::Proj, range: Some(d.range()) }),
     ))(input)
 }
 

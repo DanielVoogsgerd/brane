@@ -4,7 +4,7 @@
 //  Created:
 //    07 Feb 2023, 10:10:18
 //  Last edited:
-//    09 Feb 2023, 18:41:31
+//    10 Feb 2023, 08:37:56
 //  Auto updated?
 //    Yes
 // 
@@ -92,7 +92,7 @@ pub(crate) fn print_range(f: &mut Formatter<'_>, range: TextRange, source: &str,
     // Now print the line up until the correct position
     let red_start : usize = range.start.col0();
     let red_end   : usize = if range.start.line == range.end.line { range.end.col1() } else { line.len() };
-    write!(f, "{} {}", style(format!(" {} |", if range.start.line == range.end.line { format!("{}", range.start.line1()) } else { pad_num(range.start.line1(), num_len(range.end.line1())) })).blue().bright(), &line[0..red_start])?;
+    write!(f, "{} {}", style(format!(" {} |", if range.start.line == range.end.line { format!("{}", range.start.line1()) } else { pad_num(range.start.line1(), num_len(range.start.line1() + 1)) })).blue().bright(), &line[0..red_start])?;
     // Print the red part
     write!(f, "{}", colour.apply_to(&line[red_start..red_end]))?;
     // Print the rest (if any)
@@ -100,7 +100,7 @@ pub(crate) fn print_range(f: &mut Formatter<'_>, range: TextRange, source: &str,
 
     // Print the red area
     writeln!(f, " {} {} {}{}",
-        (0..(if range.start.line == range.end.line { num_len(range.start.line1()) } else { num_len(range.end.line1()) })).map(|_| ' ').collect::<String>(),
+        (0..(if range.start.line == range.end.line { num_len(range.start.line1()) } else { num_len(range.start.line1() + 1) })).map(|_| ' ').collect::<String>(),
         style("|").blue().bright(),
         (0..red_start).map(|_| ' ').collect::<String>(),
         colour.apply_to((red_start..red_end).map(|_| '^').collect::<String>()),
@@ -109,7 +109,7 @@ pub(crate) fn print_range(f: &mut Formatter<'_>, range: TextRange, source: &str,
     // If the range is longer, print dots
     if range.start.line != range.end.line {
         writeln!(f, "{} {}", style(format!(" {} |", range.start.line1() + 1)).blue().bright(), colour.apply_to("..."))?;
-        writeln!(f, "{} {}", style(format!(" {} |", (0..num_len(range.end.line1())).map(|_| ' ').collect::<String>())).blue().bright(), colour.apply_to("^^^"))?;
+        writeln!(f, "{} {}", style(format!(" {} |", (0..num_len(range.start.line1() + 1)).map(|_| ' ').collect::<String>())).blue().bright(), colour.apply_to("^^^"))?;
     }
 
     // Done

@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 16:33:22
 //  Last edited:
-//    09 Feb 2023, 14:59:56
+//    10 Feb 2023, 09:08:57
 //  Auto updated?
 //    Yes
 // 
@@ -26,6 +26,8 @@ pub enum Token<'s> {
     // Identifiers
     /// Represents an identifier.
     Identifier(Input<'s>),
+    /// Represents an array data type.
+    ArrayType(Input<'s>),
 
     // Literals
     /// A boolean value
