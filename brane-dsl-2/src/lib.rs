@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 15:25:18
 //  Last edited:
-//    10 Feb 2023, 19:25:03
+//    11 Feb 2023, 18:13:28
 //  Auto updated?
 //    Yes
 // 
@@ -16,6 +16,7 @@
 
 // Declare modules
 pub mod errors;
+pub mod warnings;
 pub mod notes;
 pub mod ast;
 mod scanner;
@@ -38,9 +39,10 @@ pub use errors::{DslError as Error, ErrorTrace};
 /// 
 /// # Errors
 /// 
-pub fn compile_module<'f, 's>(file: &'f str, source: &'s str) -> Result<(), ErrorTrace<'f, 's>> {
+pub fn compile_module<'f, 's>(file: &'f str, source: &'s str, phase: compiler::CompilerPhase) -> Result<(), ErrorTrace<'f, 's>> {
     use ast::toplevel::Program;
     use scanner::tokens::Token;
+    use compiler::{traversals, CompilerPhase};
 
     // Scan the input text to a string of tokens
     let tokens: Vec<Token> = match scanner::scan_tokens(scanner::Input::new(&source)) {
@@ -59,6 +61,14 @@ pub fn compile_module<'f, 's>(file: &'f str, source: &'s str) -> Result<(), Erro
         },
         Err(err) => { return Err(ErrorTrace::from_nom_err_parse(file, source, err)); }
     };
+
+    // We print and done if we're told to do that phase
+    if phase == CompilerPhase::Print { traversals::print_ast::traverse(&mut std::io::stdout(), &ast).unwrap_or_else(|err| panic!("Failed to write to stderr: {}", err)); return Ok(()); }
+
+    // Else, match the phases to do
+    if phase >= CompilerPhase::Resolve {
+        traversals::resolve::traverse(&mut ast);
+    }
 
     // Done
     Ok(())

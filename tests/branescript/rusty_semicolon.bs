@@ -1,0 +1,17 @@
+// This file we use to showcase some features available since Brane v2.0.0
+// Specifically, we provide some examples for Rust-style semicolons!
+
+
+// First: semicolons become semi-optional, at least for loose expression-statements
+println("Hey, where's the semicolon???")
+println("But it still compiles, wow!")
+
+// The trick is that in this position, semicolons now implement a _discard_ operation. Specifically, this is allowed:
+println("Returns nothing :)")
+// ...because a println returns a void. However, if you uncomment the following:
+// 42 + 42
+// This would cause an error, because the expression now no longer evaluates to a void and its value is not used.
+
+// In summary: for "loose" expressions, semicolons discard the value and turns the expression's evaluated type into a void.
+
+// Now check `rusty_block.bs` to see why this is nice...

@@ -1,0 +1,29 @@
+// This file we use to showcase some features available since Brane v2.0.0
+// Specifically, we provide some examples for Rust-style blocks!
+// If you are new to Rust-style syntax, check `rusty_semicolon.bs` first.
+
+
+// What this update brings is a subtle change: blocks become expressions, and can evaluate to values.
+// Specifically: the block will evaluate to its final statement.
+let fourty_two := {
+    21 + 21
+};
+println(fourty_two);   // Prints '42'!
+
+// This is possible because we can now omit semicolons to have the last statement evaluate to an integer instead of void.
+// Because of this, if-statements and parallel-statements can become expressions as well:
+let true_or_false := if (fourty_two == 42) {
+    "true"
+} else {
+    "false"
+};
+println(true_or_false);   // Prints 'true' if the condition is true, or 'false' otherwise!
+
+// Much more exciting:
+let colours := parallel [{
+    "red"
+}, {
+    "blue"
+}, {
+    "green"
+}];

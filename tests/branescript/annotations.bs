@@ -1,0 +1,38 @@
+// Testing annotations (Brane v2.0.0 onwards)
+
+// Annotations are given before any statement to annotate them with additional information
+// Probably the most-often used one is the replacement of the on-statement:
+#[on = "test"]
+println("Wow, no longer any braces if I don't want to :)");
+
+
+// However, since a block is a statement, the following also works
+#[on = "test"]
+{
+    println("I run on \"test\"!");
+    println("Me too!");
+}
+
+
+// However, other types of annotations are also available. For example:
+#[allow(dead_code)]
+{
+    return;
+    println("This will no longer cause a warning!");
+}
+
+
+// Finally, you can stack them either by using commas in a single annotation notation (`#[]`), or use multiple:
+#[on = "test", allow(dead_code)]
+{
+    return;
+    println("If this would be printed, it would be printed on \"test\"");
+}
+
+// or
+#[on = "test"]
+#[allow(dead_code)]
+{
+    return;
+    println("If this would be printed, it would be printed on \"test\"");
+}

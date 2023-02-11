@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 16:29:23
 //  Last edited:
-//    10 Feb 2023, 19:25:05
+//    11 Feb 2023, 18:09:42
 //  Auto updated?
 //    Yes
 // 
@@ -15,4 +15,9 @@
 // 
 
 // Declare submodules
-mod traversals;
+mod annot_stack;
+pub mod traversals;
+
+
+// Pull some stuff into this module's namespace
+pub use traversals::CompilerPhase;

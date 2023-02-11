@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 15:32:54
 //  Last edited:
-//    08 Feb 2023, 13:30:35
+//    11 Feb 2023, 17:54:46
 //  Auto updated?
 //    Yes
 // 
@@ -16,6 +16,7 @@
 // Declare nested modules
 pub mod spec;
 pub mod types;
+pub mod symbol_tables;
 pub mod auxillary;
 pub mod expressions;
 pub mod statements;
