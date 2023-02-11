@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 16:07:39
 //  Last edited:
-//    07 Feb 2023, 19:29:15
+//    11 Feb 2023, 16:39:31
 //  Auto updated?
 //    Yes
 // 
@@ -13,6 +13,7 @@
 //!   that determine what is convertible to what.
 // 
 
+use std::fmt::{Display, Formatter, Result as FResult};
 use std::str::FromStr;
 
 use enum_debug::EnumDebug;
@@ -25,6 +26,8 @@ pub enum DataType {
     // Special types
     /// No compile-time type is deduced; essentially means "to-be-assessed".
     Any,
+    /// A zero-sized, "none" type.
+    Void,
 
     // Atomic types
     /// A boolean value.
@@ -45,6 +48,36 @@ pub enum DataType {
     Function(Vec<Self>, Box<Self>),
 }
 
+impl DataType {
+    /// Returns whether this DataType is `Any` or not.
+    /// 
+    /// If so, then it means that this DataType is effectively unknown until runtime, and the compiler should try to refine its type if possible.
+    #[inline]
+    pub fn is_any(&self) -> bool { matches!(self, Self::Any) }
+
+    /// Returns whether this DataType is `Void` or not.
+    #[inline]
+    pub fn is_void(&self) -> bool { matches!(self, Self::Void) }
+}
+
+impl Display for DataType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
+        use DataType::*;
+        match self {
+            Any  => write!(f, "any"),
+            Void => write!(f, "()"),
+
+            Boolean => write!(f, "bool"),
+            Integer => write!(f, "int"),
+            Real    => write!(f, "real"),
+            String  => write!(f, "string"),
+
+            Array(elem_type)    => write!(f, "[{}]", elem_type),
+            Class(name)         => write!(f, "{}", name),
+            Function(args, ret) => write!(f, "func({}) -> {}", args.iter().map(|a| format!("{}", a)).collect::<Vec<std::string::String>>().join(","), ret),
+        }
+    }
+}
 impl From<String> for DataType {
     #[inline]
     fn from(value: String) -> Self { Self::from(value.as_str()) }

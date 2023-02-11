@@ -4,7 +4,7 @@
 //  Created:
 //    08 Feb 2023, 10:19:08
 //  Last edited:
-//    10 Feb 2023, 19:04:58
+//    11 Feb 2023, 16:59:19
 //  Auto updated?
 //    Yes
 // 
@@ -17,7 +17,7 @@ use nom::{branch, combinator as comb, multi, sequence as seq};
 
 use crate::ast::spec::TextRange;
 use crate::ast::auxillary::{Annotation, DataType, Identifier};
-use crate::ast::expressions::{Block, Expression, Literal};
+use crate::ast::expressions::{Block, Expression, ExpressionKind, Literal};
 use crate::ast::statements::{ArgDef, ClassMemberDef, FunctionDef, PropertyDef, Statement, StatementKind};
 use crate::scanner::Token;
 use crate::parser::{Error, Input};
@@ -422,18 +422,30 @@ fn expr<'t, 's: 't, 'a>(annots: &'a [Annotation]) -> impl 'a + FnMut(Input<'t, '
                 comb::opt(tag_token!('t, 's, Token::Semicolon)),
             )),
             |(expression, semicolon): (Expression, Option<&Token>)| {
-                // Find the range for the statement
-                let range: Option<TextRange> = expression.range.map(|r| TextRange::new(r.start, if let Some(semicolon) = semicolon {
-                    semicolon.end_of()
-                } else {
-                    r.end
-                }));
+                // Switch on semicolon given or not
+                match semicolon {
+                    Some(semicolon) => {
+                        // We return the expression wrapped in a discard (only way to parse that).
+                        let range: Option<TextRange> = expression.range.map(|r| TextRange::new(r.start, semicolon.end_of()));
+                        Statement {
+                            kind : StatementKind::Expression(Expression {
+                                kind : ExpressionKind::Discard{ expr: Box::new(expression) },
+                                range,
+                            }),
+                            annots : annots.into(),
+                            range,
+                        }
+                    },
 
-                // Return it
-                Statement {
-                    kind   : StatementKind::Expression(expression),
-                    annots : annots.into(),
-                    range,
+                    None => {
+                        // We return the expression as-is
+                        let range: Option<TextRange> = expression.range;
+                        Statement {
+                            kind   : StatementKind::Expression(expression),
+                            annots : annots.into(),
+                            range,
+                        }
+                    },
                 }
             },
         )(input)

@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 15:35:30
 //  Last edited:
-//    09 Feb 2023, 15:04:28
+//    11 Feb 2023, 17:07:45
 //  Auto updated?
 //    Yes
 // 
@@ -12,6 +12,8 @@
 //!   Defines auxillary AST nodes such as identifiers or property
 //!   definitions.
 // 
+
+use std::fmt::{Display, Formatter, Result as FResult};
 
 use enum_debug::EnumDebug;
 
@@ -97,6 +99,24 @@ pub struct MergeStrategy {
     pub kind  : MergeStrategyKind,
     /// Defines the range we parsed it from.
     pub range : Option<TextRange>,
+}
+impl Display for MergeStrategy {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
+        use MergeStrategyKind::*;
+        match self.kind {
+            First         => write!(f, "first"),
+            FirstBlocking => write!(f, "first*"),
+            Last          => write!(f, "last"),
+
+            Sum     => write!(f, "sum"),
+            Product => write!(f, "product"),
+
+            Max => write!(f, "max"),
+            Min => write!(f, "min"),
+
+            All => write!(f, "all"),
+        }
+    }
 }
 impl Node for MergeStrategy {
     #[inline]

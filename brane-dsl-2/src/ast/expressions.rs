@@ -4,13 +4,15 @@
 //  Created:
 //    06 Feb 2023, 15:34:18
 //  Last edited:
-//    10 Feb 2023, 11:30:52
+//    11 Feb 2023, 17:17:41
 //  Auto updated?
 //    Yes
 // 
 //  Description:
 //!   Defines expressions within the BraneScript/Bakery AST.
 // 
+
+use std::fmt::{Display, Formatter, Result as FResult};
 
 use enum_debug::EnumDebug;
 
@@ -66,6 +68,11 @@ pub enum ExpressionKind {
         expr      : Box<Expression>,
         /// The new data type to cast to.
         data_type : DataType,
+    },
+    /// Discards the value of the expression it wraps, i.e., "casts" to void. Essentially `;`.
+    Discard {
+        /// The expression to discard.
+        expr : Box<Expression>,
     },
 
     /// Indexes some object, typically an Array.
@@ -219,6 +226,15 @@ impl UnaryOperator {
     #[inline]
     pub fn binding_power(&self) -> BindingPower { self.kind.binding_power() }
 }
+impl Display for UnaryOperator {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
+        use UnaryOperatorKind::*;
+        match &self.kind {
+            Not => write!(f, "!"),
+            Neg => write!(f, "-"),
+        }
+    }
+}
 impl Node for UnaryOperator {
     #[inline]
     fn range(&self) -> Option<TextRange> { self.range }
@@ -266,6 +282,30 @@ impl BinaryOperator {
     /// A `BindingPower` struct that describes the asynchronous binding power for side of the expression.
     #[inline]
     pub fn binding_power(&self) -> BindingPower { self.kind.binding_power() }
+}
+impl Display for BinaryOperator {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
+        use BinaryOperatorKind::*;
+        match &self.kind {
+            Add => write!(f, "+"),
+            Sub => write!(f, "-"),
+            Mul => write!(f, "*"),
+            Div => write!(f, "/"),
+            Mod => write!(f, "%"),
+
+            Or  => write!(f, "||"),
+            And => write!(f, "&&"),
+
+            Eq => write!(f, "=="),
+            Ne => write!(f, "!="),
+            Lt => write!(f, "<"),
+            Le => write!(f, "<="),
+            Gt => write!(f, ">"),
+            Ge => write!(f, ">="),
+
+            Assign => write!(f, ":="),
+        }
+    }
 }
 impl Node for BinaryOperator {
     #[inline]
