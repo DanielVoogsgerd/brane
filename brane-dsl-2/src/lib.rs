@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 15:25:18
 //  Last edited:
-//    11 Feb 2023, 18:13:28
+//    13 Feb 2023, 11:11:46
 //  Auto updated?
 //    Yes
 // 
@@ -54,7 +54,7 @@ pub fn compile_module<'f, 's>(file: &'f str, source: &'s str, phase: compiler::C
     };
 
     // Parse the token stream to an AST
-    let ast: Program = match parser::parse_tokens(&tokens) {
+    let mut ast: Program = match parser::parse_tokens(&tokens) {
         Ok((rem, ast)) => {
             if !rem.is_empty() { return Err(ErrorTrace::from_error(file, source, Error::ParseLeftoverError{ remainder: rem.into() })); }
             ast

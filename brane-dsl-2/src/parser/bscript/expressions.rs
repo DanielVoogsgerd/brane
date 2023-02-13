@@ -4,7 +4,7 @@
 //  Created:
 //    07 Feb 2023, 12:54:14
 //  Last edited:
-//    10 Feb 2023, 19:22:25
+//    13 Feb 2023, 13:03:42
 //  Auto updated?
 //    Yes
 // 
@@ -246,7 +246,7 @@ fn atomic<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Expression, Er
         // Block (nested scope)
         comb::map( blocks::parse, |block: Block| {
             let range: Option<TextRange> = block.range;
-            Expression { kind : ExpressionKind::Block(Box::new(block)), range, }
+            Expression { kind : ExpressionKind::Block(Box::new(block), vec![]), range, }
         }),
         // If-statements
         if_stmt,
@@ -399,9 +399,13 @@ fn if_stmt<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Expression, E
             // Return the new expression
             Expression {
                 kind : ExpressionKind::If {
-                    cond       : Box::new(cond),
+                    cond : Box::new(cond),
+
                     block      : Box::new(block),
                     block_else : block_else.map(Box::new),
+
+                    annots      : vec![],
+                    annots_else : vec![],
                 },
                 range,
             }
@@ -441,7 +445,7 @@ fn parallel_stmt<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Express
         |(parallel, (merge, branches, rbrack)): (&Token, (Option<MergeStrategy>, Vec<Block>, &Token))| {
             Expression {
                 kind : ExpressionKind::Parallel {
-                    branches,
+                    branches : branches.into_iter().map(|b| (b, vec![])).collect(),
                     strategy : merge,
                 },
                 range : Some(TextRange::new(parallel.start_of(), rbrack.end_of())),

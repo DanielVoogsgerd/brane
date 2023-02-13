@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 17:10:24
 //  Last edited:
-//    10 Feb 2023, 11:49:17
+//    13 Feb 2023, 11:51:26
 //  Auto updated?
 //    Yes
 // 
@@ -28,7 +28,7 @@ use super::tokens::Token;
 /// # Errors
 /// This function errors if we failed to parse a keyword for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
 #[inline]
-fn separator<'s, E: Error<'s>>(input: Input<'s>) -> IResult<Input<'s>, (), E> {
+pub(crate) fn separator<'s, E: Error<'s>>(input: Input<'s>) -> IResult<Input<'s>, (), E> {
     comb::not(branch::alt((cc::alphanumeric1, bc::tag("_"))))(input)
 }
 

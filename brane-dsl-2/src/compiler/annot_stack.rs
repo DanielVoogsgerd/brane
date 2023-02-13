@@ -4,7 +4,7 @@
 //  Created:
 //    11 Feb 2023, 18:08:46
 //  Last edited:
-//    11 Feb 2023, 18:37:34
+//    13 Feb 2023, 11:44:18
 //  Auto updated?
 //    Yes
 // 
@@ -14,100 +14,93 @@
 //!   based on what we are compiling.
 // 
 
+use log::warn;
+
 use crate::warnings::WarningCode;
-use crate::ast::auxillary::AnnotationKind;
-use crate::ast::expressions::Expression;
+use crate::ast::spec::Annotation;
 
 
 /***** LIBRARY *****/
-/// Provides the contents of each annotation. This defines the annotations that the compiler accepts, essentially.
-#[derive(Clone, Debug)]
-pub enum Annotation {
-    /// Disables a specific warning message with the given identifier
-    Allow(WarningCode),
-    /// Scopes any external function occurring in the given statement to a specific location.
-    On(Expression),
-}
-
-impl Annotation {
-    /// Constructor for the Annotation that will create it from its parsed counterpart.
-    /// 
-    /// # Arguments
-    /// - `annot`: The parsed AnnotationKind that can be used to read the annotation.
-    /// 
-    /// # Returns
-    /// A new list of `Annotation` instances that were contained within. Note that this list may be empty, in which case the annotation did not make sense to us.
-    fn from(value: &AnnotationKind) -> Vec<Self> {
-        // Parse the parsed annotation
-        match value {
-            AnnotationKind::Identifier(ident) => {
-                // There are no such annotations yet
-                vec![]
-            },
-
-            AnnotationKind::KeyValue(ident, value) => {
-                // Match on the identifier to find what it is
-                match ident.name.as_str() {
-                    "on" => vec![ Self::On(value.clone()) ],
-
-                    // The rest is unknown to us
-                    _ => vec![],
-                }
-            },
-
-            AnnotationKind::KeyList(ident, list) => {
-                // Match on the identifier to find what it is, then process the list
-                match ident.name.as_str() {
-                    "allow" => {
-                        // Assert it is a list of identifiers
-                        for annot in list {
-                            match &annot.kind {
-                                AnnotationKind::Identifier(ident) => match &ident.name {
-                                    
-                                },
-
-                                // The rest is an unknown warning code
-                                
-                            }
-                        }
-                    },
-                }
-            },
-        }
-    }
-}
-
-
-
 /// A thin wrapper around a vector to implement a stack for annotation features.
 #[derive(Debug)]
-pub struct AnnotationStack(Vec<Annotation>);
+pub struct AnnotationStack {
+    /// The stack with annotation itself.
+    stack  : Vec<Annotation>,
+    /// The frames upon this stack, given in the number of annotations in them.
+    /// 
+    /// This is done this way to both be able to pop really efficiently, and be cache-friendly in the annotations themselves.
+    frames : Vec<usize>,
+}
 
 impl Default for AnnotationStack {
     #[inline]
     fn default() -> Self { Self::new() }
 }
 impl AnnotationStack {
-    /// Constructor for the annotation stack that creates an empty stack.
+    /// Constructor for the AnnotationStack that initializes it without any annotations yet.
     /// 
     /// # Returns
-    /// A new AnnotationStack instance with nothing pushed on it yet.
+    /// A new AnnotationStack instance that is empty.
     #[inline]
     pub fn new() -> Self {
-        Self(vec![])
+        Self {
+            stack  : vec![],
+            frames : vec![],
+        }
     }
 
-    /// Constructor for the annotation stack that initializes it with allocated space for at least `capacity` elements.
+
+
+    /// Pushes the given list of Annotations to this stack.
     /// 
-    /// Note that it does not populate them; this is just to avoid reallocation.
+    /// They are pushed as one frame, which means that they are also popped together when calling `AnnotationStack::pop()`.
     /// 
     /// # Arguments
-    /// - `capacity`: The initial capacity for the stack.
+    /// - `annots`: The list of parsed Annotations to push.
+    pub fn push<'a>(&mut self, annots: impl IntoIterator<Item = &'a Annotation>) {
+        let annots: Vec<Annotation> = annots.into_iter().cloned().collect();
+
+        // Resize our internal arrays for optimal performance :sunglasses:
+        if !annots.is_empty() && self.stack.len() + annots.len() >= self.stack.capacity() { self.stack.reserve(if annots.len() > self.stack.capacity() { annots.len() } else { self.stack.capacity() }); }
+        if self.frames.len() == self.frames.capacity() { self.frames.reserve(self.frames.capacity()); }
+
+        // Push the frame
+        let frame_size: usize = annots.len();
+        self.stack.extend(annots);
+        self.frames.push(frame_size);
+    }
+
+    /// Pops the top frame off the annotation stack.
+    /// 
+    /// Does nothing if there are no frames to push, but does emit a warning.
+    pub fn pop(&mut self) {
+        if let Some(size) = self.frames.pop() {
+            let new_size: usize = self.stack.len().saturating_sub(size);
+            self.stack.truncate(new_size);
+        } else {
+            warn!("Attempted to pop from the annotation stack while there were not frames on it (implies an ill-formed compiler pass)");
+        }
+    }
+
+
+
+    /// Checks the given warning is disabled.
+    /// 
+    /// # Arguments
+    /// - `code`: The WarningCode of the warning to check for.
     /// 
     /// # Returns
-    /// A new AnnotationStack instance with nothing pushed on it yet.
-    #[inline]
-    pub fn with_capacity(capacity: usize) -> Self {
-        Self(Vec::with_capacity(capacity))
+    /// True if it is disabled, or false otherwise.
+    pub fn is_allowed(&self, code: WarningCode) -> bool {
+        // Search in reverse order
+        for annot in self.stack.iter().rev() {
+            if let Annotation::Allow(allowed_code) = annot {
+                // Return if allowed
+                if *allowed_code == code { return true; }
+            }
+        }
+
+        // Not found is not allowed
+        false
     }
 }

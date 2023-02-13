@@ -4,7 +4,7 @@
 //  Created:
 //    10 Feb 2023, 19:25:20
 //  Last edited:
-//    11 Feb 2023, 17:44:58
+//    13 Feb 2023, 13:14:56
 //  Auto updated?
 //    Yes
 // 
@@ -15,10 +15,9 @@
 use std::fmt::{Display, Formatter, Result as FResult};
 use std::io::Write;
 
-use crate::ast::spec::Node;
-use crate::ast::auxillary::{Annotation, AnnotationKind};
+use crate::ast::spec::{Annotation, Node};
 use crate::ast::expressions::{Block, Expression, ExpressionKind, Literal, LiteralKind, UnaryOperatorKind};
-use crate::ast::statements::{ArgDef, ClassMemberDef, FunctionDef, PropertyDef, Statement, StatementKind};
+use crate::ast::statements::{ArgDef, ClassMemberDefKind, FunctionDef, RawAnnotation, RawAnnotationKind, Statement, StatementKind};
 use crate::ast::toplevel::Program;
 
 
@@ -137,6 +136,18 @@ trait TravFormattable {
     /// - `indent`: The indentation to print this element with. Mostly relevant for statements or multi-line expressions.
     fn trav_indent<'e>(&'e self, indent: usize) -> TravFormatter<'e, Self>;
 }
+impl TravFormattable for Annotation {
+    #[inline]
+    fn trav<'e>(&'e self) -> TravFormatter<'e, Self> { TravFormatter{ elem: self, indent: 0 } }
+
+    fn trav_indent<'e>(&'e self, indent: usize) -> TravFormatter<'e, Self> { TravFormatter{ elem: self, indent } }
+}
+impl TravFormattable for (&Block, &Vec<Annotation>) {
+    #[inline]
+    fn trav<'e>(&'e self) -> TravFormatter<'e, Self> { TravFormatter{ elem: self, indent: 0 } }
+
+    fn trav_indent<'e>(&'e self, indent: usize) -> TravFormatter<'e, Self> { TravFormatter{ elem: self, indent } }
+}
 impl<T: Node> TravFormattable for T {
     #[inline]
     fn trav<'e>(&'e self) -> TravFormatter<'e, Self> { TravFormatter{ elem: self, indent: 0 } }
@@ -163,6 +174,11 @@ struct TravFormatter<'e, E: ?Sized> {
 /// Formatter for Programs
 impl<'e> Display for TravFormatter<'e, Program> {
     fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
+        // Print annotations, if any
+        for a in &self.elem.annots {
+            writeln!(f, indent = self.indent, "#![{}]", a.trav_indent(self.indent))?;
+        }
+
         // Simply print all statements with zero indentation
         for s in &self.elem.stmts {
             write!(f, "{}", s.trav())?;
@@ -186,6 +202,23 @@ impl<'e> Display for TravFormatter<'e, Statement> {
         // Then match on the specific kind of statement
         use StatementKind::*;
         match &self.elem.kind {
+            // Annotations
+            Annotation{ annots } => {
+                for a in annots {
+                    writeln!(f, indent = self.indent, "#[{}]", a.trav_indent(self.indent))?;
+                }
+                Ok(())
+            },
+
+            ParentAnnotation{ annots } => {
+                for a in annots {
+                    writeln!(f, indent = self.indent, "#![{}]", a.trav_indent(self.indent))?;
+                }
+                Ok(())
+            },
+
+
+
             // Definitions
             Import{ name, version } => {
                 // Print the statement
@@ -200,9 +233,20 @@ impl<'e> Display for TravFormatter<'e, Statement> {
                 // Write all the definitions
                 for def in defs {
                     // Match on the kind
-                    match def {
-                        ClassMemberDef::Property(def) => { write!(f, "{}", def.trav_indent(self.indent + INDENT_SIZE))?; },
-                        ClassMemberDef::Method(def)   => { write!(f, "{}", def.trav_indent(self.indent + INDENT_SIZE))?; },
+                    match &def.kind {
+                        ClassMemberDefKind::Annotation{ annots } => {
+                            for a in annots {
+                                writeln!(f, indent = self.indent, "#[{}]", a.trav_indent(self.indent))?;
+                            }
+                        },
+                        ClassMemberDefKind::ParentAnnotation{ annots } => {
+                            for a in annots {
+                                writeln!(f, indent = self.indent, "#![{}]", a.trav_indent(self.indent))?;
+                            }
+                        },
+
+                        ClassMemberDefKind::Property{ name, data_type } => { writeln!(f, indent = self.indent, "{}: {};", name.name, data_type.data_type)?; },
+                        ClassMemberDefKind::Method(def)                 => { write!(f, "{}", def.trav_indent(self.indent + INDENT_SIZE))?; },
                     }
                 }
                 // Write the footer
@@ -266,11 +310,23 @@ impl<'e> Display for TravFormatter<'e, Statement> {
     }
 }
 
-/// The formatter for indentations.
+/// The formatter for annotations.
 impl<'e> Display for TravFormatter<'e, Annotation> {
     fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
-        // Match on the kind of annotaiton
-        use AnnotationKind::*;
+        // Match on the kind of annotation
+        use Annotation::*;
+        match &self.elem {
+            Allow(code) => write!(f, "allow({})", code),
+            On(loc)     => write!(f, "on = {}", loc.trav_indent(self.indent)),
+        }
+    }
+}
+
+/// The formatter for raw annotations.
+impl<'e> Display for TravFormatter<'e, RawAnnotation> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
+        // Match on the kind of annotation
+        use RawAnnotationKind::*;
         match &self.elem.kind {
             Identifier(id) => {
                 write!(f, "{}", id.name)
@@ -284,13 +340,6 @@ impl<'e> Display for TravFormatter<'e, Annotation> {
                 write!(f, "{}({})", id.name, annots.iter().map(|a| a.trav_indent(self.indent).to_string()).collect::<Vec<String>>().join(", "))
             },
         }
-    }
-}
-
-/// The formatter for property definitions.
-impl<'e> Display for TravFormatter<'e, PropertyDef> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
-        writeln!(f, indent = self.indent, "{}: {};", self.elem.name.name, self.elem.data_type.data_type)
     }
 }
 
@@ -328,22 +377,22 @@ impl<'e> Display for TravFormatter<'e, Expression> {
         use ExpressionKind::*;
         match &self.elem.kind {
             // Statement-carrying expressions
-            Block(block) => {
-                // We can just print as block
-                write!(f, "{}", block.trav_indent(self.indent))
+            Block(block, annots) => {
+                // We can just print as block, except we note annotations inside
+                write!(f, "{}", (block.as_ref(), annots).trav_indent(self.indent))
             },
 
-            If { cond, block, block_else } => {
+            If { cond, block, block_else, annots, annots_else } => {
                 write!(f, "if ({}) {}{}",
                     cond.trav_indent(self.indent),
-                    block.trav_indent(self.indent),
-                    if let Some(block_else) = block_else { format!(" else {}", block_else.trav_indent(self.indent)) } else { String::new() }
+                    (block.as_ref(), annots).trav_indent(self.indent),
+                    if let Some(block_else) = block_else { format!(" else {}", (block_else.as_ref(), annots_else).trav_indent(self.indent)) } else { String::new() }
                 )
             },
             Parallel { branches, strategy } => {
                 write!(f, "parallel{} [{}]",
                     if let Some(strat) = strategy { format!(" [{}]", strat) } else { String::new() },
-                    branches.iter().map(|b| format!("{}", b.trav_indent(self.indent))).collect::<Vec<String>>().join(", "),
+                    branches.iter().map(|(b, a)| format!("{}", (b, a).trav_indent(self.indent))).collect::<Vec<String>>().join(", "),
                 )
             },
 
@@ -436,6 +485,27 @@ impl<'e> Display for TravFormatter<'e, Block> {
         // Don't write an indentation at the start cuz this is an expression
         writeln!(f, "{{")?;
         for s in &self.elem.stmts {
+            write!(f, "{}", s.trav_indent(self.indent + INDENT_SIZE))?;
+        }
+        write!(f, indent = self.indent, "}}")?;
+
+        // Done
+        Ok(())
+    }
+}
+// The formatter for blocks with their own annotations
+impl<'e> Display for TravFormatter<'e, (&Block, &Vec<Annotation>)> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
+        // Special display for if no statements
+        if self.elem.0.stmts.is_empty() && self.elem.1.is_empty() { return write!(f, "{{}}"); }
+
+        // Don't write an indentation at the start cuz this is an expression
+        writeln!(f, "{{")?;
+        for a in self.elem.1 {
+            writeln!(f, indent = self.indent + INDENT_SIZE, "#![{}]", a.trav_indent(self.indent))?;
+        }
+        if !self.elem.1.is_empty() && self.elem.0.stmts.is_empty() { writeln!(f)?; }
+        for s in &self.elem.0.stmts {
             write!(f, "{}", s.trav_indent(self.indent + INDENT_SIZE))?;
         }
         write!(f, indent = self.indent, "}}")?;

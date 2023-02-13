@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 16:56:44
 //  Last edited:
-//    10 Feb 2023, 10:56:17
+//    13 Feb 2023, 11:52:28
 //  Auto updated?
 //    Yes
 // 
@@ -17,6 +17,7 @@ use nom::{branch, bytes::complete as bc, character::complete as cc, combinator a
 
 use super::{Error, Input};
 use super::tokens::Token;
+use super::keywords;
 
 
 /***** SCANNING FUNCTIONS *****/
@@ -33,8 +34,8 @@ use super::tokens::Token;
 fn boolean<'s, E: Error<'s>>(input: Input<'s>) -> IResult<Input<'s>, Token, E> {
     nom::error::context("a boolean literal", comb::map(
         branch::alt((
-            bc::tag("true"),
-            bc::tag("false"),
+            seq::terminated(bc::tag("true"),  comb::peek(keywords::separator)),
+            seq::terminated(bc::tag("false"), comb::peek(keywords::separator)),
         )),
         Token::Boolean,
     ))(input)

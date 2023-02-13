@@ -22,7 +22,7 @@ println("Wow, no longer any braces if I don't want to :)");
 }
 
 
-// Finally, you can stack them either by using commas in a single annotation notation (`#[]`), or use multiple:
+// You can also stack them either by using commas in a single annotation notation (`#[]`), or use multiple:
 #[on = "test", allow(dead_code)]
 {
     return;
@@ -36,3 +36,17 @@ println("Wow, no longer any braces if I don't want to :)");
     return;
     println("If this would be printed, it would be printed on \"test\"");
 }
+
+
+// Finally, you can also attach annotations from _within_ a block to everything in that block:
+{
+    #![allow(dead_code)]
+    return;
+    println("Does still not error!");
+}
+
+// This is especially useful if you want to annotate an entire program:
+
+#![allow(dead_code)]
+// Gotcha, this program would never throw dead_code warnings anyways due to this statement :)
+// (But comment it out to test the other statements)

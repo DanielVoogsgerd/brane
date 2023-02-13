@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 15:34:18
 //  Last edited:
-//    11 Feb 2023, 17:17:41
+//    13 Feb 2023, 13:03:08
 //  Auto updated?
 //    Yes
 // 
@@ -16,7 +16,7 @@ use std::fmt::{Display, Formatter, Result as FResult};
 
 use enum_debug::EnumDebug;
 
-use super::spec::{BindingPower, Node, TextRange};
+use super::spec::{Annotation, BindingPower, Node, TextRange};
 use super::auxillary::{DataType, Identifier, MergeStrategy};
 use super::statements::Statement;
 
@@ -39,22 +39,28 @@ impl Node for Expression {
 #[derive(Clone, Debug, EnumDebug)]
 pub enum ExpressionKind {
     // Statement-carrying expressions
-    /// A Block carries a nested series of statements that evaluates to the same result.
-    Block(Box<Block>),
+    /// A Block carries a nested series of statements that evaluates to the same result, as well as any scope-specific annotations.
+    Block(Box<Block>, Vec<Annotation>),
 
     /// An If-statement branches between two values. It may evaluate to either of it, so both branches should always return the same type.
     If {
         /// The condition, as an expression.
-        cond       : Box<Expression>,
+        cond : Box<Expression>,
+
         /// The true-part of the statement.
         block      : Box<Block>,
         /// The false-part of the statement, which may be optional.
         block_else : Option<Box<Block>>,
+
+        /// The annotations for the true-block.
+        annots      : Vec<Annotation>,
+        /// The annotations for the else-block.
+        annots_else : Vec<Annotation>,
     },
     /// A Parallel-statement executes multiple values in parallel, returning according to some specific _merge strategy_.
     Parallel {
         /// The branches to execute in parallel.
-        branches : Vec<Block>,
+        branches : Vec<(Block, Vec<Annotation>)>,
         /// The strategy to use to merge the branches once they are done.
         strategy : Option<MergeStrategy>,
     },

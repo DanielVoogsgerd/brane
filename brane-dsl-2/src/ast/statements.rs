@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 15:33:27
 //  Last edited:
-//    10 Feb 2023, 19:32:00
+//    13 Feb 2023, 12:38:50
 //  Auto updated?
 //    Yes
 // 
@@ -14,8 +14,8 @@
 
 use enum_debug::EnumDebug;
 
-use super::spec::{Node, TextRange};
-use super::auxillary::{Annotation, DataType, Identifier};
+use super::spec::{Annotation, Node, TextRange};
+use super::auxillary::{DataType, Identifier};
 use super::expressions::{Block, Expression, Literal};
 
 
@@ -24,11 +24,12 @@ use super::expressions::{Block, Expression, Literal};
 #[derive(Clone, Debug)]
 pub struct Statement {
     /// Any specific implementations of a statement.
-    pub kind   : StatementKind,
-    /// Any annotations that are applied to this statement.
-    pub annots : Vec<Annotation>,
+    pub kind  : StatementKind,
     /// The range in the source text for this statement.
-    pub range  : Option<TextRange>,
+    pub range : Option<TextRange>,
+
+    /// Any _parsed_ annotations that are added to this statement.
+    pub annots : Vec<Annotation>,
 }
 impl Node for Statement {
     #[inline]
@@ -38,6 +39,23 @@ impl Node for Statement {
 /// Defines the StatementKind, which implements the specifics for each of the various statements.
 #[derive(Clone, Debug, EnumDebug)]
 pub enum StatementKind {
+    // Annotations
+    /// The most common case of annotation that annotates some subsequent statement with annotations.
+    Annotation {
+        /// The list of annotations defined.
+        annots : Vec<RawAnnotation>,
+    },
+
+    /// A special case of annotation that is not attached to some statement from the outside, but rather from within.
+    /// 
+    /// Because it acts as a statement itself, can only be used in statement position.
+    ParentAnnotation {
+        /// The list of annotations defined.
+        annots : Vec<RawAnnotation>,
+    },
+
+
+
     // Definitions
     /// An import-statement defines an external package.
     Import {
@@ -110,6 +128,32 @@ pub enum StatementKind {
 
 
 
+/// Defines the possible annotations that are possible from a parsing perspective.
+#[derive(Clone, Debug)]
+pub struct RawAnnotation {
+    /// The variant for this annotation.
+    pub kind  : RawAnnotationKind,
+    /// The range where we found it.
+    pub range : Option<TextRange>,
+}
+impl Node for RawAnnotation {
+    #[inline]
+    fn range(&self) -> Option<TextRange> { self.range }
+}
+
+/// Defines the variants of a RawAnnotation.
+#[derive(Clone, Debug, EnumDebug)]
+pub enum RawAnnotationKind {
+    /// It's a separate identifier.
+    Identifier(Identifier),
+    /// It's a key/value pair.
+    KeyValue(Identifier, Expression),
+    /// It's a key/list pair.
+    KeyList(Identifier, Vec<RawAnnotation>),
+}
+
+
+
 /// Defines how a function definition looks like.
 #[derive(Clone, Debug)]
 pub struct FunctionDef {
@@ -152,38 +196,51 @@ impl Node for ArgDef {
 
 
 /// Defines either one of two things: either a property definition or a function (method) definition.
-#[derive(Clone, Debug, EnumDebug)]
-pub enum ClassMemberDef {
-    /// It's a property
-    Property(PropertyDef),
-    /// It's a method.
-    Method(FunctionDef),
+#[derive(Clone, Debug)]
+pub struct ClassMemberDef {
+    /// The specific variant for this definition.
+    pub kind   : ClassMemberDefKind,
+    /// The list of parsed annotations that we keep for this member.
+    pub annots : Vec<Annotation>,
+    /// The range for this class member.
+    pub range  : Option<TextRange>,
 }
 impl Node for ClassMemberDef {
     #[inline]
-    fn range(&self) -> Option<TextRange> {
-        use ClassMemberDef::*;
-        match self {
-            Property(prop) => prop.range(),
-            Method(method) => method.range(),
-        }
-    }
-}
-
-
-
-/// Defines a property definition.
-#[derive(Clone, Debug)]
-pub struct PropertyDef {
-    /// The name of the property.
-    pub name      : Identifier,
-    /// The data type of the property.
-    pub data_type : DataType,
-
-    /// The TextRange of the property.
-    pub range : Option<TextRange>,
-}
-impl Node for PropertyDef {
-    #[inline]
     fn range(&self) -> Option<TextRange> { self.range }
+}
+
+/// Defines the variants for the class member definitions.
+/// 
+/// Note that annotations are here included as separated definition-like statements.
+#[derive(Clone, Debug, EnumDebug)]
+pub enum ClassMemberDefKind {
+    // Annotations
+    /// The most common case of annotation that annotates some subsequent statement with annotations.
+    Annotation {
+        /// The list of annotations defined.
+        annots : Vec<RawAnnotation>,
+    },
+
+    /// A special case of annotation that is not attached to some statement from the outside, but rather from within.
+    /// 
+    /// Because it acts as a statement itself, can only be used in statement position.
+    ParentAnnotation {
+        /// The list of annotations defined.
+        annots : Vec<RawAnnotation>,
+    },
+
+
+
+    // Real definitions
+    /// It's a property
+    Property {
+        /// The name of the property.
+        name      : Identifier,
+        /// The data type of the property.
+        data_type : DataType,
+    },
+
+    /// It's a method.
+    Method(FunctionDef),
 }

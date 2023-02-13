@@ -4,7 +4,7 @@
 //  Created:
 //    08 Feb 2023, 13:20:01
 //  Last edited:
-//    10 Feb 2023, 11:41:10
+//    13 Feb 2023, 11:40:05
 //  Auto updated?
 //    Yes
 // 
@@ -16,6 +16,7 @@ use nom::IResult;
 use nom::{combinator as comb, multi};
 
 use crate::ast::spec::TextRange;
+use crate::ast::symbol_tables::SymbolTable;
 use crate::ast::statements::Statement;
 use crate::ast::toplevel::Program;
 use crate::parser::{Error, Input};
@@ -47,6 +48,9 @@ pub(crate) fn parse<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Prog
             Program {
                 stmts,
                 range,
+
+                table  : SymbolTable::empty(),
+                annots : vec![],
             }
         }
     )(input)

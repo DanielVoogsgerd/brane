@@ -4,7 +4,7 @@
 //  Created:
 //    07 Feb 2023, 19:02:01
 //  Last edited:
-//    10 Feb 2023, 19:03:46
+//    13 Feb 2023, 11:25:31
 //  Auto updated?
 //    Yes
 // 
@@ -18,114 +18,14 @@ use nom::{branch, combinator as comb, sequence as seq};
 
 use crate::errors::ParseError;
 use crate::ast::spec::TextRange;
-use crate::ast::auxillary::{Annotation, AnnotationKind, DataType, Identifier, MergeStrategy, MergeStrategyKind};
+use crate::ast::auxillary::{DataType, Identifier, MergeStrategy, MergeStrategyKind};
 use crate::ast::types;
-use crate::ast::expressions::Expression;
 use crate::scanner::Token;
 use crate::parser::{Error, Input};
-use crate::parser::utils::{self, tag_token};
-use super::expressions;
+use crate::parser::utils::tag_token;
 
 
 /***** LIBRARY *****/
-/// Parses a statement-annotation thing from the head of the given token stream.
-/// 
-/// # Arguments
-/// - `input`: The new TokenStream to parse from.
-/// 
-/// # Returns
-/// A tuple of the remaining, unparsed tokenstream and the parsed annotations (a single annotation notation `#[ ... ]` can have multiple annotations within it).
-/// 
-/// # Errors
-/// This function errors if we failed to parse a definition for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
-pub(crate) fn parse_annots<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Vec<Annotation>, Error<'t, 's>> {
-    nom::error::context("an annotation", seq::preceded(
-        tag_token!('t, 's, Token::Hashtag),
-        comb::cut(seq::delimited(
-            tag_token!('t, 's, Token::LeftBracket),
-            utils::separated_list0(
-                tag_token!('t, 's, Token::Comma),
-                annot,
-            ),
-            tag_token!('t, 's, Token::RightBracket),
-        )),
-    ))(input)
-}
-
-/// Parses an annotation from the head of the given token stream.
-/// 
-/// # Arguments
-/// - `input`: The new TokenStream to parse from.
-/// 
-/// # Returns
-/// A tuple of the remaining, unparsed tokenstream and the parsed annotations (a single annotation notation `#[ ... ]` can have multiple annotations within it).
-/// 
-/// # Errors
-/// This function errors if we failed to parse a definition for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
-fn annot<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Annotation, Error<'t, 's>> {
-    branch::alt((
-        // It's an identifier/expression pair
-        comb::map(
-            seq::separated_pair(
-                parse_ident,
-                tag_token!('t, 's, Token::Equals),
-                expressions::parse,
-            ),
-            |(key, value): (Identifier, Expression)| {
-                // Find a range covering both
-                let range: Option<TextRange> = match (key.range, value.range) {
-                    (Some(TextRange{ start, .. }), Some(TextRange{ end, .. })) => Some(TextRange::new(start, end)),
-                    _                                                          => None,
-                };
-
-                // Create an annotation with it
-                Annotation {
-                    kind : AnnotationKind::KeyValue(key, value),
-                    range,
-                }
-            },
-        ),
-
-        // It's a key/list pair
-        comb::map(
-            seq::pair(
-                parse_ident,
-                seq::pair(
-                    seq::preceded(
-                        tag_token!('t, 's, Token::LeftParen),
-                        utils::separated_list1(
-                            tag_token!('t, 's, Token::Comma),
-                            annot,
-                        ),
-                    ),
-                    tag_token!('t, 's, Token::RightParen),
-                ),
-            ),
-            |(key, (list, rparen)): (Identifier, (Vec<Annotation>, &Token))| {
-                let range: Option<TextRange> = key.range.map(|r| TextRange::new(r.start, rparen.end_of()));
-                Annotation {
-                    kind : AnnotationKind::KeyList(key, list),
-                    range,
-                }
-            },
-        ),
-
-        // It's a single identifier
-        comb::map(
-            parse_ident,
-            |ident: Identifier| {
-                let range: Option<TextRange> = ident.range;
-                Annotation {
-                    kind : AnnotationKind::Identifier(ident),
-                    range,
-                }
-            },
-        ),
-    ))(input)
-}
-
-
-
 /// Attempts to parse an identifier off the top of the given tokenstream.
 /// 
 /// # Arguments

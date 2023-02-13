@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 15:35:30
 //  Last edited:
-//    11 Feb 2023, 17:07:45
+//    13 Feb 2023, 11:20:07
 //  Auto updated?
 //    Yes
 // 
@@ -19,37 +19,10 @@ use enum_debug::EnumDebug;
 
 use super::spec::{Node, TextRange};
 use super::types;
-use super::expressions::Expression;
 
 
 /***** LIBRARY *****/
-/// An annotation is an additional bit of information that the compiler can use to do stuff.
-#[derive(Clone, Debug)]
-pub struct Annotation {
-    /// The specific form of annotation
-    pub kind  : AnnotationKind,
-    /// The range where we found the annotation
-    pub range : Option<TextRange>,
-}
-impl Node for Annotation {
-    #[inline]
-    fn range(&self) -> Option<TextRange> { self.range }
-}
-
-/// Specifies the allows annotation variants.
-#[derive(Clone, Debug, EnumDebug)]
-pub enum AnnotationKind {
-    /// It's a separate identifier.
-    Identifier(Identifier),
-    /// It's a key/value pair.
-    KeyValue(Identifier, Expression),
-    /// It's a key/list pair.
-    KeyList(Identifier, Vec<Annotation>),
-}
-
-
-
-/// An identifier is a simply, well, identifier that the user has defined.
+// An identifier is a simply, well, identifier that the user has defined.
 #[derive(Clone, Debug)]
 pub struct Identifier {
     /// The name given to this identifier.
