@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 15:34:18
 //  Last edited:
-//    13 Feb 2023, 13:03:08
+//    13 Feb 2023, 18:14:33
 //  Auto updated?
 //    Yes
 // 
@@ -12,11 +12,14 @@
 //!   Defines expressions within the BraneScript/Bakery AST.
 // 
 
+use std::cell::RefCell;
 use std::fmt::{Display, Formatter, Result as FResult};
+use std::rc::Rc;
 
 use enum_debug::EnumDebug;
 
 use super::spec::{Annotation, BindingPower, Node, TextRange};
+use super::symbol_tables::{ClassEntry, DelayedEntryPtr, SymbolTable};
 use super::auxillary::{DataType, Identifier, MergeStrategy};
 use super::statements::Statement;
 
@@ -140,6 +143,9 @@ pub enum ExpressionKind {
         name  : Identifier,
         /// The values for each of the properties of the class.
         props : Vec<PropertyExpr>,
+
+        /// The entry for the class which this instance references.
+        st_entry : Option<DelayedEntryPtr<ClassEntry>>,
     },
 
     /// Refers to some statically declared variable (which may be a dynamic value).
@@ -173,6 +179,9 @@ pub struct Block {
     pub stmts : Vec<Statement>,
     /// The range in the source text for this block.
     pub range : Option<TextRange>,
+
+    /// The symbol table for this scope.
+    pub table : Rc<RefCell<SymbolTable>>,
 }
 impl Node for Block {
     #[inline]

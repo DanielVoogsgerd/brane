@@ -4,13 +4,16 @@
 //  Created:
 //    08 Feb 2023, 13:20:01
 //  Last edited:
-//    13 Feb 2023, 11:40:05
+//    13 Feb 2023, 14:29:34
 //  Auto updated?
 //    Yes
 // 
 //  Description:
 //!   Defines functions to parse everything.
 // 
+
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use nom::IResult;
 use nom::{combinator as comb, multi};
@@ -49,7 +52,7 @@ pub(crate) fn parse<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Prog
                 stmts,
                 range,
 
-                table  : SymbolTable::empty(),
+                table  : Rc::new(RefCell::new(SymbolTable::empty())),
                 annots : vec![],
             }
         }

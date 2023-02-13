@@ -4,7 +4,7 @@
 //  Created:
 //    07 Feb 2023, 10:10:18
 //  Last edited:
-//    11 Feb 2023, 18:13:40
+//    13 Feb 2023, 18:06:41
 //  Auto updated?
 //    Yes
 // 
@@ -21,7 +21,7 @@ use log::debug;
 use nom::error::{ContextError, ErrorKind, FromExternalError, ParseError as NomParseError, VerboseError, VerboseErrorKind};
 use unicode_segmentation::UnicodeSegmentation as _;
 
-use crate::notes::{NomNote, PrettyNote};
+use crate::notes::{CompileNote, NomNote, PrettyNote};
 use crate::ast::spec::{TextPos, TextRange};
 use crate::scanner::{Input as ScanInput, Token};
 use crate::parser::Input as ParseInput;
@@ -704,6 +704,58 @@ impl<'s> PrettyError for DslError<'s> {
 
     #[inline]
     fn notes(&self) -> Vec<Box<dyn PrettyNote>> { vec![] }
+}
+
+
+
+/// Defines error that occur while resolving symbol tables.
+#[derive(Debug)]
+pub enum ResolveError {
+    /// A function call had an invalid expression to the left.
+    IllegalFunctionExpr{ variant: String, range: Option<TextRange> },
+    /// An assignment had an invalid expression to the left.
+    IllegalAssignExpr{ variant: String, range: Option<TextRange> },
+
+    /// The first argument in a method is not called 'self'.
+    MethodWithNonSelf{ name: String, arg: Option<TextRange>, func: Option<TextRange>, class: Option<TextRange> },
+    /// A method does not have any arguments, including 'self'.
+    MethodWithoutSelf{ name: String, func: Option<TextRange>, class: Option<TextRange> },
+}
+impl Display for ResolveError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
+        use ResolveError::*;
+        match self {
+            IllegalFunctionExpr{ variant, .. } => write!(f, "Illegal expression '{}' to call (expected a projection or an identifier)", variant),
+            IllegalAssignExpr{ variant, .. }   => write!(f, "Illegal expression '{}' to assign a value to (expected an array index, a projection or an identifier)", variant),
+
+            MethodWithNonSelf{ name, .. } => write!(f, "First argument in method must be 'self', not '{}'", name),
+            MethodWithoutSelf{ name, .. } => write!(f, "Method '{}' has no 'self' argument", name),
+        }
+    }
+}
+impl Error for ResolveError {}
+impl PrettyError for ResolveError {
+    fn range(&self) -> Option<TextRange> {
+        use ResolveError::*;
+        match self {
+            IllegalFunctionExpr{ range, .. } => *range,
+            IllegalAssignExpr{ range, .. }   => *range,
+
+            MethodWithNonSelf{ arg, .. }  => *arg,
+            MethodWithoutSelf{ func, .. } => *func,
+        }
+    }
+
+    fn notes(&self) -> Vec<Box<dyn PrettyNote>> {
+        use ResolveError::*;
+        match self {
+            IllegalFunctionExpr{ .. } |
+            IllegalAssignExpr{ .. }   => vec![],
+
+            MethodWithNonSelf{ func, class, .. } => vec![ Box::new(CompileNote::PartOf{ what: "function", range: *func }), Box::new(CompileNote::DefinedIn { what: "class", range: *class }) ],
+            MethodWithoutSelf{ class, .. }       => vec![ Box::new(CompileNote::DefinedIn { what: "class", range: *class }) ],
+        }
+    }
 }
 
 

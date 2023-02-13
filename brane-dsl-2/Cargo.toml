@@ -15,6 +15,7 @@ num-traits           = "0.2.15"
 unicode-segmentation = "1.10.1"
 
 brane-ast-2 = { path = "../brane-ast-2" }
+specifications = { path = "../specifications" }
 
 [dev-dependencies]
 brane-shr = { path = "../brane-shr" }

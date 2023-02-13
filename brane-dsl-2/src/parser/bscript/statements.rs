@@ -4,7 +4,7 @@
 //  Created:
 //    08 Feb 2023, 10:19:08
 //  Last edited:
-//    13 Feb 2023, 12:39:31
+//    13 Feb 2023, 17:34:30
 //  Auto updated?
 //    Yes
 // 
@@ -333,6 +333,8 @@ fn import<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Statement, Err
                 kind : StatementKind::Import {
                     name    : package,
                     version : version.map(|(major, (minor, patch))| (major, minor, patch)),
+
+                    st_entry : None,
                 },
                 annots : vec![],
                 range  : Some(TextRange::new(import.start_of(), semicolon.end_of())),
@@ -380,6 +382,8 @@ fn func_def<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, FunctionDef,
                 body,
 
                 range,
+
+                st_entry : None,
             }
         }
     )(input)
@@ -415,6 +419,8 @@ fn class_def<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Statement, 
                 kind : StatementKind::ClassDef {
                     name,
                     defs : members,
+
+                    st_entry : None,
                 },
                 annots : vec![],
                 range  : Some(TextRange::new(class.start_of(), rbrace.end_of())),
@@ -457,7 +463,10 @@ fn var_def<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Statement, Er
                 kind : StatementKind::VarDef {
                     name,
                     data_type : data_type.unwrap_or_else(DataType::any),
+
                     value,
+
+                    st_entry : None,
                 },
                 annots : vec![],
                 range  : Some(TextRange::new(let_kw.start_of(), semicolon.end_of())),
@@ -517,6 +526,8 @@ fn for_loop<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Statement, E
                     step,
 
                     block : body,
+
+                    st_entry : None,
                 },
                 annots : vec![],
                 range,

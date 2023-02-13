@@ -4,13 +4,16 @@
 //  Created:
 //    08 Feb 2023, 13:18:17
 //  Last edited:
-//    13 Feb 2023, 11:39:55
+//    13 Feb 2023, 14:29:08
 //  Auto updated?
 //    Yes
 // 
 //  Description:
 //!   Defines the toplevel struct(s) in the BraneScript/Bakery AST.
 // 
+
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use super::spec::{Annotation, Node, TextRange};
 use super::symbol_tables::SymbolTable;
@@ -29,7 +32,7 @@ pub struct Program {
     /// The toplevel list of annotations for the program.
     pub annots : Vec<Annotation>,
     /// The toplevel symbol table for the program.
-    pub table  : SymbolTable,
+    pub table  : Rc<RefCell<SymbolTable>>,
 }
 impl Node for Program {
     #[inline]

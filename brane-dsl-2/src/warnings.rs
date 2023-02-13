@@ -4,7 +4,7 @@
 //  Created:
 //    11 Feb 2023, 18:14:09
 //  Last edited:
-//    13 Feb 2023, 12:49:57
+//    13 Feb 2023, 16:50:54
 //  Auto updated?
 //    Yes
 // 
@@ -19,11 +19,11 @@ use std::str::FromStr;
 use console::{style, Style};
 
 use crate::errors::print_range;
-use crate::notes::PrettyNote;
+use crate::notes::{CompileNote, PrettyNote};
 use crate::ast::spec::TextRange;
 
 
-/***** AUXILLARY *****/
+/***** HELPER MACROS *****/
 /// Provides a template for writing the WarningCode struct
 macro_rules! warning_codes {
     (
@@ -94,6 +94,96 @@ macro_rules! warning_codes {
     };
 }
 
+/// Provides a template for warnings.
+macro_rules! warning {
+    (
+        $(#[$outer:meta])*
+        $wname:ident {
+            $(
+                $(#[$annot:ident $($args:tt)*])*
+                $name:ident $({ $($field:ident : $field_ty:ty),* })?
+            ),*
+            $(,)?
+        }$(,)?
+
+        impl Display {
+            $(
+                $dname:ident $({ $($dfield:ident $(: $dfield_as:ident)?),* $(, ..)? })? => ($fmt:literal $(, $dval:expr)* $(,)?)
+            ),*
+            $(,)?
+        }$(,)?
+
+        impl Range {
+            $(
+                $rname:ident $({ $($rfield:ident $(: $rfield_as:ident)?),* $(, ..)? })? => $rval:expr,
+            )*
+
+            $(_ => $roval:expr $(,)?)?
+        }$(,)?
+
+        impl Notes {
+            $(
+                $nname:ident $({ $($nfield:ident $(: $nfield_as:ident)?),* $(, ..)? })? => $nval:expr,
+            )*
+
+            $(_ => $noval:expr $(,)?)?
+        }$(,)?
+    ) => {
+        $(#[$outer])*
+        #[derive(Debug)]
+        pub enum $wname {
+            $(
+                $(#[$annot $($args)*])*
+                $name $({ $($field : $field_ty),* })?,
+            )*
+        }
+        impl Display for $wname {
+            fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
+                match self {
+                    $(
+                        $wname::$dname $({ $($dfield $(: $dfield_as)?,)* .. })? => write!(f, $fmt $(, $dval)*),
+                    )*
+                }
+            }
+        }
+        impl Warning for $wname {
+            fn code(&self) -> WarningCode {
+                match self {
+                    $(
+                        $wname::$name { .. } => WarningCode::$name,
+                    )*
+                }
+            }
+        }
+        impl PrettyWarning for $wname {
+            fn range(&self) -> Option<TextRange> {
+                match self {
+                    $(
+                        $wname::$rname $({ $($rfield $(: $rfield_as)?,)* .. })? => $rval,
+                    )*
+        
+                    $(_ => $roval $(,)?)?
+                }
+            }
+
+            fn notes(&self) -> Vec<Box<dyn PrettyNote>> {
+                match self {
+                    $(
+                        $wname::$nname $({ $($nfield $(: $nfield_as)?,)* .. })? => $nval,
+                    )*
+        
+                    $(_ => $noval,)?
+                }
+            }
+        }
+    }
+}
+
+
+
+
+
+/***** AUXILLARY *****/
 warning_codes!{
     /// Occurs when some unknown annotation is used.
     UnknownAnnotation  => "unknown_annot",
@@ -103,6 +193,17 @@ warning_codes!{
     UnknownWarningCode => "unknown_warn_code",
     /// Occurs when an annotation is valid but unused.
     UnusedAnnotation   => "unused_annot",
+
+    /// Occurs when a package shadows another package in the same scope.
+    DuplicatePackageImport      => "duplicate_package",
+    /// Occurs when a function shadows another function in the same scope.
+    DuplicateFuncDefinition     => "duplicate_function",
+    /// Occurs when a class shadows another class in the same scope.
+    DuplicateClassDefinition    => "duplicate_class",
+    /// Occurs when a property shadows another property in the same class.
+    DuplicatePropertyDefinition => "duplicate_property",
+    /// Occurs when a method shadows another method in the same class.
+    DuplicateMethodDefinition   => "duplicate_method",
 
     /// Occurs when some code can never be reached.
     DeadCode => "dead_code",
@@ -196,53 +297,70 @@ pub trait PrettyWarning: Warning + PrettyWarningAsDyn {
 
 
 /***** LIBRARY *****/
-/// Describes warnings that may originate when working with annotations.
-#[derive(Debug)]
-pub enum AnnotationWarning {
-    /// An annotation was given that we did not know.
-    UnknownAnnotation{ raw: String, range: Option<TextRange> },
-    /// The given warning code was of illegal annotation type.
-    IllegalWarningCode{ range: Option<TextRange> },
-    /// The given warning code was unknown to us.
-    UnknownWarningCode{ raw: String, range: Option<TextRange> },
-    /// An annotation was defined but not matched with any statement.
-    UnusedAnnotation{ range: Option<TextRange> },
+warning! {
+    /// Describes warnings taht may originate when resolving symbol table entries.
+    ResolveWarning {
+        /// A duplicate package declaration (import).
+        DuplicatePackageImport { name: String, range: Option<TextRange>, prev: Option<TextRange> },
+        /// A duplicate function delcaration.
+        DuplicateFuncDefinition { name: String, range: Option<TextRange>, prev: Option<TextRange> },
+        /// A duplicate class declaration.
+        DuplicateClassDefinition{ name: String, range: Option<TextRange>, prev: Option<TextRange> },
+        /// A duplicate proprety declaration.
+        DuplicatePropertyDefinition{ name: String, class: String, range: Option<TextRange>, prev: Option<TextRange> },
+        /// A duplicate method declaration.
+        DuplicateMethodDefinition{ name: String, class: String, range: Option<TextRange>, prev: Option<TextRange> },
+    },
+    impl Display {
+        DuplicatePackageImport{ name }             => ("Package '{}' was already imported (not overwriting)", name),
+        DuplicateFuncDefinition{ name }            => ("Function '{}' was already defined (not overwriting)", name),
+        DuplicateClassDefinition{ name }           => ("Class '{}' was already defined (not overwriting)", name),
+        DuplicatePropertyDefinition{ name, class } => ("Proprety '{}' was already defined in class '{}' (not overwriting)", name, class),
+        DuplicateMethodDefinition{ name, class }   => ("Method '{}' was already defined in class '{}' (not overwriting)", name, class),
+    },
+    impl Range {
+        DuplicatePackageImport{ range }      => *range,
+        DuplicateFuncDefinition{ range }     => *range,
+        DuplicateClassDefinition{ range }    => *range,
+        DuplicatePropertyDefinition{ range } => *range,
+        DuplicateMethodDefinition{ range }   => *range,
+    },
+    impl Notes {
+        DuplicatePackageImport{ prev }      => vec![ Box::new(CompileNote::DefinedAt{ what: "Package", range: *prev }) ],
+        DuplicateFuncDefinition{ prev }     => vec![ Box::new(CompileNote::DefinedAt{ what: "Function", range: *prev }) ],
+        DuplicateClassDefinition{ prev }    => vec![ Box::new(CompileNote::DefinedAt{ what: "Class", range: *prev }) ],
+        DuplicatePropertyDefinition{ prev } => vec![ Box::new(CompileNote::DefinedAt{ what: "Property", range: *prev }) ],
+        DuplicateMethodDefinition{ prev }   => vec![ Box::new(CompileNote::DefinedAt{ what: "Method", range: *prev }) ],
+    },
 }
-impl Display for AnnotationWarning {
-    fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
-        use AnnotationWarning::*;
-        match self {
-            UnknownAnnotation{ raw, .. }  => write!(f, "Unknown annotation '{}'", raw),
-            IllegalWarningCode{ .. }      => write!(f, "Warning codes can only be single identifiers"),
-            UnknownWarningCode{ raw, .. } => write!(f, "Unknown warning code '{}'", raw),
-            UnusedAnnotation{ .. }        => write!(f, "Unused annotation"),
-        }
-    }
-}
-impl Warning for AnnotationWarning {
-    fn code(&self) -> WarningCode {
-        use AnnotationWarning::*;
-        match self {
-            UnknownAnnotation{ .. }  => WarningCode::UnknownAnnotation,
-            IllegalWarningCode{ .. } => WarningCode::IllegalWarningCode,
-            UnknownWarningCode{ .. } => WarningCode::UnknownWarningCode,
-            UnusedAnnotation{ .. }   => WarningCode::UnusedAnnotation,
-        }
-    }
-}
-impl PrettyWarning for AnnotationWarning {
-    fn range(&self) -> Option<TextRange> {
-        use AnnotationWarning::*;
-        match self {
-            UnknownAnnotation{ range, .. }  => *range,
-            IllegalWarningCode{ range, .. } => *range,
-            UnknownWarningCode{ range, .. } => *range,
-            UnusedAnnotation{ range, .. }   => *range,
-        }
-    }
 
-    fn notes(&self) -> Vec<Box<dyn PrettyNote>> {
-        // No notes yet
-        vec![]
+
+
+warning! {
+    /// Describes warnings that may originate when working with annotations.
+    AnnotationWarning {
+        /// An annotation was given that we did not know.
+        UnknownAnnotation{ raw: String, range: Option<TextRange> },
+        /// The given warning code was of illegal annotation type.
+        IllegalWarningCode{ range: Option<TextRange> },
+        /// The given warning code was unknown to us.
+        UnknownWarningCode{ raw: String, range: Option<TextRange> },
+        /// An annotation was defined but not matched with any statement.
+        UnusedAnnotation{ range: Option<TextRange> },
+    }
+    impl Display {
+        UnknownAnnotation{ raw }  => ("Unknown annotation '{}'", raw),
+        IllegalWarningCode{}      => ("Warning codes can only be single identifiers"),
+        UnknownWarningCode{ raw } => ("Unknown warning code '{}'", raw),
+        UnusedAnnotation{}        => ("Unused annotation"),
+    }
+    impl Range {
+        UnknownAnnotation{ range, .. }  => *range,
+        IllegalWarningCode{ range, .. } => *range,
+        UnknownWarningCode{ range, .. } => *range,
+        UnusedAnnotation{ range, .. }   => *range,
+    }
+    impl Notes {
+        _ => vec![],
     }
 }

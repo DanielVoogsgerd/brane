@@ -4,7 +4,7 @@
 //  Created:
 //    09 Feb 2023, 08:37:07
 //  Last edited:
-//    09 Feb 2023, 13:15:20
+//    13 Feb 2023, 17:17:26
 //  Auto updated?
 //    Yes
 // 
@@ -37,19 +37,19 @@ pub struct PrettyNoteFormatter<'n, 'f, 's> {
 impl<'n, 'f, 's> Display for PrettyNoteFormatter<'n, 'f, 's> {
     fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
         // Get the ranges to print
-        let (message, range): (String, Option<TextRange>) = self.note.ranges();
+        let range: Option<TextRange> = self.note.range();
 
         // Print the main error
         if let Some(range) = range {
             // Write the top line
-            writeln!(f, "{}: {}: {}", style(format!("{}:{}:{}", self.file, range.start.line, range.start.col)).bold(), style("note").green().bold(), message)?;
+            writeln!(f, "{}: {}: {}", style(format!("{}:{}:{}", self.file, range.start.line, range.start.col)).bold(), style("note").green().bold(), self.note)?;
 
             // Write the range
             print_range(f, range, self.source, Style::new().green().bold())?;
             writeln!(f)?;
         } else {
             // Write the top line without context
-            writeln!(f, "{}: {}: {}", style(self.file), style("note").green().bold(), message)?;
+            writeln!(f, "{}: {}: {}", style(self.file), style("note").green().bold(), self.note)?;
             writeln!(f)?;
         }
 
@@ -75,11 +75,11 @@ impl<T: PrettyNote + Sized> PrettyNoteAsDyn for T {
 /// A trait very similar to the `PrettyError` trait in `errors.rs`, but for Notes.
 pub trait PrettyNote: Note + PrettyNoteAsDyn {
     // Child-implemented
-    /// Returns the message and range that this note concerns itself with.
+    /// Returns the range that this note concerns itself with.
     /// 
     /// # Returns
-    /// A tuple with the message to write and the matching range. If there is no range, then `None` is returned for the range instead, and you can assume this Note does not relate to the source.
-    fn ranges(&self) -> (String, Option<TextRange>);
+    /// The matching range. If there is no range, then `None` is returned for the range instead, and you can assume this Note does not relate to the source.
+    fn range(&self) -> Option<TextRange>;
 
 
     // Globally provided
@@ -100,6 +100,46 @@ pub trait PrettyNote: Note + PrettyNoteAsDyn {
 
 
 /***** LIBRARY *****/
+/// Defines generic notes that can be used in many places.
+#[derive(Debug)]
+pub enum CompileNote {
+    /// Defines where something was defined.
+    /// 
+    /// `what` here gives answer to: `... defined here`.
+    DefinedAt{ what: &'static str, range: Option<TextRange> },
+    /// Notes that whatever we are talking about is defined in something else.
+    /// 
+    /// `what` here gives answer to: `Defined in ...`.
+    DefinedIn{ what: &'static str, range: Option<TextRange> },
+    /// Notes that whatever we are talking about is part of something else.
+    /// 
+    /// `what` here gives answer to: `Part of ...`.
+    PartOf{ what: &'static str, range: Option<TextRange> },
+}
+impl Display for CompileNote {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
+        use CompileNote::*;
+        match self {
+            DefinedAt{ what, .. } => write!(f, "{} defined here", what),
+            DefinedIn{ what, .. } => write!(f, "Defined in {}", what),
+            PartOf{ what, .. }    => write!(f, "Part of {}", what),
+        }
+    }
+}
+impl Note for CompileNote {}
+impl PrettyNote for CompileNote {
+    fn range(&self) -> Option<TextRange> {
+        use CompileNote::*;
+        match self {
+            DefinedAt{ range, .. } => *range,
+            DefinedIn{ range, .. } => *range,
+            PartOf{ range, .. }    => *range,
+        }
+    }
+}
+
+
+
 /// Defines the types of notes that may occur when scanning or parsing.
 #[derive(Debug)]
 pub enum NomNote {
@@ -119,11 +159,11 @@ impl Display for NomNote {
 }
 impl Note for NomNote {}
 impl PrettyNote for NomNote {
-    fn ranges(&self) -> (String, Option<TextRange>) {
+    fn range(&self) -> Option<TextRange> {
         use NomNote::*;
         match self {
-            ScanContext{ range, .. }  => (self.to_string(), Some(*range)),
-            ParseContext{ range, .. } => (self.to_string(), *range),
+            ScanContext{ range, .. }  => Some(*range),
+            ParseContext{ range, .. } => *range,
         }
     }
 }

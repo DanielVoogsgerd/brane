@@ -4,7 +4,7 @@
 //  Created:
 //    08 Feb 2023, 10:17:31
 //  Last edited:
-//    10 Feb 2023, 08:42:19
+//    13 Feb 2023, 14:31:00
 //  Auto updated?
 //    Yes
 // 
@@ -13,10 +13,14 @@
 //!   parallel-statements) that can be given in expression position.
 // 
 
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use nom::IResult;
 use nom::{combinator as comb, multi, sequence as seq};
 
 use crate::ast::spec::TextRange;
+use crate::ast::symbol_tables::SymbolTable;
 use crate::ast::expressions::Block;
 use crate::ast::statements::Statement;
 use crate::scanner::Token;
@@ -50,6 +54,8 @@ pub(crate) fn parse<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Bloc
             Block {
                 stmts,
                 range : Some(TextRange::new(lbrace.start_of(), rbrace.end_of())),
+
+                table : Rc::new(RefCell::new(SymbolTable::empty())),
             }
         }
     )(input)

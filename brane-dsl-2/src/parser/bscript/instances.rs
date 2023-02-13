@@ -4,7 +4,7 @@
 //  Created:
 //    07 Feb 2023, 19:07:08
 //  Last edited:
-//    10 Feb 2023, 19:04:43
+//    13 Feb 2023, 18:14:44
 //  Auto updated?
 //    Yes
 // 
@@ -94,6 +94,8 @@ pub(crate) fn parse<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Expr
                 kind : ExpressionKind::Instance {
                     name : ident,
                     props,
+
+                    st_entry : None,
                 },
                 range : Some(TextRange::new(new.start_of(), rbrace.end_of())),
             }

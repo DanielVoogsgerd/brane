@@ -4,7 +4,7 @@
 //  Created:
 //    13 Feb 2023, 11:54:08
 //  Last edited:
-//    13 Feb 2023, 13:17:44
+//    13 Feb 2023, 14:26:38
 //  Auto updated?
 //    Yes
 // 
@@ -20,7 +20,7 @@
 
 use std::mem;
 
-use crate::warnings::AnnotationWarning;
+use crate::warnings::AnnotationWarning as Warning;
 use crate::ast::spec::{self, Annotation, TextRange};
 use crate::ast::expressions::{Block, Expression, ExpressionKind};
 use crate::ast::statements::{ClassMemberDef, ClassMemberDefKind, Statement, StatementKind};
@@ -37,7 +37,7 @@ mod tests {
     use crate::scanner::{scan_tokens, Input as ScanInput};
     use crate::parser::parse_tokens;
     use crate::compiler::traversals::print_ast;
-    use super::{traverse, AnnotationWarning, Program};
+    use super::{traverse, Program, Warning};
 
 
     /// Tests the parser by print all files
@@ -63,7 +63,7 @@ mod tests {
             };
 
             // Run the traversal
-            let mut warns: Vec<AnnotationWarning> = vec![];
+            let mut warns: Vec<Warning> = vec![];
             traverse(&mut ast, &mut warns);
 
             // Print any warnings
@@ -94,7 +94,7 @@ mod tests {
 /// 
 /// # Returns
 /// Returns whether this statement should be preserved (the same statement) or not (None).
-fn trav_stmt(mut stmt: Statement, annot_buffer: &mut Vec<Annotation>, range_buffer: &mut Vec<Option<TextRange>>, parent_annots: &mut Vec<Annotation>, warnings: &mut Vec<AnnotationWarning>) -> Option<Statement> {
+fn trav_stmt(mut stmt: Statement, annot_buffer: &mut Vec<Annotation>, range_buffer: &mut Vec<Option<TextRange>>, parent_annots: &mut Vec<Annotation>, warnings: &mut Vec<Warning>) -> Option<Statement> {
     // Match on the statement
     use StatementKind::*;
     match &mut stmt.kind {
@@ -102,7 +102,7 @@ fn trav_stmt(mut stmt: Statement, annot_buffer: &mut Vec<Annotation>, range_buff
         Annotation { annots } => {
             // Parse each of the annotations and add them to the temporary buffer for the next, non-annotation statement
             for a in annots {
-                let (annots, warns): (Vec<spec::Annotation>, Vec<AnnotationWarning>) = spec::Annotation::from_ref(a);
+                let (annots, warns): (Vec<spec::Annotation>, Vec<Warning>) = spec::Annotation::from_ref(a);
                 annot_buffer.extend(annots);
                 range_buffer.push(stmt.range);
                 warnings.extend(warns);
@@ -115,7 +115,7 @@ fn trav_stmt(mut stmt: Statement, annot_buffer: &mut Vec<Annotation>, range_buff
         ParentAnnotation { annots } => {
             // Parse each of the annotations and add them to the parent statement
             for a in annots {
-                let (annots, warns): (Vec<spec::Annotation>, Vec<AnnotationWarning>) = spec::Annotation::from_ref(a);
+                let (annots, warns): (Vec<spec::Annotation>, Vec<Warning>) = spec::Annotation::from_ref(a);
                 parent_annots.extend(annots);
                 warnings.extend(warns);
             }
@@ -157,7 +157,7 @@ fn trav_stmt(mut stmt: Statement, annot_buffer: &mut Vec<Annotation>, range_buff
             let old_defs: Vec<ClassMemberDef> = mem::take(defs);
             *defs = old_defs.into_iter().filter_map(|d| trav_member_def(d, annot_buffer, range_buffer, &mut stmt.annots, warnings)).collect();
             if !range_buffer.is_empty() {
-                warnings.extend(range_buffer.drain(..).map(|r| AnnotationWarning::UnusedAnnotation{ range: r }));
+                warnings.extend(range_buffer.drain(..).map(|r| Warning::UnusedAnnotation{ range: r }));
                 annot_buffer.clear();
             }
 
@@ -255,7 +255,7 @@ fn trav_stmt(mut stmt: Statement, annot_buffer: &mut Vec<Annotation>, range_buff
 /// 
 /// # Returns
 /// Returns whether this definition should be preserved (the same definition) or not (None).
-fn trav_member_def(mut def: ClassMemberDef, annot_buffer: &mut Vec<Annotation>, range_buffer: &mut Vec<Option<TextRange>>, parent_annots: &mut Vec<Annotation>, warnings: &mut Vec<AnnotationWarning>) -> Option<ClassMemberDef> {
+fn trav_member_def(mut def: ClassMemberDef, annot_buffer: &mut Vec<Annotation>, range_buffer: &mut Vec<Option<TextRange>>, parent_annots: &mut Vec<Annotation>, warnings: &mut Vec<Warning>) -> Option<ClassMemberDef> {
     // Match on the definition
     use ClassMemberDefKind::*;
     match &mut def.kind {
@@ -263,7 +263,7 @@ fn trav_member_def(mut def: ClassMemberDef, annot_buffer: &mut Vec<Annotation>, 
         Annotation{ annots } => {
             // Parse each of the annotations and add them to the temporary buffer for the next, non-annotation statement
             for a in annots {
-                let (annots, warns): (Vec<spec::Annotation>, Vec<AnnotationWarning>) = spec::Annotation::from_ref(a);
+                let (annots, warns): (Vec<spec::Annotation>, Vec<Warning>) = spec::Annotation::from_ref(a);
                 annot_buffer.extend(annots);
                 range_buffer.push(def.range);
                 warnings.extend(warns);
@@ -276,7 +276,7 @@ fn trav_member_def(mut def: ClassMemberDef, annot_buffer: &mut Vec<Annotation>, 
         ParentAnnotation{ annots } => {
             // Parse each of the annotations and add them to the parent statement
             for a in annots {
-                let (annots, warns): (Vec<spec::Annotation>, Vec<AnnotationWarning>) = spec::Annotation::from_ref(a);
+                let (annots, warns): (Vec<spec::Annotation>, Vec<Warning>) = spec::Annotation::from_ref(a);
                 parent_annots.extend(annots);
                 warnings.extend(warns);
             }
@@ -322,7 +322,7 @@ fn trav_member_def(mut def: ClassMemberDef, annot_buffer: &mut Vec<Annotation>, 
 /// - `annot_buffer`: A temporary buffer of annotations we collected for the first statement we see. Note that we assume these are already empty (but we re-use them for optimization purposes).
 /// - `range_buffer`: A temporary buffer of ranges matching the collected `annot_buffer`. Does not map one-to-one, but rather, can be used to emit errors about groups of annotations instead. Note that we assume these are already empty (but we re-use them for optimization purposes).
 /// - `warnings`: A list of warnings to populate.
-fn trav_expr(expr: &mut Expression, annot_buffer: &mut Vec<Annotation>, range_buffer: &mut Vec<Option<TextRange>>, warnings: &mut Vec<AnnotationWarning>) {
+fn trav_expr(expr: &mut Expression, annot_buffer: &mut Vec<Annotation>, range_buffer: &mut Vec<Option<TextRange>>, warnings: &mut Vec<Warning>) {
     // Switch on the expression
     use ExpressionKind::*;
     match &mut expr.kind {
@@ -408,12 +408,12 @@ fn trav_expr(expr: &mut Expression, annot_buffer: &mut Vec<Annotation>, range_bu
 /// - `range_buffer`: A temporary buffer of ranges matching the collected `annot_buffer`. Does not map one-to-one, but rather, can be used to emit errors about groups of annotations instead. Note that we assume these are already empty (but we re-use them for optimization purposes).
 /// - `parent_annots`: The list of annotations to populate for _parent_ annotations.
 /// - `warnings`: A list of warnings to populate.
-fn trav_block(block: &mut Block, annot_buffer: &mut Vec<Annotation>, range_buffer: &mut Vec<Option<TextRange>>, parent_annots: &mut Vec<Annotation>, warnings: &mut Vec<AnnotationWarning>) {
+fn trav_block(block: &mut Block, annot_buffer: &mut Vec<Annotation>, range_buffer: &mut Vec<Option<TextRange>>, parent_annots: &mut Vec<Annotation>, warnings: &mut Vec<Warning>) {
     // Hit it for the statements again
     let old_stmts: Vec<Statement> = mem::take(&mut block.stmts);
     block.stmts = old_stmts.into_iter().filter_map(|s| trav_stmt(s, annot_buffer, range_buffer, parent_annots, warnings)).collect();
     if !range_buffer.is_empty() {
-        warnings.extend(range_buffer.drain(..).map(|r| AnnotationWarning::UnusedAnnotation{ range: r }));
+        warnings.extend(range_buffer.drain(..).map(|r| Warning::UnusedAnnotation{ range: r }));
         annot_buffer.clear();
     }
 }
@@ -428,8 +428,7 @@ fn trav_block(block: &mut Block, annot_buffer: &mut Vec<Annotation>, range_buffe
 /// # Arguments
 /// - `tree`: The AST to resolve.
 /// - `warnings`: A list of AnnotationWarnings to populate.
-#[allow(dead_code)]
-pub fn traverse(tree: &mut Program, warnings: &mut Vec<AnnotationWarning>) {
+pub fn traverse(tree: &mut Program, warnings: &mut Vec<Warning>) {
     // We start populating the program's symbol table
     let Program{ stmts, annots, .. } = tree;
 
@@ -438,7 +437,7 @@ pub fn traverse(tree: &mut Program, warnings: &mut Vec<AnnotationWarning>) {
     let (mut annot_buffer, mut range_buffer): (Vec<Annotation>, Vec<Option<TextRange>>) = (vec![], vec![]);
     *stmts = old_stmts.into_iter().filter_map(|s| trav_stmt(s, &mut annot_buffer, &mut range_buffer, annots, warnings)).collect();
     if !range_buffer.is_empty() {
-        warnings.extend(range_buffer.drain(..).map(|r| AnnotationWarning::UnusedAnnotation{ range: r }));
+        warnings.extend(range_buffer.drain(..).map(|r| Warning::UnusedAnnotation{ range: r }));
         annot_buffer.clear();
     }
 

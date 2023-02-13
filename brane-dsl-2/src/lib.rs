@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 15:25:18
 //  Last edited:
-//    13 Feb 2023, 11:11:46
+//    13 Feb 2023, 14:04:34
 //  Auto updated?
 //    Yes
 // 
@@ -66,9 +66,9 @@ pub fn compile_module<'f, 's>(file: &'f str, source: &'s str, phase: compiler::C
     if phase == CompilerPhase::Print { traversals::print_ast::traverse(&mut std::io::stdout(), &ast).unwrap_or_else(|err| panic!("Failed to write to stderr: {}", err)); return Ok(()); }
 
     // Else, match the phases to do
-    if phase >= CompilerPhase::Resolve {
-        traversals::resolve::traverse(&mut ast);
-    }
+    // if phase >= CompilerPhase::Resolve {
+    //     traversals::resolve::traverse(&mut ast);
+    // }
 
     // Done
     Ok(())

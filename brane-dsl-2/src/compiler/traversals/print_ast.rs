@@ -4,7 +4,7 @@
 //  Created:
 //    10 Feb 2023, 19:25:20
 //  Last edited:
-//    13 Feb 2023, 13:14:56
+//    13 Feb 2023, 18:14:51
 //  Auto updated?
 //    Yes
 // 
@@ -220,14 +220,14 @@ impl<'e> Display for TravFormatter<'e, Statement> {
 
 
             // Definitions
-            Import{ name, version } => {
+            Import{ name, version, .. } => {
                 // Print the statement
                 writeln!(f, indent = self.indent, "import {}{};", name.name, if let Some(version) = version { format!("[{}.{}.{}]", version.0.trav(), version.1.trav(), version.2.trav()) } else { String::new() })
             },
 
             FunctionDef(def) => write!(f, "{}", def.trav_indent(self.indent)),
 
-            ClassDef { name, defs } => {
+            ClassDef { name, defs, .. } => {
                 // Write the class header
                 writeln!(f, indent = self.indent, "class {} {{", name.name)?;
                 // Write all the definitions
@@ -256,7 +256,7 @@ impl<'e> Display for TravFormatter<'e, Statement> {
                 Ok(())
             },
         
-            VarDef { name, data_type, value } => {
+            VarDef { name, data_type, value, .. } => {
                 // Write the let statement thingy in one line
                 writeln!(f, indent = self.indent, "let {}{}{};",
                     name.name,
@@ -268,7 +268,7 @@ impl<'e> Display for TravFormatter<'e, Statement> {
 
 
             // Control flow
-            For { name, start, stop, step, block } => {
+            For { name, start, stop, step, block, .. } => {
                 // Write the for header
                 write!(f, indent = self.indent, "for ({} from {} to {}{}) ",
                     name.name,
@@ -445,7 +445,7 @@ impl<'e> Display for TravFormatter<'e, Expression> {
             Array { elems } => {
                 write!(f, "[{}]", elems.iter().map(|e| e.trav_indent(self.indent).to_string()).collect::<Vec<String>>().join(", "))
             },
-            Instance { name, props } => {
+            Instance { name, props, .. } => {
                 // Write the header
                 writeln!(f, "new {} {{", name.name)?;
                 // Write the properties

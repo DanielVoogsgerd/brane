@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 15:33:27
 //  Last edited:
-//    13 Feb 2023, 12:38:50
+//    13 Feb 2023, 17:34:16
 //  Auto updated?
 //    Yes
 // 
@@ -15,6 +15,7 @@
 use enum_debug::EnumDebug;
 
 use super::spec::{Annotation, Node, TextRange};
+use super::symbol_tables::{ClassEntry, DelayedEntryPtr, LocalFuncEntry, PackageEntry, VarEntry};
 use super::auxillary::{DataType, Identifier};
 use super::expressions::{Block, Expression, Literal};
 
@@ -63,6 +64,9 @@ pub enum StatementKind {
         name    : Identifier,
         /// An optional version, specified as a (major, minor, patch) triplet of integer literals.
         version : Option<(Literal, Literal, Literal)>,
+
+        /// The symbol table entry for the declared package.
+        st_entry : Option<DelayedEntryPtr<PackageEntry>>,
     },
 
     /// A definition of a function.
@@ -74,6 +78,9 @@ pub enum StatementKind {
         name : Identifier,
         /// The definitions in this class, which may be either properties or methods.
         defs : Vec<ClassMemberDef>,
+
+        /// The symbol table entry for the declared class.
+        st_entry : Option<DelayedEntryPtr<ClassEntry>>,
     },
 
     /// A definition of a variable (previously known as a let-expression).
@@ -85,6 +92,9 @@ pub enum StatementKind {
 
         /// An optional value to assign to the variable.
         value : Option<Expression>,
+
+        /// The symbol table entry for the declared variable.
+        st_entry : Option<DelayedEntryPtr<VarEntry>>,
     },
 
 
@@ -103,6 +113,9 @@ pub enum StatementKind {
 
         /// The block of statements to be executed repeatedly.
         block : Block,
+
+        /// The symbol table entry for the declared iterator variable.
+        st_entry : Option<DelayedEntryPtr<VarEntry>>,
     },
 
     /// A while-loop defines a series of statements that should be executed in succession, but with an unpredictable amount.
@@ -169,6 +182,9 @@ pub struct FunctionDef {
 
     /// The range in the source text for this definition (as a whole).
     pub range : Option<TextRange>,
+
+    /// The symbol table entry for the declared function.
+    pub st_entry : Option<DelayedEntryPtr<LocalFuncEntry>>,
 }
 impl Node for FunctionDef {
     #[inline]
