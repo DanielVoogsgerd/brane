@@ -20,37 +20,18 @@
 
 Regardless of the context and rationale, running distributed applications on geographically dispersed IT resources often comes with various technical and organizational challenges. If not addressed appropriately, these challenges may impede development, and in turn, scientific and business innovation. We have designed and developed Brane to support implementers in addressing these challenges. Brane makes use of containerization to encapsulate functionalities as portable building blocks. Through programmability, application orchestration can be expressed using intuitive domain-specific languages. As a result, end-users with limited or no programming experience are empowered to compose applications by themselves, without having to deal with the underlying technical details.
 
-See the [documentation](https://onnovalkering.gitbook.io/brane) for more information.
+See the [documentation](https://wiki.enablingpersonalizedinterventions.nl) for more information.
+
 
 ## Contributing
 If you're interrested in contributing, please read the [code of conduct](.github/CODE_OF_CONDUCT.md) and [contributing](.github/CONTRIBUTING.md) guide.
 
 Bug reports and feature requests can be created in the [issue tracker](https://github.com/epi-project/brane/issues).
 
+
+## Installation
+For an how-to on how to install or run the framework, refer to the [user guide](https://wiki.enablingpersonalizedinterventions.nl/user-guide) and then the section that represents your role best. If you don't know, it might be a start 
+
+
 ## Development
-The latest version of [Rust](https://www.rust-lang.org), and the following system dependencies must be installed (assuming Ubuntu 20.04):
 
-- build-essential
-- cmake
-- docker-compose
-- docker.io
-- libssl-dev
-- musl-tools
-- pkg-config
-
-### Builds
-To compile and test the complete project:
-```
-$ cargo build
-$ cargo test
-```
-
-To build optimized versions of the binaries (`brane` and `branelet`):
-```shell
-$ make build-binaries
-```
-
-To build optimized versions of the services (Docker images):
-```shell
-$ make build-services
-```
