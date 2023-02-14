@@ -4,7 +4,7 @@
 //  Created:
 //    13 Feb 2023, 11:54:08
 //  Last edited:
-//    14 Feb 2023, 08:59:52
+//    14 Feb 2023, 10:05:48
 //  Auto updated?
 //    Yes
 // 
@@ -33,12 +33,10 @@ use crate::ast::toplevel::Program;
 mod tests {
     use std::path::PathBuf;
     use brane_shr::utilities::test_on_dsl_files;
-    use crate::errors::{DslError, ErrorTrace, PrettyError as _};
+    use crate::compile_module;
     use crate::warnings::PrettyWarning as _;
-    use crate::scanner::{scan_tokens, Input as ScanInput};
-    use crate::parser::parse_tokens;
-    use crate::compiler::traversals::print_ast;
-    use super::{traverse, DslWarning, Program};
+    use crate::compiler::traversals::{print_ast, CompilerPhase};
+    use super::{DslWarning, Program};
 
 
     /// Tests the parser by print all files
@@ -48,24 +46,16 @@ mod tests {
             println!("{}", (0..80).map(|_| '-').collect::<String>());
             println!("File '{}' gave us:", path.display());
 
-            // Scan the tokens
-            let mut ast: Program = match parse_tokens(&scan_tokens(ScanInput::new(&raw)).unwrap().1) {
-                Ok((remain, ast)) => {
-                    if !remain.is_empty() {
-                        eprintln!("{}", DslError::ParseLeftoverError{ remainder: remain.into() }.display_with_source(&path.display().to_string(), &raw));
-                        panic!("Scanning failed (see above)");
-                    }
-                    ast
-                },
+            // Run the traversals up to this one
+            let file: String = path.display().to_string();
+            let (ast, warns): (Program, Vec<DslWarning>) = match compile_module(&file, &raw, CompilerPhase::Annotations) {
+                Ok(res)  => res,
                 Err(err) => {
-                    eprintln!("{}", ErrorTrace::from_nom_err_parse(&path.display().to_string(), &raw, err).display());
-                    panic!("Scanning failed (see above)");
+                    // Prettyprint the errors
+                    eprintln!("{}", err.display());
+                    panic!("Failed to compile the file (see the output above)");
                 },
             };
-
-            // Run the traversal
-            let mut warns: Vec<DslWarning> = vec![];
-            traverse(&mut ast, &mut warns);
 
             // Print any warnings
             for w in warns {

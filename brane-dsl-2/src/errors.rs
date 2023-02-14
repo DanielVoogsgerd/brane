@@ -4,7 +4,7 @@
 //  Created:
 //    07 Feb 2023, 10:10:18
 //  Last edited:
-//    14 Feb 2023, 09:06:15
+//    14 Feb 2023, 10:06:34
 //  Auto updated?
 //    Yes
 // 
@@ -326,6 +326,42 @@ impl<'f, 's> ErrorTrace<'f, 's> {
         trace.extend(trace[0].error().notes().into_iter().map(|n| TraceElem::Note(n)));
 
         // That's enough to return ourselves
+        Self {
+            file,
+            source,
+
+            trace,
+        }
+    }
+
+    /// Constructor that constructs the trace from the given list of DSL errors.
+    /// 
+    /// It is a little bit less of a trace, and more a list of traces.
+    /// 
+    /// # Arguments
+    /// - `file`: The name or other description of the input source.
+    /// - `source`: A reference to the physical source we (attempted to) parsed.
+    /// - `errs`: The list of DslErrors to wrap.
+    /// 
+    /// # Returns
+    /// A new `ErrorTrace` instance.
+    pub fn from_errors(file: &'f str, source: &'s str, errs: impl IntoIterator<Item = DslError<'s>>) -> Self {
+        // Convert the list (probably) into an iterator
+        let errs = errs.into_iter();
+        let size_hint = errs.size_hint();
+
+        // Wrap all the errors into errors and notes
+        let mut trace: Vec<TraceElem> = Vec::with_capacity(size_hint.1.unwrap_or(size_hint.0));
+        for err in errs {
+            // Get the notes of the error
+            let notes: Vec<Box<dyn PrettyNote>> = err.notes();
+
+            // Wrap the error in an element together with all of its notes
+            trace.push(TraceElem::Error(Box::new(err)));
+            trace.extend(notes.into_iter().map(|n| TraceElem::Note(n)));
+        }
+
+        // Now we can construct ourselves
         Self {
             file,
             source,

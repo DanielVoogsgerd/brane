@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 15:25:18
 //  Last edited:
-//    14 Feb 2023, 09:07:20
+//    14 Feb 2023, 10:03:18
 //  Auto updated?
 //    Yes
 // 
@@ -23,12 +23,25 @@ mod scanner;
 mod parser;
 mod compiler;
 
-// Define some useful abstraction over a DslError
+// Bring some of that into the main namespace
 pub use errors::{DslError as Error, ErrorTrace};
-
+pub use ast::Program;
 
 
 /***** LIBRARY *****/
+/// Provides a wrapper around the different answers that the compile-functions may give.
+#[derive(Clone, Debug, enum_debug::EnumDebug)]
+pub enum CompileResult {
+    /// It's a program that is parsed and (depending on the chosen phase) preprocessed.
+    Program(Program),
+}
+impl From<Program> for CompileResult {
+    #[inline]
+    fn from(value: Program) -> Self { Self::Program(value) }
+}
+
+
+
 /// Toplevel comilation function that drives the entire compilation process.
 /// 
 /// # Arguments
@@ -39,9 +52,8 @@ pub use errors::{DslError as Error, ErrorTrace};
 /// 
 /// # Errors
 /// 
-pub fn compile_module<'f, 's>(file: &'f str, source: &'s str, phase: compiler::CompilerPhase) -> Result<Vec<warnings::DslWarning>, ErrorTrace<'f, 's>> {
+pub fn compile_module<'f, 's>(file: &'f str, source: &'s str, phase: compiler::CompilerPhase) -> Result<(Program, Vec<warnings::DslWarning>), ErrorTrace<'f, 's>> {
     use warnings::DslWarning;
-    use ast::toplevel::Program;
     use scanner::tokens::Token;
     use compiler::{traversals, CompilerPhase};
 
@@ -64,7 +76,7 @@ pub fn compile_module<'f, 's>(file: &'f str, source: &'s str, phase: compiler::C
     };
 
     // We print and done if we're told to do that phase
-    if phase == CompilerPhase::Print { traversals::print_ast::traverse(&mut std::io::stdout(), &ast).unwrap_or_else(|err| panic!("Failed to write to stderr: {}", err)); return Ok(()); }
+    if phase == CompilerPhase::Print { traversals::print_ast::traverse(&mut std::io::stdout(), &ast).unwrap_or_else(|err| panic!("Failed to write to stderr: {}", err)); return Ok((ast.into(), vec![])); }
 
     // Else, match the phases to do
     let mut warnings: Vec<DslWarning> = vec![];
@@ -72,9 +84,9 @@ pub fn compile_module<'f, 's>(file: &'f str, source: &'s str, phase: compiler::C
         traversals::annotations::traverse(&mut ast, &mut warnings);
     }
     if phase >= CompilerPhase::Resolve {
-        if let Err(errs) = traversals::resolve::traverse(&mut ast, &mut warnings) { return Err() };
+        if let Err(errs) = traversals::resolve::traverse(&mut ast, &mut warnings) { return Err(ErrorTrace::from_errors(file, source, errs)); };
     }
 
     // Done
-    Ok(())
+    Ok((ast.into(), warnings))
 }

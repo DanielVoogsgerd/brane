@@ -9,4 +9,4 @@ import test;
 //     import test[1.0.0];
 // }
 
-println(hello_world());
+println(test::hello_world());

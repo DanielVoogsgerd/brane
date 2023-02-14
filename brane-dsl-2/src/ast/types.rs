@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 16:07:39
 //  Last edited:
-//    11 Feb 2023, 16:39:31
+//    14 Feb 2023, 10:40:25
 //  Auto updated?
 //    Yes
 // 
@@ -21,7 +21,7 @@ use enum_debug::EnumDebug;
 
 /***** LIBRARY *****/
 /// Defines the allowed / supported data types by BraneScript and Bakery.
-#[derive(Clone, Debug, EnumDebug)]
+#[derive(Clone, Debug, EnumDebug, Eq, PartialEq)]
 pub enum DataType {
     // Special types
     /// No compile-time type is deduced; essentially means "to-be-assessed".

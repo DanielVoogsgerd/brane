@@ -4,7 +4,7 @@
 //  Created:
 //    10 Feb 2023, 19:25:20
 //  Last edited:
-//    14 Feb 2023, 08:27:55
+//    14 Feb 2023, 13:24:43
 //  Auto updated?
 //    Yes
 // 
@@ -12,10 +12,13 @@
 //!   Compiler traversal for printing the current AST.
 // 
 
+use std::cell::Ref;
 use std::fmt::{Display, Formatter, Result as FResult};
 use std::io::Write;
 
 use crate::ast::spec::{Annotation, Node};
+use crate::ast::types::DataType;
+use crate::ast::symbol_tables::{ClassEntry, ClassEntryMember, DelayedEntry, ExternalFuncEntry, LocalFuncEntry, PackageEntry, SymbolTable, VarEntry};
 use crate::ast::expressions::{Block, Expression, ExpressionKind, Literal, LiteralKind, UnaryOperatorKind};
 use crate::ast::statements::{ArgDef, ClassMemberDefKind, FunctionDef, RawAnnotation, RawAnnotationKind, Statement, StatementKind};
 use crate::ast::toplevel::Program;
@@ -29,7 +32,7 @@ mod tests {
     use crate::errors::{DslError, ErrorTrace, PrettyError as _};
     use crate::scanner::{scan_tokens, Input as ScanInput};
     use crate::parser::parse_tokens;
-    use super::{traverse, Program};
+    use super::{traverse, traverse_st, Program};
 
 
     /// Tests the parser by print all files
@@ -56,6 +59,34 @@ mod tests {
 
             // Show the tokens using the formatter
             traverse(&mut std::io::stdout(), &ast).unwrap();
+            println!("{}\n\n", (0..80).map(|_| '-').collect::<String>());
+        });
+    }
+
+    /// Tests the parser by printing all symbol tables
+    #[test]
+    fn test_print_st() {
+        test_on_dsl_files("BraneScript", |path: PathBuf, raw: String| {
+            println!("{}", (0..80).map(|_| '-').collect::<String>());
+            println!("File '{}' gave us:", path.display());
+
+            // Scan the tokens
+            let ast: Program = match parse_tokens(&scan_tokens(ScanInput::new(&raw)).unwrap().1) {
+                Ok((remain, ast)) => {
+                    if !remain.is_empty() {
+                        eprintln!("{}", DslError::ParseLeftoverError{ remainder: remain.into() }.display_with_source(&path.display().to_string(), &raw));
+                        panic!("Scanning failed (see above)");
+                    }
+                    ast
+                },
+                Err(err) => {
+                    eprintln!("{}", ErrorTrace::from_nom_err_parse(&path.display().to_string(), &raw, err).display());
+                    panic!("Scanning failed (see above)");
+                },
+            };
+
+            // Show the tokens using the formatter
+            traverse_st(&mut std::io::stdout(), &ast).unwrap();
             println!("{}\n\n", (0..80).map(|_| '-').collect::<String>());
         });
     }
@@ -142,6 +173,60 @@ impl TravFormattable for Annotation {
 
     fn trav_indent<'e>(&'e self, indent: usize) -> TravFormatter<'e, Self> { TravFormatter{ elem: self, indent } }
 }
+impl TravFormattable for SymbolTable {
+    #[inline]
+    fn trav<'e>(&'e self) -> TravFormatter<'e, Self> { TravFormatter{ elem: self, indent: 0 } }
+
+    fn trav_indent<'e>(&'e self, indent: usize) -> TravFormatter<'e, Self> { TravFormatter{ elem: self, indent } }
+}
+impl TravFormattable for DelayedEntry<PackageEntry> {
+    #[inline]
+    fn trav<'e>(&'e self) -> TravFormatter<'e, Self> { TravFormatter{ elem: self, indent: 0 } }
+
+    fn trav_indent<'e>(&'e self, indent: usize) -> TravFormatter<'e, Self> { TravFormatter{ elem: self, indent } }
+}
+impl TravFormattable for ExternalFuncEntry {
+    #[inline]
+    fn trav<'e>(&'e self) -> TravFormatter<'e, Self> { TravFormatter{ elem: self, indent: 0 } }
+
+    fn trav_indent<'e>(&'e self, indent: usize) -> TravFormatter<'e, Self> { TravFormatter{ elem: self, indent } }
+}
+impl TravFormattable for DelayedEntry<LocalFuncEntry> {
+    #[inline]
+    fn trav<'e>(&'e self) -> TravFormatter<'e, Self> { TravFormatter{ elem: self, indent: 0 } }
+
+    fn trav_indent<'e>(&'e self, indent: usize) -> TravFormatter<'e, Self> { TravFormatter{ elem: self, indent } }
+}
+impl TravFormattable for LocalFuncEntry {
+    #[inline]
+    fn trav<'e>(&'e self) -> TravFormatter<'e, Self> { TravFormatter{ elem: self, indent: 0 } }
+
+    fn trav_indent<'e>(&'e self, indent: usize) -> TravFormatter<'e, Self> { TravFormatter{ elem: self, indent } }
+}
+impl TravFormattable for DelayedEntry<ClassEntry> {
+    #[inline]
+    fn trav<'e>(&'e self) -> TravFormatter<'e, Self> { TravFormatter{ elem: self, indent: 0 } }
+
+    fn trav_indent<'e>(&'e self, indent: usize) -> TravFormatter<'e, Self> { TravFormatter{ elem: self, indent } }
+}
+impl TravFormattable for ClassEntry {
+    #[inline]
+    fn trav<'e>(&'e self) -> TravFormatter<'e, Self> { TravFormatter{ elem: self, indent: 0 } }
+
+    fn trav_indent<'e>(&'e self, indent: usize) -> TravFormatter<'e, Self> { TravFormatter{ elem: self, indent } }
+}
+impl TravFormattable for DelayedEntry<VarEntry> {
+    #[inline]
+    fn trav<'e>(&'e self) -> TravFormatter<'e, Self> { TravFormatter{ elem: self, indent: 0 } }
+
+    fn trav_indent<'e>(&'e self, indent: usize) -> TravFormatter<'e, Self> { TravFormatter{ elem: self, indent } }
+}
+impl TravFormattable for VarEntry {
+    #[inline]
+    fn trav<'e>(&'e self) -> TravFormatter<'e, Self> { TravFormatter{ elem: self, indent: 0 } }
+
+    fn trav_indent<'e>(&'e self, indent: usize) -> TravFormatter<'e, Self> { TravFormatter{ elem: self, indent } }
+}
 impl TravFormattable for (&Block, &Vec<Annotation>) {
     #[inline]
     fn trav<'e>(&'e self) -> TravFormatter<'e, Self> { TravFormatter{ elem: self, indent: 0 } }
@@ -153,6 +238,163 @@ impl<T: Node> TravFormattable for T {
     fn trav<'e>(&'e self) -> TravFormatter<'e, Self> { TravFormatter{ elem: self, indent: 0 } }
 
     fn trav_indent<'e>(&'e self, indent: usize) -> TravFormatter<'e, Self> { TravFormatter{ elem: self, indent } }
+}
+
+
+
+
+
+/***** SYMBOL TABLE TRAVERSALS *****/
+/// Formatter for a symbol table.
+impl<'e> Display for TravFormatter<'e, SymbolTable> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
+        // Write the opening
+        writeln!(f, indent = self.indent, "SymbolTable [")?;
+
+        // Write the package namespace
+        for p in self.elem.packages.values() {
+            write!(f, "{}", p.borrow().trav_indent(self.indent + INDENT_SIZE))?;
+        }
+        // Write the function namespace
+        if !self.elem.packages.is_empty() && !self.elem.funcs.is_empty() { writeln!(f)?; }
+        for fun in self.elem.funcs.values() {
+            write!(f, "{}", fun.borrow().trav_indent(self.indent + INDENT_SIZE))?;
+        }
+        // Write the class namespace
+        if (!self.elem.packages.is_empty() || !self.elem.funcs.is_empty()) && !self.elem.classes.is_empty() { writeln!(f)?; }
+        for c in self.elem.classes.values() {
+            write!(f, "{}", c.borrow().trav_indent(self.indent + INDENT_SIZE))?;
+        }
+        // Write the variable namespace
+        if (!self.elem.packages.is_empty() || !self.elem.funcs.is_empty() || !self.elem.classes.is_empty()) && !self.elem.vars.is_empty() { writeln!(f)?; }
+        for v in self.elem.vars.values() {
+            write!(f, "{}", v.borrow().trav_indent(self.indent + INDENT_SIZE))?;
+        }
+
+        // Now write any child symbol tables
+        for (i, child) in self.elem.childs.iter().enumerate() {
+            // Write a newline
+            if i > 0 || ((!self.elem.packages.is_empty() || !self.elem.funcs.is_empty() || !self.elem.classes.is_empty()) && !self.elem.vars.is_empty()) {
+                writeln!(f)?;
+            }
+
+            // Write the table
+            write!(f, "{}", child.borrow().trav_indent(self.indent + INDENT_SIZE))?;
+        }
+
+        // Write the close
+        writeln!(f, indent = self.indent, "]")?;
+
+        // Done
+        Ok(())
+    }
+}
+
+/// Formatter for package entries.
+impl<'e> Display for TravFormatter<'e, DelayedEntry<PackageEntry>> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
+        // Write the header which carries the name
+        writeln!(f, indent = self.indent, "{}Package '{}' [",
+            if self.elem.is_phantom() { "(P) " } else { "" },
+            self.elem.name,
+        )?;
+
+        // Write the functions
+        for fun in self.elem.funcs.values() {
+            writeln!(f, indent = self.indent + INDENT_SIZE, "{}{}", if self.elem.funcs.is_phantom() { "(P) " } else { "" }, fun.trav_indent(self.indent + INDENT_SIZE))?;
+        }
+        // Write the classes
+        for c in self.elem.classes.values() {
+            writeln!(f, indent = self.indent + INDENT_SIZE, "{}{}", if self.elem.classes.is_phantom() { "(P) " } else { "" }, c.trav_indent(self.indent + INDENT_SIZE))?;
+        }
+
+        // Write the close
+        writeln!(f, indent = self.indent, "]")?;
+
+        // Done
+        Ok(())
+    }
+}
+
+/// Formatter for external function entries.
+impl<'e> Display for TravFormatter<'e, ExternalFuncEntry> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
+        // Note that we write without newline and indent, since the parent (PackageEntry) wants to potentially prefix us
+        write!(f, "func {}::{}({}){}",
+            self.elem.package.borrow().name,
+            self.elem.name,
+            self.elem.args.iter().map(|a| format!("{}{}", a.name, if a.data_type != DataType::Any { format!(" -> {}", a.data_type) } else { String::new() })).collect::<Vec<String>>().join(","),
+            if self.elem.ret_type != DataType::Any { format!(" -> {}", self.elem.ret_type) } else { String::new() },
+        )
+    }
+}
+
+/// Formatter for local function entries.
+impl<'e> Display for TravFormatter<'e, DelayedEntry<LocalFuncEntry>> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
+        writeln!(f, indent = self.indent, "{}{}",
+            if self.elem.is_phantom() { "(P) " } else { "" },
+            self.elem.entry().trav_indent(self.indent),
+        )
+    }
+}
+/// Formatter for local function entries that does not do indent and newlines and whatever.
+impl<'e> Display for TravFormatter<'e, LocalFuncEntry> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
+        write!(f, "func {}({}){}",
+            self.elem.name,
+            self.elem.args.iter().map(|a| {
+                let a: Ref<DelayedEntry<VarEntry>> = a.borrow();
+                format!("{}{}", a.name, if a.data_type != DataType::Any { format!(" -> {}", a.data_type) } else { String::new() })
+            }).collect::<Vec<String>>().join(","),
+            if self.elem.ret_type != DataType::Any { format!(" -> {}", self.elem.ret_type) } else { String::new() },
+        )
+    }
+}
+
+/// Formatter for classes wrapped in delayed entries.
+impl<'e> Display for TravFormatter<'e, DelayedEntry<ClassEntry>> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
+        // We wrap the normal formatter
+        writeln!(f, indent = self.indent, "{}{}", if self.elem.is_phantom() { "(P) " } else { "" }, self.elem.entry().trav_indent(self.indent))
+    }
+}
+/// Formatter for bare classes.
+impl<'e> Display for TravFormatter<'e, ClassEntry> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
+        // Note that we write without newline and indent, since the parent (PackageEntry) wants to potentially prefix us
+        writeln!(f, "class {} [", self.elem.name)?;
+
+        // Write the properties
+        for p in self.elem.defs.values() {
+            match p {
+                ClassEntryMember::Property(prop) => { writeln!(f, indent = self.indent + INDENT_SIZE, "{}", prop.trav_indent(self.indent + INDENT_SIZE))?; },
+                ClassEntryMember::Method(method) => { writeln!(f, indent = self.indent + INDENT_SIZE, "{}", method.trav_indent(self.indent + INDENT_SIZE))?; },
+            }
+        }
+
+        // Write the end
+        write!(f, indent = self.indent, "]")?;
+        Ok(())
+    }
+}
+
+/// Formatter for variable entries.
+impl<'e> Display for TravFormatter<'e, DelayedEntry<VarEntry>> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
+        writeln!(f, indent = self.indent, "{}{}",
+            if self.elem.is_phantom() { "(P) " } else { "" },
+            self.elem.entry().trav_indent(self.indent),
+        )
+    }
+}
+impl<'e> Display for TravFormatter<'e, VarEntry> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
+        write!(f, "var {}{}",
+            self.elem.name,
+            if self.elem.data_type != DataType::Any { format!(": {}", self.elem.data_type) } else { String::new() },
+        )
+    }
 }
 
 
@@ -537,7 +779,7 @@ impl<'e> Display for TravFormatter<'e, Literal> {
 /***** LIBRARY *****/
 /// Runs a full traversal on the given AST to print it to the given formatter.
 /// 
-/// This traversal does not mutate or 
+/// This traversal does not mutate or change the given AST in any way.
 /// 
 /// # Arguments
 /// - `out`: The `Write`r on which to print the given tree.
@@ -549,6 +791,25 @@ impl<'e> Display for TravFormatter<'e, Literal> {
 pub fn traverse(out: &mut impl Write, tree: &Program) -> Result<(), std::io::Error> {
     // Simply call the toplevel formatter
     write!(out, "{}", tree.trav())?;
+
+    // Done
+    Ok(())
+}
+
+
+
+/// Runs a full traversal on the given AST to print its _symbol tables_ to the given formatter.
+/// 
+/// # Arguments
+/// - `out`: The `Write`r on which to print the given tree.
+/// - `tree`: The AST who's symbol tables to print.
+/// 
+/// # Errors
+/// This function errors if we failed to write to the given writer.
+#[allow(dead_code)]
+pub fn traverse_st(out: &mut impl Write, tree: &Program) -> Result<(), std::io::Error> {
+    // Simply call the formatter on the toplevel symbol table
+    write!(out, "{}", tree.table.borrow().trav())?;
 
     // Done
     Ok(())

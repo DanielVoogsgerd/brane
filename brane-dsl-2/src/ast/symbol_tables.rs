@@ -4,7 +4,7 @@
 //  Created:
 //    11 Feb 2023, 17:54:32
 //  Last edited:
-//    14 Feb 2023, 08:45:27
+//    14 Feb 2023, 13:32:39
 //  Auto updated?
 //    Yes
 // 
@@ -201,14 +201,45 @@ pub struct LocalFuncEntry {
 pub struct ClassEntry {
     /// The name of the class (also its signature).
     pub name : String,
-
-    /// The properties defined within this class.
-    pub props   : HashMap<String, VarEntry>,
-    /// The methods defined within this class.
-    pub methods : HashMap<String, LocalFuncEntry>,
+    /// Things defined in the class.
+    pub defs : HashMap<String, ClassEntryMember>,
 
     /// The location in the source where this class was declared. Obviously `None` if phantom, but may also be None in other cases.
     pub range : Option<TextRange>,
+}
+
+/// Defines the things that can be defined in a class, entry-wise.
+/// 
+/// This allows them to be in the same scope.
+#[derive(Clone, Debug, EnumDebug)]
+pub enum ClassEntryMember {
+    /// It's a property.
+    Property(VarEntry),
+    /// It's a method.
+    Method(LocalFuncEntry),
+}
+impl ClassEntryMember {
+    /// Returns some name describing the member.
+    /// 
+    /// TODO: Replace with some function in EnumDebug once that's updated.
+    #[inline]
+    pub fn what(&self) -> &'static str {
+        use ClassEntryMember::*;
+        match self {
+            Property(_) => "Property",
+            Method(_)   => "Method",
+        }
+    }
+
+    /// Returns the range of the internal entry, if any.
+    #[inline]
+    pub fn range(&self) -> Option<TextRange> {
+        use ClassEntryMember::*;
+        match self {
+            Property(prop) => prop.range,
+            Method(func)   => func.range,
+        }
+    }
 }
 
 
@@ -246,9 +277,11 @@ pub struct SymbolTable {
     pub vars     : HashMap<String, DelayedEntryPtr<VarEntry>>,
 
     /// The parent symbol table to report to. Is `None` is this is the root.
-    pub parent : Option<Rc<RefCell<SymbolTable>>>,
+    pub parent   : Option<Rc<RefCell<SymbolTable>>>,
     /// Whether this symbol table does consider the parent to be a "parent scope", i.e., can it access variables declared there.
-    pub nests  : bool,
+    pub nests    : bool,
+    /// The children of this SymbolTable.
+    pub childs   : Vec<Rc<RefCell<SymbolTable>>>,
 }
 
 impl SymbolTable {
@@ -266,6 +299,7 @@ impl SymbolTable {
 
             parent : None,
             nests  : false,
+            childs : vec![],
         }
     }
 
@@ -340,10 +374,10 @@ impl SymbolTable {
     pub fn resolve_var(&self, name: impl AsRef<str>) -> Option<DelayedEntryPtr<VarEntry>> {
         let name: &str = name.as_ref();
 
-        // Search either this table or the parent
+        // Search either this table or the parent - but only if we are nested (to avoid functions grabbing variables in the top scope).
         match self.vars.get(name) {
             Some(entry) => Some(entry.clone()),
-            None        => self.parent.as_ref().map(|p| p.borrow().resolve_var(name)).unwrap_or(None),
+            None        => if self.nests { self.parent.as_ref().map(|p| p.borrow().resolve_var(name)).unwrap_or(None) } else { None },
         }
     }
 }

@@ -4,7 +4,7 @@
 //  Created:
 //    11 Feb 2023, 17:46:03
 //  Last edited:
-//    14 Feb 2023, 09:02:27
+//    14 Feb 2023, 13:29:13
 //  Auto updated?
 //    Yes
 // 
@@ -28,12 +28,57 @@ use crate::errors::DslError;
 pub use crate::warnings::ResolveWarning as Warning;
 use crate::warnings::{DslWarning, Warning as _};
 use crate::ast::types::DataType;
-use crate::ast::symbol_tables::{ClassEntry, DelayedEntry, DelayedEntryPtr, ExternalFuncEntry, LocalFuncEntry, PackageEntry, SymbolTable, VarEntry};
+use crate::ast::symbol_tables::{ClassEntry, ClassEntryMember, DelayedEntry, DelayedEntryPtr, ExternalFuncEntry, LocalFuncEntry, PackageEntry, SymbolTable, VarEntry};
 use crate::ast::auxillary::Identifier;
 use crate::ast::expressions::{BinaryOperatorKind, Block, Expression, ExpressionKind, LiteralKind};
 use crate::ast::statements::{self, ClassMemberDefKind, FunctionDef, Statement, StatementKind};
 use crate::ast::toplevel::Program;
 use crate::compiler::annot_stack::AnnotationStack;
+
+
+/***** TESTS *****/
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+    use brane_shr::utilities::test_on_dsl_files;
+    use crate::compile_module;
+    use crate::warnings::PrettyWarning as _;
+    use crate::compiler::traversals::{print_ast, CompilerPhase};
+    use super::{DslWarning, Program};
+
+
+    /// Tests the parser by print all files
+    #[test]
+    fn test_resolve() {
+        test_on_dsl_files("BraneScript", |path: PathBuf, raw: String| {
+            println!("{}", (0..80).map(|_| '-').collect::<String>());
+            println!("File '{}' gave us:", path.display());
+
+            // Run the traversals up to this one
+            let file: String = path.display().to_string();
+            let (ast, warns): (Program, Vec<DslWarning>) = match compile_module(&file, &raw, CompilerPhase::Resolve) {
+                Ok(res)  => res,
+                Err(err) => {
+                    // Prettyprint the errors
+                    eprintln!("{}", err.display());
+                    panic!("Failed to compile the file (see the output above)");
+                },
+            };
+
+            // Print any warnings
+            for w in warns {
+                w.display_with_source(&path.display().to_string(), &raw);
+            }
+
+            // Print the symbol tables
+            print_ast::traverse_st(&mut std::io::stdout(), &ast).unwrap();
+            println!("{}\n\n", (0..80).map(|_| '-').collect::<String>());
+        });
+    }
+}
+
+
+
 
 
 /***** HELPER FUNCTIONS *****/
@@ -46,13 +91,6 @@ fn funcify(expr: &mut Expression, errors: &mut Vec<Error>) {
     // Match on the expression
     use ExpressionKind::*;
     match &mut expr.kind {
-        Proj { to_proj, .. } => {
-            funcify(to_proj, errors);
-        },
-        Call { to_call, .. } => {
-            funcify(to_call, errors);
-        },
-
         // Replace if it's a variable reference
         VarRef{ name, .. } => {
             // Pull the name
@@ -64,7 +102,8 @@ fn funcify(expr: &mut Expression, errors: &mut Vec<Error>) {
             expr.kind = ExpressionKind::LocalFunctionRef{ name: fname, st_entry: None };
         },
 
-        // Checks out if it's a function reference of any kind
+        // Checks out if it's projection (because then we are referencing a variable again) or a function reference of any kind
+        Proj{ .. }                |
         LocalFunctionRef{ .. }    |
         ExternalFunctionRef{ .. } => {},
 
@@ -88,9 +127,6 @@ fn assert_assign(expr: &Expression, errors: &mut Vec<Error>) {
         },
         Proj { to_proj, .. } => {
             assert_assign(to_proj, errors);
-        },
-        Call { to_call, .. } => {
-            assert_assign(to_call, errors);
         },
 
         // Checks out if it's a variable reference
@@ -157,6 +193,7 @@ pub fn trav_stmt(stmt: &mut Statement, table: &Rc<RefCell<SymbolTable>>, stack: 
                 // Assert the package does not already exist
                 if let Some(prev) = table.packages.get(&name.name) {
                     // Only emit if not phantom to avoid confusing warning message about duplicate declarations and then not declared
+                    // Note that we make imports imperative, so we don't fix missing declarations using later imports.
                     let prev: Ref<DelayedEntry<PackageEntry>> = prev.borrow();
                     if !prev.is_phantom() {
                         let warn: Warning = Warning::DuplicatePackageImport{ name: name.name.clone(), range: stmt.range, prev: prev.range };
@@ -175,8 +212,7 @@ pub fn trav_stmt(stmt: &mut Statement, table: &Rc<RefCell<SymbolTable>>, stack: 
 
         ClassDef { name, defs, st_entry } => {
             // Create the entries for the definitions
-            let mut props   : HashMap<String, VarEntry>       = HashMap::new();
-            let mut methods : HashMap<String, LocalFuncEntry> = HashMap::new();
+            let mut entry_defs : HashMap<String, ClassEntryMember> = HashMap::new();
             for d in defs.iter() {
                 // Push the definition's annotations
                 stack.push(&d.annots);
@@ -185,33 +221,33 @@ pub fn trav_stmt(stmt: &mut Statement, table: &Rc<RefCell<SymbolTable>>, stack: 
                 match &d.kind {
                     ClassMemberDefKind::Property { name: pname, data_type } => {
                         // Assert it does not already exist
-                        if let Some(prev) = props.get(&pname.name) {
-                            let warn: Warning = Warning::DuplicatePropertyDefinition{ name: pname.name.clone(), class: name.name.clone(), range: d.range, prev: prev.range };
+                        if let Some(prev) = entry_defs.get(&pname.name) {
+                            let warn: Warning = Warning::DuplicateClassMemberDefinition{ name: pname.name.clone(), class: name.name.clone(), range: d.range, prev: prev.range(), prev_variant: prev.what() };
                             if !stack.is_allowed(warn.code()) { warnings.push(warn); }
                         } else {
-                            props.insert(pname.name.clone(), VarEntry {
+                            entry_defs.insert(pname.name.clone(), ClassEntryMember::Property(VarEntry {
                                 name      : pname.name.clone(),
                                 data_type : data_type.data_type.clone(),
 
                                 shadowed : false,
 
                                 range : d.range,
-                            });
+                            }));
                         }
                     },
                     ClassMemberDefKind::Method(def) => {
                         // Assert it does not already exist
-                        if let Some(prev) = methods.get(&def.name.name) {
-                            let warn: Warning = Warning::DuplicateMethodDefinition{ name: def.name.name.clone(), class: name.name.clone(), range: def.range, prev: prev.range };
+                        if let Some(prev) = entry_defs.get(&def.name.name) {
+                            let warn: Warning = Warning::DuplicateClassMemberDefinition{ name: def.name.name.clone(), class: name.name.clone(), range: def.range, prev: prev.range(), prev_variant: prev.what() };
                             if !stack.is_allowed(warn.code()) { warnings.push(warn); }
                         } else {
-                            methods.insert(def.name.name.clone(), LocalFuncEntry {
+                            entry_defs.insert(def.name.name.clone(), ClassEntryMember::Method(LocalFuncEntry {
                                 name     : def.name.name.clone(),
                                 args     : def.args.iter().map(|a| DelayedEntryPtr::resolved(VarEntry{ name: a.name.name.clone(), data_type: a.data_type.data_type.clone(), shadowed: false, range: a.range })).collect(),
                                 ret_type : def.ret.data_type.clone(),
 
                                 range : def.range,
-                            });
+                            }));
                         }
                     },
 
@@ -227,9 +263,7 @@ pub fn trav_stmt(stmt: &mut Statement, table: &Rc<RefCell<SymbolTable>>, stack: 
             // Create the class entry around it
             let class: ClassEntry = ClassEntry {
                 name : name.name.clone(),
-
-                props,
-                methods,
+                defs : entry_defs,
 
                 range : stmt.range,
             };
@@ -580,9 +614,7 @@ fn trav_expr(expr: &mut Expression, table: &Rc<RefCell<SymbolTable>>, stack: &mu
                     // Create a new entry for this instance
                     let entry: DelayedEntryPtr<ClassEntry> = DelayedEntryPtr::phantom(ClassEntry {
                         name : name.name.clone(),
-
-                        props   : HashMap::new(),
-                        methods : HashMap::new(),
+                        defs : HashMap::new(),
 
                         range : None,
                     });
@@ -714,7 +746,9 @@ fn trav_block(block: &mut Block, table: &Rc<RefCell<SymbolTable>>, nests: bool, 
         btable.parent = Some(table.clone());
         btable.nests  = nests;
     }
-    block.table.borrow_mut().parent = Some(table.clone());
+
+    // Set this block as child in the given symbol table
+    table.borrow_mut().childs.push(block.table.clone());
 
     // Recurse into the statements
     for s in &mut block.stmts {
@@ -746,7 +780,7 @@ pub fn traverse(tree: &mut Program, warnings: &mut Vec<DslWarning>) -> Result<()
     let mut errs  : Vec<Error>   = vec![];
     let mut warns : Vec<Warning> = vec![];
     for s in stmts {
-        trav_stmt(s, table, &mut stack, &mut warns, &mut vec![]);
+        trav_stmt(s, table, &mut stack, &mut warns, &mut errs);
     }
 
     // Done, return the warnings and errors (if any)
