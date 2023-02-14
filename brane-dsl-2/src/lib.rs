@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 15:25:18
 //  Last edited:
-//    14 Feb 2023, 08:57:41
+//    14 Feb 2023, 09:07:20
 //  Auto updated?
 //    Yes
 // 
@@ -69,9 +69,10 @@ pub fn compile_module<'f, 's>(file: &'f str, source: &'s str, phase: compiler::C
     // Else, match the phases to do
     let mut warnings: Vec<DslWarning> = vec![];
     if phase >= CompilerPhase::Annotations {
-        let mut warns: Vec<AnnotationWarning> = vec![];
-        traversals::annotations::traverse(&mut ast, &mut warns);
-        warnings.extend(warns.into_iter().map(|w| w.into()));
+        traversals::annotations::traverse(&mut ast, &mut warnings);
+    }
+    if phase >= CompilerPhase::Resolve {
+        if let Err(errs) = traversals::resolve::traverse(&mut ast, &mut warnings) { return Err() };
     }
 
     // Done

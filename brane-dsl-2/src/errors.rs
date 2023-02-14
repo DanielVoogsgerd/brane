@@ -4,7 +4,7 @@
 //  Created:
 //    07 Feb 2023, 10:10:18
 //  Last edited:
-//    14 Feb 2023, 09:03:18
+//    14 Feb 2023, 09:06:15
 //  Auto updated?
 //    Yes
 // 
@@ -661,6 +661,9 @@ pub enum DslError<'s> {
     ParseLeftoverError{ remainder: Vec<Token<'s>> },
     /// We needed more tokens.
     ParseIncompleteError{ range: Option<TextRange> },
+
+    /// Errors that originate in the resolve traversal.
+    Resolve(ResolveError),
 }
 impl<'s> Display for DslError<'s> {
     fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
@@ -677,6 +680,8 @@ impl<'s> Display for DslError<'s> {
             ParseUnknownError{ kind, .. } => write!(f, "Syntax error: Parser returned unknown error '{:?}'", kind),
             ParseLeftoverError{ .. }      => write!(f, "Syntax error: Failed to parse input"),
             ParseIncompleteError{ .. }    => write!(f, "Syntax error: Unexpected end-of-file (did you close all brackets, added all semicolons?)"),
+
+            Resolve(err) => write!(f, "{}", err),
         }
     }
 }
@@ -699,15 +704,24 @@ impl<'s> PrettyError for DslError<'s> {
             },
             ParseExternalError{ range, .. }   |
             ParseIncompleteError{ range, .. } => *range,
+
+            Resolve(err) => err.range(),
         }
     }
 
     #[inline]
-    fn notes(&self) -> Vec<Box<dyn PrettyNote>> { vec![] }
+    fn notes(&self) -> Vec<Box<dyn PrettyNote>> {
+        use DslError::*;
+        match self {
+            Resolve(err) => err.notes(),
+
+            _ => vec![],
+        }
+    }
 }
 impl<'s> From<ResolveError> for DslError<'s> {
     #[inline]
-    fn from(value: ResolveError) -> Self {  }
+    fn from(value: ResolveError) -> Self { Self::Resolve(value) }
 }
 
 
