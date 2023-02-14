@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 15:25:18
 //  Last edited:
-//    14 Feb 2023, 10:03:18
+//    14 Feb 2023, 13:37:53
 //  Auto updated?
 //    Yes
 // 
@@ -75,9 +75,6 @@ pub fn compile_module<'f, 's>(file: &'f str, source: &'s str, phase: compiler::C
         Err(err) => { return Err(ErrorTrace::from_nom_err_parse(file, source, err)); }
     };
 
-    // We print and done if we're told to do that phase
-    if phase == CompilerPhase::Print { traversals::print_ast::traverse(&mut std::io::stdout(), &ast).unwrap_or_else(|err| panic!("Failed to write to stderr: {}", err)); return Ok((ast.into(), vec![])); }
-
     // Else, match the phases to do
     let mut warnings: Vec<DslWarning> = vec![];
     if phase >= CompilerPhase::Annotations {
@@ -85,6 +82,9 @@ pub fn compile_module<'f, 's>(file: &'f str, source: &'s str, phase: compiler::C
     }
     if phase >= CompilerPhase::Resolve {
         if let Err(errs) = traversals::resolve::traverse(&mut ast, &mut warnings) { return Err(ErrorTrace::from_errors(file, source, errs)); };
+    }
+    if phase >= CompilerPhase::Typing {
+        if let Err(errs) = traversals::typing::traverse(&mut ast, &mut warnings) { return Err(ErrorTrace::from_errors(file, source, errs)); };
     }
 
     // Done

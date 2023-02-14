@@ -4,7 +4,7 @@
 //  Created:
 //    11 Feb 2023, 17:46:03
 //  Last edited:
-//    14 Feb 2023, 13:29:13
+//    14 Feb 2023, 15:54:21
 //  Auto updated?
 //    Yes
 // 
@@ -151,14 +151,17 @@ fn assert_assign(expr: &Expression, errors: &mut Vec<Error>) {
 /// - `warnings`: A list that we will populate with warnings if they occur.
 /// - `errors`: A list that we will populate with errors if they occur. If they do, then this function might early quit before properly traversing the tree (since it is malformed anyway).
 pub fn trav_stmt(stmt: &mut Statement, table: &Rc<RefCell<SymbolTable>>, stack: &mut AnnotationStack, warnings: &mut Vec<Warning>, errors: &mut Vec<Error>) {
-    // Push to the stack
-    stack.push(&stmt.annots);
-
     // Match on the statement
     use StatementKind::*;
     match &mut stmt.kind {
         // Definitions
         Import { name, version, st_entry } => {
+            // Push to the stack
+            stack.push(&stmt.annots);
+
+            // Do nothing if we've already processed this import.
+            if st_entry.is_some() { return; }
+
             // Resolve the version
             let version: Version = if let Some(version) = version {
                 // Extract the numbers
@@ -189,10 +192,10 @@ pub fn trav_stmt(stmt: &mut Statement, table: &Rc<RefCell<SymbolTable>>, stack: 
             *st_entry = Some(ptr.clone());
             {
                 let mut table: RefMut<SymbolTable> = table.borrow_mut();
-                
+
                 // Assert the package does not already exist
                 if let Some(prev) = table.packages.get(&name.name) {
-                    // Only emit if not phantom to avoid confusing warning message about duplicate declarations and then not declared
+                    // Only emit if not phantom to avoid confusing warning messages about duplicate declarations and then not declared
                     // Note that we make imports imperative, so we don't fix missing declarations using later imports.
                     let prev: Ref<DelayedEntry<PackageEntry>> = prev.borrow();
                     if !prev.is_phantom() {
@@ -211,6 +214,20 @@ pub fn trav_stmt(stmt: &mut Statement, table: &Rc<RefCell<SymbolTable>>, stack: 
         },
 
         ClassDef { name, defs, st_entry } => {
+            // Do nothing if we've already processed this class.
+            if let Some(entry) = st_entry {
+                // Well, I say nothing, but we do recurse in methods to find other things we can update
+                for def in defs {
+                    match &def.kind {
+                        ClassMemberDefKind::Method(def) => {
+                            trav_block(&mut def.body, table, false, stack, warnings, errors);
+                        }
+                        _ => {},
+                    }
+                }
+                return;
+            }
+
             // Create the entries for the definitions
             let mut entry_defs : HashMap<String, ClassEntryMember> = HashMap::new();
             for d in defs.iter() {
@@ -340,6 +357,9 @@ pub fn trav_stmt(stmt: &mut Statement, table: &Rc<RefCell<SymbolTable>>, stack: 
             // Recurse into the value, if any
             if let Some(value) = value { trav_expr(value, table, stack, warnings, errors); }
 
+            // Do nothing else if we've already processed this let.
+            if st_entry.is_some() { return; }
+
             // Create an entry for the variable
             let entry: DelayedEntryPtr<VarEntry> = DelayedEntryPtr::resolved(VarEntry {
                 name      : name.name.clone(),
@@ -383,24 +403,27 @@ pub fn trav_stmt(stmt: &mut Statement, table: &Rc<RefCell<SymbolTable>>, stack: 
             trav_expr(start, table, stack, warnings, errors);
             trav_expr(stop, table, stack, warnings, errors);
 
-            // Create the iterator variable entry
-            let entry: DelayedEntryPtr<VarEntry> = DelayedEntryPtr::resolved(VarEntry {
-                name      : name.name.clone(),
-                data_type : DataType::Integer,
+            // Only annotate new things if we haven't already
+            if st_entry.is_none() {
+                // Create the iterator variable entry
+                let entry: DelayedEntryPtr<VarEntry> = DelayedEntryPtr::resolved(VarEntry {
+                    name      : name.name.clone(),
+                    data_type : DataType::Integer,
 
-                shadowed : false,
+                    shadowed : false,
 
-                range : name.range,
-            });
+                    range : name.range,
+                });
 
-            // Note it down in the block's table
-            *st_entry = Some(entry.clone());
-            {
-                let mut btable: RefMut<SymbolTable> = block.table.borrow_mut();
+                // Note it down in the block's table
+                *st_entry = Some(entry.clone());
+                {
+                    let mut btable: RefMut<SymbolTable> = block.table.borrow_mut();
 
-                // It's empty, so trivial
-                if !btable.vars.is_empty() { warn!("For-loop block table is not empty"); }
-                btable.vars.insert(name.name.clone(), entry);
+                    // It's empty, so trivial
+                    if !btable.vars.is_empty() { warn!("For-loop block table is not empty"); }
+                    btable.vars.insert(name.name.clone(), entry);
+                }
             }
 
             // Recurse into the block with this table
@@ -410,7 +433,6 @@ pub fn trav_stmt(stmt: &mut Statement, table: &Rc<RefCell<SymbolTable>>, stack: 
         While { cond, block } => {
             // Recurse into the expression first
             trav_expr(cond, table, stack, warnings, errors);
-
             // Then recurse into the block
             trav_block(block, table, true, stack, warnings, errors);
         },
@@ -444,60 +466,65 @@ pub fn trav_stmt(stmt: &mut Statement, table: &Rc<RefCell<SymbolTable>>, stack: 
 /// - `warnings`: A list that we will populate with warnings if they occur.
 /// - `errors`: A list that we will populate with errors if they occur. If they do, then this function might early quit before properly traversing the tree (since it is malformed anyway).
 fn trav_func_def(def: &mut FunctionDef, table: &Rc<RefCell<SymbolTable>>, stack: &mut AnnotationStack, warnings: &mut Vec<Warning>, errors: &mut Vec<Error>) {
-    // Create the entries first; arguments...
-    let args: Vec<DelayedEntryPtr<VarEntry>> = def.args.iter().map(|a| DelayedEntryPtr::resolved(VarEntry {
-        name      : a.name.name.clone(),
-        data_type : a.data_type.data_type.clone(),
+    // We only generate the entries if we didn't already
+    if def.st_entry.is_none() {
+        // Create the entries first; arguments...
+        let args: Vec<DelayedEntryPtr<VarEntry>> = def.args.iter().map(|a| DelayedEntryPtr::resolved(VarEntry {
+            name      : a.name.name.clone(),
+            data_type : a.data_type.data_type.clone(),
 
-        shadowed : false,
+            shadowed : false,
 
-        range : a.range,
-    })).collect();
+            range : a.range,
+        })).collect();
 
-    // ...then the function itself
-    let func: LocalFuncEntry = LocalFuncEntry {
-        name     : def.name.name.clone(),
-        args     : args.clone(),
-        ret_type : def.ret.data_type.clone(),
+        // ...then the function itself
+        let func: LocalFuncEntry = LocalFuncEntry {
+            name     : def.name.name.clone(),
+            args     : args.clone(),
+            ret_type : def.ret.data_type.clone(),
 
-        range : def.range,
-    };
+            range : def.range,
+        };
 
-    // Next up, register the function entry in the table and this def
-    {
-        let mut table: RefMut<SymbolTable> = table.borrow_mut();
+        // Next up, register the function entry in the table and this def
+        {
+            let mut table: RefMut<SymbolTable> = table.borrow_mut();
 
-        // Assert the function does not already exist
-        if let Some(prev_ptr) = table.funcs.get(&def.name.name) {
-            // If it's phantom, then mark as resolved instead with this definition
-            let mut prev: RefMut<DelayedEntry<LocalFuncEntry>> = prev_ptr.borrow_mut();
-            match &*prev {
-                DelayedEntry::Resolved(prev) => {
-                    let warn: Warning = Warning::DuplicateFuncDefinition{ name: def.name.name.clone(), range: def.range, prev: prev.range };
-                    if !stack.is_allowed(warn.code()) { warnings.push(warn); }
-                },
+            // Assert the function does not already exist
+            if let Some(prev_ptr) = table.funcs.get(&def.name.name) {
+                // If it's phantom, then mark as resolved instead with this definition
+                let mut prev: RefMut<DelayedEntry<LocalFuncEntry>> = prev_ptr.borrow_mut();
+                match &*prev {
+                    DelayedEntry::Resolved(prev) => {
+                        let warn: Warning = Warning::DuplicateFuncDefinition{ name: def.name.name.clone(), range: def.range, prev: prev.range };
+                        if !stack.is_allowed(warn.code()) { warnings.push(warn); }
+                    },
 
-                DelayedEntry::Phantom(_) => {
-                    *prev = DelayedEntry::Resolved(func);
+                    DelayedEntry::Phantom(_) => {
+                        *prev = DelayedEntry::Resolved(func);
+                    }
                 }
-            }
 
-            // Set this entry for ourselves as well
-            def.st_entry = Some(prev_ptr.clone());
-        } else {
-            // Otherwise, add it
-            let func: DelayedEntryPtr<LocalFuncEntry> = DelayedEntryPtr::resolved(func);
-            def.st_entry = Some(func.clone());
-            table.funcs.insert(def.name.name.clone(), func);
+                // Set this entry for ourselves as well
+                def.st_entry = Some(prev_ptr.clone());
+            } else {
+                // Otherwise, add it
+                let func: DelayedEntryPtr<LocalFuncEntry> = DelayedEntryPtr::resolved(func);
+                def.st_entry = Some(func.clone());
+                table.funcs.insert(def.name.name.clone(), func);
+            }
         }
+
+        // Then we add the arguments to the symbol table of the body, after which we can recurse
+        def.body.table.borrow_mut().vars.extend(args.into_iter().map(|a| {
+            // Get the name, then return (done to avoid lifetime issues)
+            let name: String = { a.borrow().name.clone() };
+            (name, a)
+        }));
     }
 
-    // Then we add the arguments to the symbol table of the body, after which we can recurse
-    def.body.table.borrow_mut().vars.extend(args.into_iter().map(|a| {
-        // Get the name, then return (done to avoid lifetime issues)
-        let name: String = { a.borrow().name.clone() };
-        (name, a)
-    }));
+    // We do always traverse, however
     trav_block(&mut def.body, table, false, stack, warnings, errors);
 }
 
