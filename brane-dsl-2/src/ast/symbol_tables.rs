@@ -4,7 +4,7 @@
 //  Created:
 //    11 Feb 2023, 17:54:32
 //  Last edited:
-//    13 Feb 2023, 18:21:57
+//    14 Feb 2023, 08:45:27
 //  Auto updated?
 //    Yes
 // 
@@ -156,9 +156,9 @@ pub struct PackageEntry {
     pub version : Version,
 
     /// The list of external functions provided by this package.
-    pub funcs   : Vec<DelayedEntryPtr<ExternalFuncEntry>>,
+    pub funcs   : DelayedEntry<HashMap<String, ExternalFuncEntry>>,
     /// The list of classes defined in this entry.
-    pub classes : Vec<DelayedEntryPtr<ClassEntry>>,
+    pub classes : DelayedEntry<HashMap<String, ClassEntry>>,
 
     /// The location in the source where this package was declared. Obviously `None` if phantom, but may also be None in other cases.
     pub range : Option<TextRange>,

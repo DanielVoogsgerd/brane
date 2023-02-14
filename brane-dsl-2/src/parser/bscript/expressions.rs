@@ -4,7 +4,7 @@
 //  Created:
 //    07 Feb 2023, 12:54:14
 //  Last edited:
-//    13 Feb 2023, 13:03:42
+//    14 Feb 2023, 08:50:04
 //  Auto updated?
 //    Yes
 // 
@@ -283,7 +283,7 @@ fn reference<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Expression,
                     // Compute the range and return the variable reference expression
                     let range: Option<TextRange> = var_ref.range;
                     Expression {
-                        kind : ExpressionKind::VarRef { name: var_ref },
+                        kind : ExpressionKind::VarRef { name: var_ref, st_entry : None },
                         range,
                     }
                 },
@@ -297,7 +297,7 @@ fn reference<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Expression,
 
                     // Return the function reference
                     Expression {
-                        kind : ExpressionKind::ExternalFunctionRef { name: func_ref, package: package_ref },
+                        kind : ExpressionKind::ExternalFunctionRef { name: func_ref, package: package_ref, st_entry: None },
                         range,
                     }
                 },

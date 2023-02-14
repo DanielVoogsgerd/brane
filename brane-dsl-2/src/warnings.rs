@@ -4,7 +4,7 @@
 //  Created:
 //    11 Feb 2023, 18:14:09
 //  Last edited:
-//    13 Feb 2023, 16:50:54
+//    14 Feb 2023, 08:56:10
 //  Auto updated?
 //    Yes
 // 
@@ -297,6 +297,60 @@ pub trait PrettyWarning: Warning + PrettyWarningAsDyn {
 
 
 /***** LIBRARY *****/
+/// Defines toplevel warnings for the BraneScript/Bakery compiler.
+#[derive(Debug)]
+pub enum DslWarning {
+    /// Defines warnings that originate from the resolve traversal.
+    Resolve(ResolveWarning),
+    /// Defines warnings that originate from the annotation traversal.
+    Annotation(AnnotationWarning),
+}
+impl Display for DslWarning {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
+        use DslWarning::*;
+        match self {
+            Resolve(warn)    => write!(f, "{}", warn),
+            Annotation(warn) => write!(f, "{}", warn),
+        }
+    }
+}
+impl Warning for DslWarning {
+    fn code(&self) -> WarningCode {
+        use DslWarning::*;
+        match self {
+            Resolve(warn)    => warn.code(),
+            Annotation(warn) => warn.code(),
+        }
+    }
+}
+impl PrettyWarning for DslWarning {
+    fn range(&self) -> Option<TextRange> {
+        use DslWarning::*;
+        match self {
+            Resolve(warn)    => warn.range(),
+            Annotation(warn) => warn.range(),
+        }
+    }
+
+    fn notes(&self) -> Vec<Box<dyn PrettyNote>> {
+        use DslWarning::*;
+        match self {
+            Resolve(warn)    => warn.notes(),
+            Annotation(warn) => warn.notes(),
+        }
+    }
+}
+impl From<ResolveWarning> for DslWarning {
+    #[inline]
+    fn from(value: ResolveWarning) -> Self { DslWarning::Resolve(value) }
+}
+impl From<AnnotationWarning> for DslWarning {
+    #[inline]
+    fn from(value: AnnotationWarning) -> Self { DslWarning::Annotation(value) }
+}
+
+
+
 warning! {
     /// Describes warnings taht may originate when resolving symbol table entries.
     ResolveWarning {

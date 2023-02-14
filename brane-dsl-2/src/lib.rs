@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 15:25:18
 //  Last edited:
-//    13 Feb 2023, 14:04:34
+//    14 Feb 2023, 08:57:41
 //  Auto updated?
 //    Yes
 // 
@@ -39,7 +39,8 @@ pub use errors::{DslError as Error, ErrorTrace};
 /// 
 /// # Errors
 /// 
-pub fn compile_module<'f, 's>(file: &'f str, source: &'s str, phase: compiler::CompilerPhase) -> Result<(), ErrorTrace<'f, 's>> {
+pub fn compile_module<'f, 's>(file: &'f str, source: &'s str, phase: compiler::CompilerPhase) -> Result<Vec<warnings::DslWarning>, ErrorTrace<'f, 's>> {
+    use warnings::DslWarning;
     use ast::toplevel::Program;
     use scanner::tokens::Token;
     use compiler::{traversals, CompilerPhase};
@@ -66,9 +67,12 @@ pub fn compile_module<'f, 's>(file: &'f str, source: &'s str, phase: compiler::C
     if phase == CompilerPhase::Print { traversals::print_ast::traverse(&mut std::io::stdout(), &ast).unwrap_or_else(|err| panic!("Failed to write to stderr: {}", err)); return Ok(()); }
 
     // Else, match the phases to do
-    // if phase >= CompilerPhase::Resolve {
-    //     traversals::resolve::traverse(&mut ast);
-    // }
+    let mut warnings: Vec<DslWarning> = vec![];
+    if phase >= CompilerPhase::Annotations {
+        let mut warns: Vec<AnnotationWarning> = vec![];
+        traversals::annotations::traverse(&mut ast, &mut warns);
+        warnings.extend(warns.into_iter().map(|w| w.into()));
+    }
 
     // Done
     Ok(())

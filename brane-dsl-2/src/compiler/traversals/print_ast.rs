@@ -4,7 +4,7 @@
 //  Created:
 //    10 Feb 2023, 19:25:20
 //  Last edited:
-//    13 Feb 2023, 18:14:51
+//    14 Feb 2023, 08:27:55
 //  Auto updated?
 //    Yes
 // 
@@ -459,13 +459,13 @@ impl<'e> Display for TravFormatter<'e, Expression> {
                 Ok(())
             },
 
-            VarRef { name } => {
+            VarRef { name, .. } => {
                 write!(f, "{}", name.name)
             },
-            LocalFunctionRef { name } => {
+            LocalFunctionRef { name, .. } => {
                 write!(f, "{}", name.name)
             },
-            ExternalFunctionRef { name, package } => {
+            ExternalFunctionRef { name, package, .. } => {
                 write!(f, "{}::{}", package.name, name.name)
             },
 

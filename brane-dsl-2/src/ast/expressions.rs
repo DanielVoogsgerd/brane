@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 15:34:18
 //  Last edited:
-//    13 Feb 2023, 18:14:33
+//    14 Feb 2023, 08:27:43
 //  Auto updated?
 //    Yes
 // 
@@ -19,7 +19,7 @@ use std::rc::Rc;
 use enum_debug::EnumDebug;
 
 use super::spec::{Annotation, BindingPower, Node, TextRange};
-use super::symbol_tables::{ClassEntry, DelayedEntryPtr, SymbolTable};
+use super::symbol_tables::{ClassEntry, DelayedEntryPtr, LocalFuncEntry, PackageEntry, SymbolTable, VarEntry};
 use super::auxillary::{DataType, Identifier, MergeStrategy};
 use super::statements::Statement;
 
@@ -152,11 +152,17 @@ pub enum ExpressionKind {
     VarRef {
         /// The name of the variable to which we refer.
         name : Identifier,
+
+        /// The symbol table entry for the variable referenced.
+        st_entry : Option<DelayedEntryPtr<VarEntry>>,
     },
     /// Refers to some statically declared _local_ function.
     LocalFunctionRef {
         /// The identifier of the function to which we refer.
         name : Identifier,
+
+        /// The symbol table entry for the function referenced.
+        st_entry : Option<DelayedEntryPtr<LocalFuncEntry>>,
     },
     /// Refers to some statically declared _external_ function.
     ExternalFunctionRef {
@@ -164,6 +170,9 @@ pub enum ExpressionKind {
         name    : Identifier,
         /// The name of the package where we can find the function.
         package : Identifier,
+
+        /// The symbol table entry for the package referenced, which can then be indexed using the function name.
+        st_entry : Option<DelayedEntryPtr<PackageEntry>>,
     },
 
     /// A literal value to push upon the stack.

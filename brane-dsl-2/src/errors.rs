@@ -4,7 +4,7 @@
 //  Created:
 //    07 Feb 2023, 10:10:18
 //  Last edited:
-//    13 Feb 2023, 18:06:41
+//    14 Feb 2023, 09:03:18
 //  Auto updated?
 //    Yes
 // 
@@ -704,6 +704,10 @@ impl<'s> PrettyError for DslError<'s> {
 
     #[inline]
     fn notes(&self) -> Vec<Box<dyn PrettyNote>> { vec![] }
+}
+impl<'s> From<ResolveError> for DslError<'s> {
+    #[inline]
+    fn from(value: ResolveError) -> Self {  }
 }
 
 

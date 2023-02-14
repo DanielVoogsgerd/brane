@@ -4,7 +4,7 @@
 //  Created:
 //    13 Feb 2023, 11:54:08
 //  Last edited:
-//    13 Feb 2023, 14:26:38
+//    14 Feb 2023, 08:59:52
 //  Auto updated?
 //    Yes
 // 
@@ -20,7 +20,8 @@
 
 use std::mem;
 
-use crate::warnings::AnnotationWarning as Warning;
+pub use crate::warnings::AnnotationWarning as Warning;
+use crate::warnings::DslWarning;
 use crate::ast::spec::{self, Annotation, TextRange};
 use crate::ast::expressions::{Block, Expression, ExpressionKind};
 use crate::ast::statements::{ClassMemberDef, ClassMemberDefKind, Statement, StatementKind};
@@ -37,7 +38,7 @@ mod tests {
     use crate::scanner::{scan_tokens, Input as ScanInput};
     use crate::parser::parse_tokens;
     use crate::compiler::traversals::print_ast;
-    use super::{traverse, Program, Warning};
+    use super::{traverse, DslWarning, Program};
 
 
     /// Tests the parser by print all files
@@ -63,7 +64,7 @@ mod tests {
             };
 
             // Run the traversal
-            let mut warns: Vec<Warning> = vec![];
+            let mut warns: Vec<DslWarning> = vec![];
             traverse(&mut ast, &mut warns);
 
             // Print any warnings
@@ -427,19 +428,25 @@ fn trav_block(block: &mut Block, annot_buffer: &mut Vec<Annotation>, range_buffe
 /// 
 /// # Arguments
 /// - `tree`: The AST to resolve.
-/// - `warnings`: A list of AnnotationWarnings to populate.
-pub fn traverse(tree: &mut Program, warnings: &mut Vec<Warning>) {
+/// - `warnings`: A list of DslWarning to populate whenever warnings occur in this traversal.
+pub fn traverse(tree: &mut Program, warnings: &mut Vec<DslWarning>) {
     // We start populating the program's symbol table
     let Program{ stmts, annots, .. } = tree;
 
-    // Alright hit it for the statements
+    // Prepare the statement by pulling it out the Program and the buffers
     let old_stmts: Vec<Statement> = mem::take(stmts);
     let (mut annot_buffer, mut range_buffer): (Vec<Annotation>, Vec<Option<TextRange>>) = (vec![], vec![]);
-    *stmts = old_stmts.into_iter().filter_map(|s| trav_stmt(s, &mut annot_buffer, &mut range_buffer, annots, warnings)).collect();
+
+    // Run the convertion of each statement
+    let mut warns: Vec<Warning> = vec![];
+    *stmts = old_stmts.into_iter().filter_map(|s| trav_stmt(s, &mut annot_buffer, &mut range_buffer, annots, &mut warns)).collect();
+
+    // Catch any annotations that have not been consumed
     if !range_buffer.is_empty() {
-        warnings.extend(range_buffer.drain(..).map(|r| Warning::UnusedAnnotation{ range: r }));
+        warns.extend(range_buffer.drain(..).map(|r| Warning::UnusedAnnotation{ range: r }));
         annot_buffer.clear();
     }
 
-    // Done
+    // Done, return the warnings
+    warnings.extend(warns.into_iter().map(|w| w.into()));
 }

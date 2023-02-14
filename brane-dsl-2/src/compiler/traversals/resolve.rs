@@ -4,7 +4,7 @@
 //  Created:
 //    11 Feb 2023, 17:46:03
 //  Last edited:
-//    13 Feb 2023, 18:32:49
+//    14 Feb 2023, 09:02:27
 //  Auto updated?
 //    Yes
 // 
@@ -23,10 +23,12 @@ use log::warn;
 
 use specifications::version::Version;
 
-use crate::errors::ResolveError as Error;
-use crate::warnings::{ResolveWarning as Warning, Warning as _};
+pub use crate::errors::ResolveError as Error;
+use crate::errors::DslError;
+pub use crate::warnings::ResolveWarning as Warning;
+use crate::warnings::{DslWarning, Warning as _};
 use crate::ast::types::DataType;
-use crate::ast::symbol_tables::{ClassEntry, DelayedEntry, DelayedEntryPtr, LocalFuncEntry, PackageEntry, SymbolTable, VarEntry};
+use crate::ast::symbol_tables::{ClassEntry, DelayedEntry, DelayedEntryPtr, ExternalFuncEntry, LocalFuncEntry, PackageEntry, SymbolTable, VarEntry};
 use crate::ast::auxillary::Identifier;
 use crate::ast::expressions::{BinaryOperatorKind, Block, Expression, ExpressionKind, LiteralKind};
 use crate::ast::statements::{self, ClassMemberDefKind, FunctionDef, Statement, StatementKind};
@@ -52,13 +54,14 @@ fn funcify(expr: &mut Expression, errors: &mut Vec<Error>) {
         },
 
         // Replace if it's a variable reference
-        VarRef{ name } => {
+        VarRef{ name, .. } => {
             // Pull the name
             let mut fname: Identifier = Identifier{ name: String::new(), range: None };
             mem::swap(&mut fname, name);
 
             // Update the expression
-            expr.kind = ExpressionKind::LocalFunctionRef{ name: fname };
+            // Note: we can leave the entry empty, since we assume this pass happens _before_ we resolve the entries
+            expr.kind = ExpressionKind::LocalFunctionRef{ name: fname, st_entry: None };
         },
 
         // Checks out if it's a function reference of any kind
@@ -138,8 +141,9 @@ pub fn trav_stmt(stmt: &mut Statement, table: &Rc<RefCell<SymbolTable>>, stack: 
                 name : name.name.clone(),
                 version,
 
-                funcs   : vec![],
-                classes : vec![],
+                // Note that these are always phantom until linking, since we don't have the package metadata before then
+                funcs   : DelayedEntry::Phantom(HashMap::new()),
+                classes : DelayedEntry::Phantom(HashMap::new()),
 
                 range : stmt.range,
             };
@@ -569,41 +573,126 @@ fn trav_expr(expr: &mut Expression, table: &Rc<RefCell<SymbolTable>>, stack: &mu
             {
                 let mut table: RefMut<SymbolTable> = table.borrow_mut();
                 if let Some(entry) = table.resolve_class(&name.name) {
-                    // Set the entry
+                    // Set the entry only to link this instance
+                    // Note that at this point we don't care yet if the entry is resolved or phantom.
+                    *st_entry = Some(entry);
                 } else {
-                    // Set it as this instance, to at least guarantee coherence between calls
-                    table.classes.insert(name.name.clone(), DelayedEntryPtr::phantom(ClassEntry {
+                    // Create a new entry for this instance
+                    let entry: DelayedEntryPtr<ClassEntry> = DelayedEntryPtr::phantom(ClassEntry {
                         name : name.name.clone(),
 
                         props   : HashMap::new(),
                         methods : HashMap::new(),
 
                         range : None,
-                    }));
+                    });
+
+                    // Set it internally to at least guarantee consistence between repeated calls.
+                    *st_entry = Some(entry.clone());
+                    table.classes.insert(name.name.clone(), entry);
                 }
+            }
+
+            // With the class resolved, iterate over the property expressions
+            for p in props {
+                trav_expr(&mut p.value, table, stack, warnings, errors);
             }
         },
 
-        // /// Refers to some statically declared variable (which may be a dynamic value).
-        // VarRef {
-        //     /// The name of the variable to which we refer.
-        //     name : Identifier,
-        // },
-        // /// Refers to some statically declared _local_ function.
-        // LocalFunctionRef {
-        //     /// The identifier of the function to which we refer.
-        //     name : Identifier,
-        // },
-        // /// Refers to some statically declared _external_ function.
-        // ExternalFunctionRef {
-        //     /// The identifier of the function to which we refer.
-        //     name    : Identifier,
-        //     /// The name of the package where we can find the function.
-        //     package : Identifier,
-        // },
+        VarRef { name, st_entry } => {
+            // Attempt to search the table for an entry with this name
+            let mut table: RefMut<SymbolTable> = table.borrow_mut();
+            if let Some(entry) = table.resolve_var(&name.name) {
+                // We set this entry internally to link it, not caring about phantom or resolved because we are cool like that
+                *st_entry = Some(entry);
+            } else {
+                // We create a new entry
+                let entry: DelayedEntryPtr<VarEntry> = DelayedEntryPtr::phantom(VarEntry {
+                    name      : name.name.clone(),
+                    data_type : DataType::Any,
 
-        // /// A literal value to push upon the stack.
-        // Literal(Literal),
+                    shadowed : false,
+
+                    range : None,
+                });
+
+                // We update it in ourselves and the table to guarantee consistency between usages.
+                *st_entry = Some(entry.clone());
+                table.vars.insert(name.name.clone(), entry);
+            }
+        },
+        LocalFunctionRef { name, st_entry } => {
+            // Attempt to search the table for an entry with this name
+            let mut table: RefMut<SymbolTable> = table.borrow_mut();
+            if let Some(entry) = table.resolve_func(&name.name) {
+                // We set this entry internally to link it, not caring about phantom or resolved because we are cool like that
+                *st_entry = Some(entry);
+            } else {
+                // We create a new entry
+                let entry: DelayedEntryPtr<LocalFuncEntry> = DelayedEntryPtr::phantom(LocalFuncEntry {
+                    name     : name.name.clone(),
+                    args     : vec![],
+                    ret_type : DataType::Any,
+
+                    range : None,
+                });
+
+                // We update it in ourselves and the table to guarantee consistency between usages.
+                *st_entry = Some(entry.clone());
+                table.funcs.insert(name.name.clone(), entry);
+            }
+        },
+        ExternalFunctionRef { name, package, st_entry } => {
+            // Attempt to search the table for an entry with this name
+            let mut table: RefMut<SymbolTable> = table.borrow_mut();
+            if let Some(entry_ptr) = table.resolve_package(&package.name) {
+                // We update the package with the function called if it not yet contained
+                // Note: We don this even if resolved, because even though it itself is phantom, its functions are never at this stage.
+                {
+                    let mut entry: RefMut<DelayedEntry<PackageEntry>> = entry_ptr.borrow_mut();
+                    if entry.funcs.is_phantom() && !entry.funcs.contains_key(&name.name) {
+                        entry.funcs.insert(name.name.clone(), ExternalFuncEntry{
+                            name     : name.name.clone(),
+                            args     : vec![],
+                            ret_type : DataType::Any,
+
+                            package : entry_ptr.clone(),
+                        });
+                    }
+                }
+                *st_entry = Some(entry_ptr);
+            } else {
+                // We create a new entry for this package call
+                let entry: DelayedEntryPtr<PackageEntry> = DelayedEntryPtr::phantom(PackageEntry {
+                    name    : package.name.clone(),
+                    version : Version::latest(),
+
+                    funcs   : DelayedEntry::Phantom(HashMap::new()),
+                    classes : DelayedEntry::Phantom(HashMap::new()),
+
+                    range : None,
+                });
+
+                // Inject the function afterwards to be able to refer to the package entry itself
+                let pptr: DelayedEntryPtr<PackageEntry> = entry.clone();
+                {
+                    entry.borrow_mut().funcs.insert(name.name.clone(), ExternalFuncEntry {
+                        name     : name.name.clone(),
+                        args     : vec![],
+                        ret_type : DataType::Any,
+
+                        package : pptr,
+                    });
+                }
+
+                // We update it in ourselves and the table to guarantee consistency between usages.
+                *st_entry = Some(entry.clone());
+                table.packages.insert(name.name.clone(), entry);
+            }
+        },
+
+        // Nothing to be done for the rest
+        Literal(_) => {},
     }
 }
 
@@ -644,8 +733,8 @@ fn trav_block(block: &mut Block, table: &Rc<RefCell<SymbolTable>>, nests: bool, 
 /// 
 /// # Arguments
 /// - `tree`: The AST to resolve.
-/// - `warnings`: A list of AnnotationWarnings to populate.
-pub fn traverse(tree: &mut Program, warnings: &mut Vec<Warning>) {
+/// - `warnings`: A list of DslWarnings to populate whenever an error occurs in this traversal.
+pub fn traverse(tree: &mut Program, warnings: &mut Vec<DslWarning>) -> Result<(), Vec<DslError<'static>>> {
     // We start populating the program's symbol table
     let Program{ stmts, annots, table, .. } = tree;
 
@@ -654,9 +743,17 @@ pub fn traverse(tree: &mut Program, warnings: &mut Vec<Warning>) {
     stack.push(annots.iter());
 
     // Do all the statements to populate it
+    let mut errs  : Vec<Error>   = vec![];
+    let mut warns : Vec<Warning> = vec![];
     for s in stmts {
-        trav_stmt(s, table, &mut stack, warnings, &mut vec![]);
+        trav_stmt(s, table, &mut stack, &mut warns, &mut vec![]);
     }
 
-    // Done
+    // Done, return the warnings and errors (if any)
+    warnings.extend(warns.into_iter().map(|w| w.into()));
+    if errs.is_empty() {
+        Ok(())
+    } else {
+        Err(errs.into_iter().map(|e| e.into()).collect())
+    }
 }
