@@ -4,7 +4,7 @@
 //  Created:
 //    13 Feb 2023, 11:54:08
 //  Last edited:
-//    14 Feb 2023, 10:05:48
+//    17 Feb 2023, 15:48:22
 //  Auto updated?
 //    Yes
 // 
@@ -377,7 +377,12 @@ fn trav_expr(expr: &mut Expression, annot_buffer: &mut Vec<Annotation>, range_bu
                 trav_expr(e, annot_buffer, range_buffer, warnings);
             }
         },
-        Instance { props, .. } => {
+        LocalInstance { props, .. } => {
+            for p in props {
+                trav_expr(&mut p.value, annot_buffer, range_buffer, warnings);
+            }
+        },
+        RemoteInstance { props, .. } => {
             for p in props {
                 trav_expr(&mut p.value, annot_buffer, range_buffer, warnings);
             }

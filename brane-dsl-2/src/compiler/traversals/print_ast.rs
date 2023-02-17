@@ -4,7 +4,7 @@
 //  Created:
 //    10 Feb 2023, 19:25:20
 //  Last edited:
-//    14 Feb 2023, 13:24:43
+//    17 Feb 2023, 15:48:07
 //  Auto updated?
 //    Yes
 // 
@@ -18,7 +18,7 @@ use std::io::Write;
 
 use crate::ast::spec::{Annotation, Node};
 use crate::ast::types::DataType;
-use crate::ast::symbol_tables::{ClassEntry, ClassEntryMember, DelayedEntry, ExternalFuncEntry, LocalFuncEntry, PackageEntry, SymbolTable, VarEntry};
+use crate::ast::symbol_tables::{DelayedEntry, ExternalClassEntry, ExternalClassEntryMember, ExternalFuncEntry, LocalClassEntry, LocalClassEntryMember, LocalFuncEntry, PackageEntry, SymbolTable, VarEntry};
 use crate::ast::expressions::{Block, Expression, ExpressionKind, Literal, LiteralKind, UnaryOperatorKind};
 use crate::ast::statements::{ArgDef, ClassMemberDefKind, FunctionDef, RawAnnotation, RawAnnotationKind, Statement, StatementKind};
 use crate::ast::toplevel::Program;
@@ -203,13 +203,13 @@ impl TravFormattable for LocalFuncEntry {
 
     fn trav_indent<'e>(&'e self, indent: usize) -> TravFormatter<'e, Self> { TravFormatter{ elem: self, indent } }
 }
-impl TravFormattable for DelayedEntry<ClassEntry> {
+impl TravFormattable for ExternalClassEntry {
     #[inline]
     fn trav<'e>(&'e self) -> TravFormatter<'e, Self> { TravFormatter{ elem: self, indent: 0 } }
 
     fn trav_indent<'e>(&'e self, indent: usize) -> TravFormatter<'e, Self> { TravFormatter{ elem: self, indent } }
 }
-impl TravFormattable for ClassEntry {
+impl TravFormattable for DelayedEntry<LocalClassEntry> {
     #[inline]
     fn trav<'e>(&'e self) -> TravFormatter<'e, Self> { TravFormatter{ elem: self, indent: 0 } }
 
@@ -352,29 +352,40 @@ impl<'e> Display for TravFormatter<'e, LocalFuncEntry> {
     }
 }
 
-/// Formatter for classes wrapped in delayed entries.
-impl<'e> Display for TravFormatter<'e, DelayedEntry<ClassEntry>> {
+/// Formatter for external classes.
+impl<'e> Display for TravFormatter<'e, ExternalClassEntry> {
     fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
-        // We wrap the normal formatter
-        writeln!(f, indent = self.indent, "{}{}", if self.elem.is_phantom() { "(P) " } else { "" }, self.elem.entry().trav_indent(self.indent))
-    }
-}
-/// Formatter for bare classes.
-impl<'e> Display for TravFormatter<'e, ClassEntry> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
-        // Note that we write without newline and indent, since the parent (PackageEntry) wants to potentially prefix us
         writeln!(f, "class {} [", self.elem.name)?;
 
         // Write the properties
         for p in self.elem.defs.values() {
             match p {
-                ClassEntryMember::Property(prop) => { writeln!(f, indent = self.indent + INDENT_SIZE, "{}", prop.trav_indent(self.indent + INDENT_SIZE))?; },
-                ClassEntryMember::Method(method) => { writeln!(f, indent = self.indent + INDENT_SIZE, "{}", method.trav_indent(self.indent + INDENT_SIZE))?; },
+                ExternalClassEntryMember::Property(prop) => { writeln!(f, indent = self.indent + INDENT_SIZE, "{}", prop.trav_indent(self.indent + INDENT_SIZE))?; },
+                ExternalClassEntryMember::Method(method) => { writeln!(f, indent = self.indent + INDENT_SIZE, "{}", method.trav_indent(self.indent + INDENT_SIZE))?; },
             }
         }
 
         // Write the end
-        write!(f, indent = self.indent, "]")?;
+        writeln!(f, indent = self.indent, "]")?;
+        Ok(())
+    }
+}
+
+/// Formatter for classes wrapped in delayed entries.
+impl<'e> Display for TravFormatter<'e, DelayedEntry<LocalClassEntry>> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
+        writeln!(f, indent = self.indent, "{}class {} [", if self.elem.is_phantom() { "(P) " } else { "" }, self.elem.name)?;
+
+        // Write the properties
+        for p in self.elem.defs.values() {
+            match p {
+                LocalClassEntryMember::Property(prop) => { writeln!(f, indent = self.indent + INDENT_SIZE, "{}", prop.trav_indent(self.indent + INDENT_SIZE))?; },
+                LocalClassEntryMember::Method(method) => { writeln!(f, indent = self.indent + INDENT_SIZE, "{}", method.trav_indent(self.indent + INDENT_SIZE))?; },
+            }
+        }
+
+        // Write the end
+        writeln!(f, indent = self.indent, "]")?;
         Ok(())
     }
 }
@@ -687,9 +698,22 @@ impl<'e> Display for TravFormatter<'e, Expression> {
             Array { elems } => {
                 write!(f, "[{}]", elems.iter().map(|e| e.trav_indent(self.indent).to_string()).collect::<Vec<String>>().join(", "))
             },
-            Instance { name, props, .. } => {
+            LocalInstance { name, props, .. } => {
                 // Write the header
                 writeln!(f, "new {} {{", name.name)?;
+                // Write the properties
+                for p in props {
+                    writeln!(f, indent = self.indent + INDENT_SIZE, "{} := {},", p.name.name, p.value.trav_indent(self.indent))?;
+                }
+                // Write the footer
+                write!(f, "}}")?;
+
+                // Done
+                Ok(())
+            },
+            RemoteInstance{ name, package, props, .. } => {
+                // Write the header
+                writeln!(f, "new {}::{} {{", package.name, name.name)?;
                 // Write the properties
                 for p in props {
                     writeln!(f, indent = self.indent + INDENT_SIZE, "{} := {},", p.name.name, p.value.trav_indent(self.indent))?;

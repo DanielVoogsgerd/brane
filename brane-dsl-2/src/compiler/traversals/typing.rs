@@ -4,7 +4,7 @@
 //  Created:
 //    14 Feb 2023, 13:33:32
 //  Last edited:
-//    14 Feb 2023, 13:38:25
+//    17 Feb 2023, 15:20:06
 //  Auto updated?
 //    Yes
 // 
@@ -27,5 +27,5 @@ use crate::ast::toplevel::Program;
 /// - `tree`: The AST to resolve.
 /// - `warnings`: A list of DslWarnings to populate whenever an error occurs in this traversal.
 pub fn traverse(tree: &mut Program, warnings: &mut Vec<DslWarning>) -> Result<(), Vec<DslError<'static>>> {
-    
+    Ok(())
 }

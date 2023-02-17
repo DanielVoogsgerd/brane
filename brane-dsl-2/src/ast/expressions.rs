@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 15:34:18
 //  Last edited:
-//    14 Feb 2023, 08:27:43
+//    17 Feb 2023, 15:41:41
 //  Auto updated?
 //    Yes
 // 
@@ -19,7 +19,7 @@ use std::rc::Rc;
 use enum_debug::EnumDebug;
 
 use super::spec::{Annotation, BindingPower, Node, TextRange};
-use super::symbol_tables::{ClassEntry, DelayedEntryPtr, LocalFuncEntry, PackageEntry, SymbolTable, VarEntry};
+use super::symbol_tables::{DelayedEntryPtr, LocalClassEntry, LocalFuncEntry, PackageEntry, SymbolTable, VarEntry};
 use super::auxillary::{DataType, Identifier, MergeStrategy};
 use super::statements::Statement;
 
@@ -137,15 +137,27 @@ pub enum ExpressionKind {
         /// The elements in this array.
         elems : Vec<Expression>,
     },
-    /// Instantiates a class, returning the new instance.
-    Instance {
+    /// Instantiates a local class, returning the new instance.
+    LocalInstance {
         /// The identifier of the class instantiated.
         name  : Identifier,
         /// The values for each of the properties of the class.
         props : Vec<PropertyExpr>,
 
         /// The entry for the class which this instance references.
-        st_entry : Option<DelayedEntryPtr<ClassEntry>>,
+        st_entry : Option<DelayedEntryPtr<LocalClassEntry>>,
+    },
+    /// Instantiates a remote class, returning the new instance.
+    RemoteInstance {
+        /// The identifier of the class instantiated.
+        name    : Identifier,
+        /// The name of the package where we can find the class.
+        package : Identifier,
+        /// The values for each of the properties of the class.
+        props   : Vec<PropertyExpr>,
+
+        /// The symbol table entry for the package referenced, which can then be indexed using the class name.
+        st_entry : Option<DelayedEntryPtr<PackageEntry>>,
     },
 
     /// Refers to some statically declared variable (which may be a dynamic value).

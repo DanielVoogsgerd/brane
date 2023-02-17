@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 15:33:27
 //  Last edited:
-//    13 Feb 2023, 17:34:16
+//    17 Feb 2023, 15:35:38
 //  Auto updated?
 //    Yes
 // 
@@ -15,7 +15,7 @@
 use enum_debug::EnumDebug;
 
 use super::spec::{Annotation, Node, TextRange};
-use super::symbol_tables::{ClassEntry, DelayedEntryPtr, LocalFuncEntry, PackageEntry, VarEntry};
+use super::symbol_tables::{DelayedEntryPtr, LocalClassEntry, LocalFuncEntry, PackageEntry, VarEntry};
 use super::auxillary::{DataType, Identifier};
 use super::expressions::{Block, Expression, Literal};
 
@@ -80,7 +80,7 @@ pub enum StatementKind {
         defs : Vec<ClassMemberDef>,
 
         /// The symbol table entry for the declared class.
-        st_entry : Option<DelayedEntryPtr<ClassEntry>>,
+        st_entry : Option<DelayedEntryPtr<LocalClassEntry>>,
     },
 
     /// A definition of a variable (previously known as a let-expression).

@@ -10,3 +10,7 @@ import test;
 // }
 
 println(test::hello_world());
+
+
+// We also import a test class, to test the syntax
+println(new test::HelloWorld{ greeting := "Greetings", world := "planet" });

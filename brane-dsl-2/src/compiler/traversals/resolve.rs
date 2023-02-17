@@ -4,7 +4,7 @@
 //  Created:
 //    11 Feb 2023, 17:46:03
 //  Last edited:
-//    14 Feb 2023, 15:54:21
+//    17 Feb 2023, 16:02:25
 //  Auto updated?
 //    Yes
 // 
@@ -28,7 +28,7 @@ use crate::errors::DslError;
 pub use crate::warnings::ResolveWarning as Warning;
 use crate::warnings::{DslWarning, Warning as _};
 use crate::ast::types::DataType;
-use crate::ast::symbol_tables::{ClassEntry, ClassEntryMember, DelayedEntry, DelayedEntryPtr, ExternalFuncEntry, LocalFuncEntry, PackageEntry, SymbolTable, VarEntry};
+use crate::ast::symbol_tables::{DelayedEntry, DelayedEntryPtr, ExternalClassEntry, ExternalFuncEntry, LocalClassEntry, LocalClassEntryMember, LocalFuncEntry, PackageEntry, SymbolTable, VarEntry};
 use crate::ast::auxillary::Identifier;
 use crate::ast::expressions::{BinaryOperatorKind, Block, Expression, ExpressionKind, LiteralKind};
 use crate::ast::statements::{self, ClassMemberDefKind, FunctionDef, Statement, StatementKind};
@@ -215,10 +215,10 @@ pub fn trav_stmt(stmt: &mut Statement, table: &Rc<RefCell<SymbolTable>>, stack: 
 
         ClassDef { name, defs, st_entry } => {
             // Do nothing if we've already processed this class.
-            if let Some(entry) = st_entry {
+            if st_entry.is_some() {
                 // Well, I say nothing, but we do recurse in methods to find other things we can update
                 for def in defs {
-                    match &def.kind {
+                    match &mut def.kind {
                         ClassMemberDefKind::Method(def) => {
                             trav_block(&mut def.body, table, false, stack, warnings, errors);
                         }
@@ -229,7 +229,7 @@ pub fn trav_stmt(stmt: &mut Statement, table: &Rc<RefCell<SymbolTable>>, stack: 
             }
 
             // Create the entries for the definitions
-            let mut entry_defs : HashMap<String, ClassEntryMember> = HashMap::new();
+            let mut entry_defs : HashMap<String, LocalClassEntryMember> = HashMap::new();
             for d in defs.iter() {
                 // Push the definition's annotations
                 stack.push(&d.annots);
@@ -242,7 +242,7 @@ pub fn trav_stmt(stmt: &mut Statement, table: &Rc<RefCell<SymbolTable>>, stack: 
                             let warn: Warning = Warning::DuplicateClassMemberDefinition{ name: pname.name.clone(), class: name.name.clone(), range: d.range, prev: prev.range(), prev_variant: prev.what() };
                             if !stack.is_allowed(warn.code()) { warnings.push(warn); }
                         } else {
-                            entry_defs.insert(pname.name.clone(), ClassEntryMember::Property(VarEntry {
+                            entry_defs.insert(pname.name.clone(), LocalClassEntryMember::Property(VarEntry {
                                 name      : pname.name.clone(),
                                 data_type : data_type.data_type.clone(),
 
@@ -258,7 +258,7 @@ pub fn trav_stmt(stmt: &mut Statement, table: &Rc<RefCell<SymbolTable>>, stack: 
                             let warn: Warning = Warning::DuplicateClassMemberDefinition{ name: def.name.name.clone(), class: name.name.clone(), range: def.range, prev: prev.range(), prev_variant: prev.what() };
                             if !stack.is_allowed(warn.code()) { warnings.push(warn); }
                         } else {
-                            entry_defs.insert(def.name.name.clone(), ClassEntryMember::Method(LocalFuncEntry {
+                            entry_defs.insert(def.name.name.clone(), LocalClassEntryMember::Method(LocalFuncEntry {
                                 name     : def.name.name.clone(),
                                 args     : def.args.iter().map(|a| DelayedEntryPtr::resolved(VarEntry{ name: a.name.name.clone(), data_type: a.data_type.data_type.clone(), shadowed: false, range: a.range })).collect(),
                                 ret_type : def.ret.data_type.clone(),
@@ -278,7 +278,7 @@ pub fn trav_stmt(stmt: &mut Statement, table: &Rc<RefCell<SymbolTable>>, stack: 
             }
 
             // Create the class entry around it
-            let class: ClassEntry = ClassEntry {
+            let class: LocalClassEntry = LocalClassEntry {
                 name : name.name.clone(),
                 defs : entry_defs,
 
@@ -292,7 +292,7 @@ pub fn trav_stmt(stmt: &mut Statement, table: &Rc<RefCell<SymbolTable>>, stack: 
                 // Assert the class does not already exist
                 if let Some(prev_ptr) = table.classes.get(&name.name) {
                     // If it's phantom, then mark as resolved instead with this definition
-                    let mut prev: RefMut<DelayedEntry<ClassEntry>> = prev_ptr.borrow_mut();
+                    let mut prev: RefMut<DelayedEntry<LocalClassEntry>> = prev_ptr.borrow_mut();
                     match &*prev {
                         DelayedEntry::Resolved(prev) => {
                             let warn: Warning = Warning::DuplicateClassDefinition{ name: name.name.clone(), range: stmt.range, prev: prev.range };
@@ -308,7 +308,7 @@ pub fn trav_stmt(stmt: &mut Statement, table: &Rc<RefCell<SymbolTable>>, stack: 
                     *st_entry = Some(prev_ptr.clone());
                 } else {
                     // Otherwise, add it
-                    let class: DelayedEntryPtr<ClassEntry> = DelayedEntryPtr::resolved(class);
+                    let class: DelayedEntryPtr<LocalClassEntry> = DelayedEntryPtr::resolved(class);
                     *st_entry = Some(class.clone());
                     table.classes.insert(name.name.clone(), class);
                 }
@@ -590,6 +590,7 @@ fn trav_expr(expr: &mut Expression, table: &Rc<RefCell<SymbolTable>>, stack: &mu
             trav_expr(index, table, stack, warnings, errors);
         },
         Proj { to_proj, .. } => {
+            // NOTE: Any stuff like checking if a class has a field is left for type deduction
             trav_expr(to_proj, table, stack, warnings, errors);
         },
         Call { to_call, args } => {
@@ -629,7 +630,7 @@ fn trav_expr(expr: &mut Expression, table: &Rc<RefCell<SymbolTable>>, stack: &mu
                 trav_expr(e, table, stack, warnings, errors);
             }
         },
-        Instance { name, props, st_entry } => {
+        LocalInstance { name, props, st_entry } => {
             // Attempt to find the class with this name
             {
                 let mut table: RefMut<SymbolTable> = table.borrow_mut();
@@ -639,7 +640,7 @@ fn trav_expr(expr: &mut Expression, table: &Rc<RefCell<SymbolTable>>, stack: &mu
                     *st_entry = Some(entry);
                 } else {
                     // Create a new entry for this instance
-                    let entry: DelayedEntryPtr<ClassEntry> = DelayedEntryPtr::phantom(ClassEntry {
+                    let entry: DelayedEntryPtr<LocalClassEntry> = DelayedEntryPtr::phantom(LocalClassEntry {
                         name : name.name.clone(),
                         defs : HashMap::new(),
 
@@ -649,6 +650,59 @@ fn trav_expr(expr: &mut Expression, table: &Rc<RefCell<SymbolTable>>, stack: &mu
                     // Set it internally to at least guarantee consistence between repeated calls.
                     *st_entry = Some(entry.clone());
                     table.classes.insert(name.name.clone(), entry);
+                }
+            }
+
+            // With the class resolved, iterate over the property expressions
+            for p in props {
+                trav_expr(&mut p.value, table, stack, warnings, errors);
+            }
+        },
+        RemoteInstance { name, package, props, st_entry } => {
+            // Attempt to search the table for an entry with this name
+            {
+                let mut table: RefMut<SymbolTable> = table.borrow_mut();
+                if let Some(entry_ptr) = table.resolve_package(&package.name) {
+                    // We update the package with the class instantiated if it not yet there
+                    // Note: We don this even if resolved, because even though the package itself is phantom, its classes are never at this stage.
+                    {
+                        let mut entry: RefMut<DelayedEntry<PackageEntry>> = entry_ptr.borrow_mut();
+                        if entry.classes.is_phantom() && !entry.classes.contains_key(&name.name) {
+                            entry.classes.insert(name.name.clone(), ExternalClassEntry{
+                                name : name.name.clone(),
+                                defs : HashMap::new(),
+
+                                package : entry_ptr.clone(),
+                            });
+                        }
+                    }
+                    *st_entry = Some(entry_ptr);
+                } else {
+                    // We create a new entry for this package
+                    let entry: DelayedEntryPtr<PackageEntry> = DelayedEntryPtr::phantom(PackageEntry {
+                        name    : package.name.clone(),
+                        version : Version::latest(),
+
+                        funcs   : DelayedEntry::Phantom(HashMap::new()),
+                        classes : DelayedEntry::Phantom(HashMap::new()),
+
+                        range : None,
+                    });
+
+                    // Inject the class afterwards to be able to refer to the package entry itself
+                    let pptr: DelayedEntryPtr<PackageEntry> = entry.clone();
+                    {
+                        entry.borrow_mut().classes.insert(name.name.clone(), ExternalClassEntry {
+                            name : name.name.clone(),
+                            defs : HashMap::new(),
+
+                            package : pptr,
+                        });
+                    }
+
+                    // We update it in ourselves and the table to guarantee consistency between usages.
+                    *st_entry = Some(entry.clone());
+                    table.packages.insert(name.name.clone(), entry);
                 }
             }
 

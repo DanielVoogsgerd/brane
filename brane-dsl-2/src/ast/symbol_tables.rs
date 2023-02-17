@@ -4,7 +4,7 @@
 //  Created:
 //    11 Feb 2023, 17:54:32
 //  Last edited:
-//    14 Feb 2023, 13:32:39
+//    17 Feb 2023, 15:57:05
 //  Auto updated?
 //    Yes
 // 
@@ -158,11 +158,13 @@ pub struct PackageEntry {
     /// The list of external functions provided by this package.
     pub funcs   : DelayedEntry<HashMap<String, ExternalFuncEntry>>,
     /// The list of classes defined in this entry.
-    pub classes : DelayedEntry<HashMap<String, ClassEntry>>,
+    pub classes : DelayedEntry<HashMap<String, ExternalClassEntry>>,
 
     /// The location in the source where this package was declared. Obviously `None` if phantom, but may also be None in other cases.
     pub range : Option<TextRange>,
 }
+
+
 
 /// Defines a symbol table entry for an external function.
 #[derive(Clone, Debug)]
@@ -177,8 +179,6 @@ pub struct ExternalFuncEntry {
     /// Reference to the parent package.
     pub package : DelayedEntryPtr<PackageEntry>,
 }
-
-
 
 /// Defines a local function in the symbol table.
 #[derive(Clone, Debug)]
@@ -196,13 +196,22 @@ pub struct LocalFuncEntry {
 
 
 
+/// An abstraction over any kind of class.
+#[derive(Clone, Debug)]
+pub enum ClassEntryPtr {
+    /// It's a local entry.
+    Local(DelayedEntryPtr<LocalClassEntry>),
+    /// It's an external class living in a package.
+    External(DelayedEntryPtr<ExternalClassEntry>),
+}
+
 /// Defines a class in the symbol table.
 #[derive(Clone, Debug)]
-pub struct ClassEntry {
+pub struct LocalClassEntry {
     /// The name of the class (also its signature).
     pub name : String,
     /// Things defined in the class.
-    pub defs : HashMap<String, ClassEntryMember>,
+    pub defs : HashMap<String, LocalClassEntryMember>,
 
     /// The location in the source where this class was declared. Obviously `None` if phantom, but may also be None in other cases.
     pub range : Option<TextRange>,
@@ -212,19 +221,19 @@ pub struct ClassEntry {
 /// 
 /// This allows them to be in the same scope.
 #[derive(Clone, Debug, EnumDebug)]
-pub enum ClassEntryMember {
+pub enum LocalClassEntryMember {
     /// It's a property.
     Property(VarEntry),
     /// It's a method.
     Method(LocalFuncEntry),
 }
-impl ClassEntryMember {
+impl LocalClassEntryMember {
     /// Returns some name describing the member.
     /// 
     /// TODO: Replace with some function in EnumDebug once that's updated.
     #[inline]
     pub fn what(&self) -> &'static str {
-        use ClassEntryMember::*;
+        use LocalClassEntryMember::*;
         match self {
             Property(_) => "Property",
             Method(_)   => "Method",
@@ -234,10 +243,46 @@ impl ClassEntryMember {
     /// Returns the range of the internal entry, if any.
     #[inline]
     pub fn range(&self) -> Option<TextRange> {
-        use ClassEntryMember::*;
+        use LocalClassEntryMember::*;
         match self {
             Property(prop) => prop.range,
             Method(func)   => func.range,
+        }
+    }
+}
+
+/// Defines a symbol table ewntry for an external class.
+#[derive(Clone, Debug)]
+pub struct ExternalClassEntry {
+    /// The name of the class (also its signature).
+    pub name : String,
+    /// Things defined in the class.
+    pub defs : HashMap<String, ExternalClassEntryMember>,
+
+    /// Reference to the parent package.
+    pub package : DelayedEntryPtr<PackageEntry>,
+}
+
+/// Defines the things that can be defined in a class, entry-wise.
+/// 
+/// This allows them to be in the same scope.
+#[derive(Clone, Debug, EnumDebug)]
+pub enum ExternalClassEntryMember {
+    /// It's a property.
+    Property(VarEntry),
+    /// It's a method.
+    Method(ExternalFuncEntry),
+}
+impl ExternalClassEntryMember {
+    /// Returns some name describing the member.
+    /// 
+    /// TODO: Replace with some function in EnumDebug once that's updated.
+    #[inline]
+    pub fn what(&self) -> &'static str {
+        use ExternalClassEntryMember::*;
+        match self {
+            Property(_) => "Property",
+            Method(_)   => "Method",
         }
     }
 }
@@ -272,7 +317,7 @@ pub struct SymbolTable {
     /// The identifiers that live in the (local) function namespace.
     pub funcs    : HashMap<String, DelayedEntryPtr<LocalFuncEntry>>,
     /// The identifiers that live in the class (type) namespace.
-    pub classes  : HashMap<String, DelayedEntryPtr<ClassEntry>>,
+    pub classes  : HashMap<String, DelayedEntryPtr<LocalClassEntry>>,
     /// The identifiers that live in the variable namespace.
     pub vars     : HashMap<String, DelayedEntryPtr<VarEntry>>,
 
@@ -352,7 +397,7 @@ impl SymbolTable {
     /// 
     /// # Returns
     /// The entry of the class if we found any, or else `None`.
-    pub fn resolve_class(&self, name: impl AsRef<str>) -> Option<DelayedEntryPtr<ClassEntry>> {
+    pub fn resolve_class(&self, name: impl AsRef<str>) -> Option<DelayedEntryPtr<LocalClassEntry>> {
         let name: &str = name.as_ref();
 
         // Search either this table or the parent
