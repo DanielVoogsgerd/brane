@@ -4,13 +4,16 @@
 //  Created:
 //    06 Feb 2023, 15:32:54
 //  Last edited:
-//    11 Feb 2023, 17:54:46
+//    17 Feb 2023, 16:36:02
 //  Auto updated?
 //    Yes
 // 
 //  Description:
 //!   The `ast` submodule defines the abstract syntax tree for the
 //!   BraneScript and Bakery languages.
+//!   
+//!   This AST maps 1-to-1 to the formal grammar specified on the
+//!   [wiki](https://wiki.enablingpersonalizedinterventions.nl/specification/branescript/grammar.html).
 // 
 
 // Declare nested modules
