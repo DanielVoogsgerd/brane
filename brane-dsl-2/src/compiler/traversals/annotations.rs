@@ -4,7 +4,7 @@
 //  Created:
 //    13 Feb 2023, 11:54:08
 //  Last edited:
-//    17 Feb 2023, 15:48:22
+//    22 May 2023, 18:50:14
 //  Auto updated?
 //    Yes
 // 
@@ -20,12 +20,16 @@
 
 use std::mem;
 
+use enum_debug::EnumDebug as _;
+use log::{debug, trace};
+
 pub use crate::warnings::AnnotationWarning as Warning;
 use crate::warnings::DslWarning;
 use crate::ast::spec::{self, Annotation, TextRange};
 use crate::ast::expressions::{Block, Expression, ExpressionKind};
 use crate::ast::statements::{ClassMemberDef, ClassMemberDefKind, Statement, StatementKind};
 use crate::ast::toplevel::Program;
+use crate::compiler::utils::trace_trap;
 
 
 /***** TESTS *****/
@@ -86,6 +90,9 @@ mod tests {
 /// # Returns
 /// Returns whether this statement should be preserved (the same statement) or not (None).
 fn trav_stmt(mut stmt: Statement, annot_buffer: &mut Vec<Annotation>, range_buffer: &mut Vec<Option<TextRange>>, parent_annots: &mut Vec<Annotation>, warnings: &mut Vec<Warning>) -> Option<Statement> {
+    trace!(target: "annotations", "Traversing {:?}", stmt.kind.variant());
+    let _trap = trace_trap!(target: "annotations", "Exiting {:?}", stmt.kind.variant());
+
     // Match on the statement
     use StatementKind::*;
     match &mut stmt.kind {
@@ -247,6 +254,9 @@ fn trav_stmt(mut stmt: Statement, annot_buffer: &mut Vec<Annotation>, range_buff
 /// # Returns
 /// Returns whether this definition should be preserved (the same definition) or not (None).
 fn trav_member_def(mut def: ClassMemberDef, annot_buffer: &mut Vec<Annotation>, range_buffer: &mut Vec<Option<TextRange>>, parent_annots: &mut Vec<Annotation>, warnings: &mut Vec<Warning>) -> Option<ClassMemberDef> {
+    trace!(target: "annotations", "Traversing {:?}", def.kind.variant());
+    let _trap = trace_trap!(target: "annotations", "Exiting {:?}", def.kind.variant());
+
     // Match on the definition
     use ClassMemberDefKind::*;
     match &mut def.kind {
@@ -314,6 +324,9 @@ fn trav_member_def(mut def: ClassMemberDef, annot_buffer: &mut Vec<Annotation>, 
 /// - `range_buffer`: A temporary buffer of ranges matching the collected `annot_buffer`. Does not map one-to-one, but rather, can be used to emit errors about groups of annotations instead. Note that we assume these are already empty (but we re-use them for optimization purposes).
 /// - `warnings`: A list of warnings to populate.
 fn trav_expr(expr: &mut Expression, annot_buffer: &mut Vec<Annotation>, range_buffer: &mut Vec<Option<TextRange>>, warnings: &mut Vec<Warning>) {
+    trace!(target: "annotations", "Traversing {:?}", expr.kind.variant());
+    let _trap = trace_trap!(target: "annotations", "Exiting {:?}", expr.kind.variant());
+
     // Switch on the expression
     use ExpressionKind::*;
     match &mut expr.kind {
@@ -405,6 +418,9 @@ fn trav_expr(expr: &mut Expression, annot_buffer: &mut Vec<Annotation>, range_bu
 /// - `parent_annots`: The list of annotations to populate for _parent_ annotations.
 /// - `warnings`: A list of warnings to populate.
 fn trav_block(block: &mut Block, annot_buffer: &mut Vec<Annotation>, range_buffer: &mut Vec<Option<TextRange>>, parent_annots: &mut Vec<Annotation>, warnings: &mut Vec<Warning>) {
+    trace!(target: "annotations", "Traversing Block");
+    let _trap = trace_trap!(target: "annotations", "Exiting Block");
+
     // Hit it for the statements again
     let old_stmts: Vec<Statement> = mem::take(&mut block.stmts);
     block.stmts = old_stmts.into_iter().filter_map(|s| trav_stmt(s, annot_buffer, range_buffer, parent_annots, warnings)).collect();
@@ -425,6 +441,8 @@ fn trav_block(block: &mut Block, annot_buffer: &mut Vec<Annotation>, range_buffe
 /// - `tree`: The AST to resolve.
 /// - `warnings`: A list of DslWarning to populate whenever warnings occur in this traversal.
 pub fn traverse(tree: &mut Program, warnings: &mut Vec<DslWarning>) {
+    debug!(target: "annotations", "Starting traversal");
+
     // We start populating the program's symbol table
     let Program{ stmts, annots, .. } = tree;
 
@@ -444,4 +462,5 @@ pub fn traverse(tree: &mut Program, warnings: &mut Vec<DslWarning>) {
 
     // Done, return the warnings
     warnings.extend(warns.into_iter().map(|w| w.into()));
+    debug!(target: "annotations", "Traversal complete");
 }

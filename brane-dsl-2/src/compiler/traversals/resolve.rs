@@ -4,7 +4,7 @@
 //  Created:
 //    11 Feb 2023, 17:46:03
 //  Last edited:
-//    17 Feb 2023, 16:02:25
+//    22 May 2023, 19:01:10
 //  Auto updated?
 //    Yes
 // 
@@ -19,7 +19,7 @@ use std::mem;
 use std::rc::Rc;
 
 use enum_debug::EnumDebug as _;
-use log::warn;
+use log::{debug, trace, warn};
 
 use specifications::version::Version;
 
@@ -33,6 +33,7 @@ use crate::ast::auxillary::Identifier;
 use crate::ast::expressions::{BinaryOperatorKind, Block, Expression, ExpressionKind, LiteralKind};
 use crate::ast::statements::{self, ClassMemberDefKind, FunctionDef, Statement, StatementKind};
 use crate::ast::toplevel::Program;
+use crate::compiler::utils::trace_trap;
 use crate::compiler::annot_stack::AnnotationStack;
 
 
@@ -151,6 +152,9 @@ fn assert_assign(expr: &Expression, errors: &mut Vec<Error>) {
 /// - `warnings`: A list that we will populate with warnings if they occur.
 /// - `errors`: A list that we will populate with errors if they occur. If they do, then this function might early quit before properly traversing the tree (since it is malformed anyway).
 pub fn trav_stmt(stmt: &mut Statement, table: &Rc<RefCell<SymbolTable>>, stack: &mut AnnotationStack, warnings: &mut Vec<Warning>, errors: &mut Vec<Error>) {
+    trace!(target: "resolve", "Traversing {:?}", stmt.kind.variant());
+    let _trap = trace_trap!(target: "resolve", "Exiting {:?}", stmt.kind.variant());
+
     // Match on the statement
     use StatementKind::*;
     match &mut stmt.kind {
@@ -466,6 +470,9 @@ pub fn trav_stmt(stmt: &mut Statement, table: &Rc<RefCell<SymbolTable>>, stack: 
 /// - `warnings`: A list that we will populate with warnings if they occur.
 /// - `errors`: A list that we will populate with errors if they occur. If they do, then this function might early quit before properly traversing the tree (since it is malformed anyway).
 fn trav_func_def(def: &mut FunctionDef, table: &Rc<RefCell<SymbolTable>>, stack: &mut AnnotationStack, warnings: &mut Vec<Warning>, errors: &mut Vec<Error>) {
+    trace!(target: "resolve", "Traversing FunctionDef");
+    let _trap = trace_trap!(target: "resolve", "Exiting FunctionDef");
+
     // We only generate the entries if we didn't already
     if def.st_entry.is_none() {
         // Create the entries first; arguments...
@@ -539,6 +546,9 @@ fn trav_func_def(def: &mut FunctionDef, table: &Rc<RefCell<SymbolTable>>, stack:
 /// - `warnings`: A list that we will populate with warnings if they occur.
 /// - `errors`: A list that we will populate with errors if they occur. If they do, then this function might early quit before properly traversing the tree (since it is malformed anyway).
 fn trav_expr(expr: &mut Expression, table: &Rc<RefCell<SymbolTable>>, stack: &mut AnnotationStack, warnings: &mut Vec<Warning>, errors: &mut Vec<Error>) {
+    trace!(target: "resolve", "Traversing {:?}", expr.kind.variant());
+    let _trap = trace_trap!(target: "resolve", "Exiting {:?}", expr.kind.variant());
+
     use ExpressionKind::*;
     match &mut expr.kind {
         // Statement-carrying expressions
@@ -817,10 +827,13 @@ fn trav_expr(expr: &mut Expression, table: &Rc<RefCell<SymbolTable>>, stack: &mu
 /// - `block`: The Block to traverse.
 /// - `table`: The SymbolTable of the current scope that we need to declare any new declarations in.
 /// - `nests`: Whether the block has access to the parent scope or nah.
-/// -` stack`: The AnnotationStack that we use to keep track of active annotations.
+/// - `stack`: The AnnotationStack that we use to keep track of active annotations.
 /// - `warnings`: A list that we will populate with warnings if they occur.
 /// - `errors`: A list that we will populate with errors if they occur. If they do, then this function might early quit before properly traversing the tree (since it is malformed anyway).
 fn trav_block(block: &mut Block, table: &Rc<RefCell<SymbolTable>>, nests: bool, stack: &mut AnnotationStack, warnings: &mut Vec<Warning>, errors: &mut Vec<Error>) {
+    trace!(target: "resolve", "Traversing Block");
+    let _trap = trace_trap!(target: "resolve", "Exiting Block");
+
     // Set the parent symbol table for this block
     {
         let mut btable: RefMut<SymbolTable> = block.table.borrow_mut();
@@ -850,6 +863,8 @@ fn trav_block(block: &mut Block, table: &Rc<RefCell<SymbolTable>>, nests: bool, 
 /// - `tree`: The AST to resolve.
 /// - `warnings`: A list of DslWarnings to populate whenever an error occurs in this traversal.
 pub fn traverse(tree: &mut Program, warnings: &mut Vec<DslWarning>) -> Result<(), Vec<DslError<'static>>> {
+    debug!(target: "resolve", "Starting traversal");
+
     // We start populating the program's symbol table
     let Program{ stmts, annots, table, .. } = tree;
 
@@ -867,8 +882,10 @@ pub fn traverse(tree: &mut Program, warnings: &mut Vec<DslWarning>) -> Result<()
     // Done, return the warnings and errors (if any)
     warnings.extend(warns.into_iter().map(|w| w.into()));
     if errs.is_empty() {
+        debug!(target: "resolve", "Traversal success");
         Ok(())
     } else {
+        debug!(target: "resolve", "Traversal failure");
         Err(errs.into_iter().map(|e| e.into()).collect())
     }
 }
