@@ -4,7 +4,7 @@
 //  Created:
 //    11 Feb 2023, 17:46:03
 //  Last edited:
-//    22 May 2023, 19:01:10
+//    23 May 2023, 11:47:25
 //  Auto updated?
 //    Yes
 // 
@@ -155,14 +155,14 @@ pub fn trav_stmt(stmt: &mut Statement, table: &Rc<RefCell<SymbolTable>>, stack: 
     trace!(target: "resolve", "Traversing {:?}", stmt.kind.variant());
     let _trap = trace_trap!(target: "resolve", "Exiting {:?}", stmt.kind.variant());
 
+    // Push the statement's annotations
+    let mut stack = stack.frame(&stmt.annots);
+
     // Match on the statement
     use StatementKind::*;
     match &mut stmt.kind {
         // Definitions
         Import { name, version, st_entry } => {
-            // Push to the stack
-            stack.push(&stmt.annots);
-
             // Do nothing if we've already processed this import.
             if st_entry.is_some() { return; }
 
@@ -214,7 +214,7 @@ pub fn trav_stmt(stmt: &mut Statement, table: &Rc<RefCell<SymbolTable>>, stack: 
         },
 
         FunctionDef(def) => {
-            trav_func_def(def, table, stack, warnings, errors);
+            trav_func_def(def, table, &mut *stack, warnings, errors);
         },
 
         ClassDef { name, defs, st_entry } => {
@@ -224,7 +224,7 @@ pub fn trav_stmt(stmt: &mut Statement, table: &Rc<RefCell<SymbolTable>>, stack: 
                 for def in defs {
                     match &mut def.kind {
                         ClassMemberDefKind::Method(def) => {
-                            trav_block(&mut def.body, table, false, stack, warnings, errors);
+                            trav_block(&mut def.body, table, false, &mut *stack, warnings, errors);
                         }
                         _ => {},
                     }
@@ -236,7 +236,7 @@ pub fn trav_stmt(stmt: &mut Statement, table: &Rc<RefCell<SymbolTable>>, stack: 
             let mut entry_defs : HashMap<String, LocalClassEntryMember> = HashMap::new();
             for d in defs.iter() {
                 // Push the definition's annotations
-                stack.push(&d.annots);
+                let stack = stack.frame(&d.annots);
 
                 // Match on the definition itself
                 match &d.kind {
@@ -276,9 +276,6 @@ pub fn trav_stmt(stmt: &mut Statement, table: &Rc<RefCell<SymbolTable>>, stack: 
                     ClassMemberDefKind::Annotation { .. }       |
                     ClassMemberDefKind::ParentAnnotation { .. } => { unreachable!(); },
                 }
-
-                // Pop the annotations
-                stack.pop();
             }
 
             // Create the class entry around it
@@ -352,14 +349,14 @@ pub fn trav_stmt(stmt: &mut Statement, table: &Rc<RefCell<SymbolTable>>, stack: 
 
                     // Add the arguments to the symbol table of the body, after which we can recurse
                     def.body.table.borrow_mut().vars.extend(args);
-                    trav_block(&mut def.body, table, false, stack, warnings, errors);
+                    trav_block(&mut def.body, table, false, &mut *stack, warnings, errors);
                 }
             }
         },
 
         VarDef { name, data_type, value, st_entry, .. } => {
             // Recurse into the value, if any
-            if let Some(value) = value { trav_expr(value, table, stack, warnings, errors); }
+            if let Some(value) = value { trav_expr(value, table, &mut *stack, warnings, errors); }
 
             // Do nothing else if we've already processed this let.
             if st_entry.is_some() { return; }
@@ -382,7 +379,7 @@ pub fn trav_stmt(stmt: &mut Statement, table: &Rc<RefCell<SymbolTable>>, stack: 
                 *st_entry = Some(entry.clone());
                 if let Some(prev) = table.vars.get(&name.name) {
                     // We first changed the old one to be shadowed, and we change its name to have the entries co-exist
-                    let new_name: String = {
+                    let prev_name: String = {
                         let mut prev: RefMut<DelayedEntry<VarEntry>> = prev.borrow_mut();
                         prev.name     = format!("{}'", prev.name);
                         prev.shadowed = true;
@@ -391,7 +388,7 @@ pub fn trav_stmt(stmt: &mut Statement, table: &Rc<RefCell<SymbolTable>>, stack: 
 
                     // Now rename the old one
                     let prev: DelayedEntryPtr<VarEntry> = table.vars.remove(&name.name).unwrap();
-                    table.vars.insert(new_name, prev);
+                    table.vars.insert(prev_name, prev);
                 }
 
                 // We can add it now without worries
@@ -404,8 +401,8 @@ pub fn trav_stmt(stmt: &mut Statement, table: &Rc<RefCell<SymbolTable>>, stack: 
         // Control flow
         For { name, start, stop, block, st_entry, .. } => {
             // Recurse into the expressions first
-            trav_expr(start, table, stack, warnings, errors);
-            trav_expr(stop, table, stack, warnings, errors);
+            trav_expr(start, table, &mut *stack, warnings, errors);
+            trav_expr(stop, table, &mut *stack, warnings, errors);
 
             // Only annotate new things if we haven't already
             if st_entry.is_none() {
@@ -431,34 +428,31 @@ pub fn trav_stmt(stmt: &mut Statement, table: &Rc<RefCell<SymbolTable>>, stack: 
             }
 
             // Recurse into the block with this table
-            trav_block(block, table, true, stack, warnings, errors);
+            trav_block(block, table, true, &mut *stack, warnings, errors);
         },
 
         While { cond, block } => {
             // Recurse into the expression first
-            trav_expr(cond, table, stack, warnings, errors);
+            trav_expr(cond, table, &mut *stack, warnings, errors);
             // Then recurse into the block
-            trav_block(block, table, true, stack, warnings, errors);
+            trav_block(block, table, true, &mut *stack, warnings, errors);
         },
 
         Return { value } => {
-            if let Some(value) = value { trav_expr(value, table, stack, warnings, errors); }
+            if let Some(value) = value { trav_expr(value, table, &mut *stack, warnings, errors); }
         },
 
 
 
         // Miscellaneous
         Expression(expr) => {
-            trav_expr(expr, table, stack, warnings, errors);
+            trav_expr(expr, table, &mut *stack, warnings, errors);
         },
 
         // Should not occur anymore
         Annotation{ .. }       |
         ParentAnnotation{ .. } => { unreachable!(); },
     }
-
-    // Don't forget to pop the stack again
-    stack.pop();
 }
 
 /// Traverses a function definition to add its entry and resolve the entries in its own table.

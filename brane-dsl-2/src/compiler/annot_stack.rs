@@ -4,7 +4,7 @@
 //  Created:
 //    11 Feb 2023, 18:08:46
 //  Last edited:
-//    22 May 2023, 19:22:36
+//    23 May 2023, 10:57:14
 //  Auto updated?
 //    Yes
 // 
@@ -13,6 +13,8 @@
 //!   traversals. This will allows us to enable/disable compiler features
 //!   based on what we are compiling.
 // 
+
+use std::ops::{Deref, DerefMut};
 
 use log::warn;
 
@@ -23,14 +25,50 @@ use crate::ast::spec::Annotation;
 /***** AUXILLARY *****/
 /// Helper struct that will automatically pop its own frame when pushed to the [`AnnotationStack`] when it goes out-of-scope.
 #[derive(Debug)]
-pub struct AnnotationStackFrame<'s> {
+pub struct AnnotationStackGuard<'s> {
     /// The [`AnnotationStack`] to pop from when done.
-    stack : &'s AnnotationStack,
+    stack : &'s mut AnnotationStack,
+    /// The identifier of the frame we are supposed to pop, which we use for assertion purposes.
+    #[cfg(debug_assertions)]
+    id    : u64,
 }
-impl<'s> AnnotationStackFrame<'s> {
+impl<'s> AnnotationStackGuard<'s> {
     /// Early-drops the frame, popping it off the stack already.
     #[inline]
-    pub fn drop(self) {}
+    pub fn pop(self) {}
+}
+impl<'s> Drop for AnnotationStackGuard<'s> {
+    fn drop(&mut self) {
+        // Attempt to get the top frame on the stack
+        if let Some(frame) = self.stack.frames.pop() {
+            // Assert it is the correct one
+            #[cfg(debug_assertions)]
+            if frame.0 != self.id { panic!("AnnotationStackGuard for frame {} attempted to pop frame with ID {}", self.id, frame.0); }
+            #[cfg(debug_assertions)]
+            let frame: usize = frame.1;
+
+            // Now pop the stack
+            let new_size: usize = self.stack.stack.len().saturating_sub(frame);
+            self.stack.stack.truncate(new_size);
+
+        } else {
+            #[cfg(debug_assertions)]
+            panic!("AnnotationStackGuard for frame {} attempted to pop empty AnnotationStack", self.id);
+            #[cfg(not(debug_assertions))]
+            panic!("AnnotationStackGuard attempted to pop empty AnnotationStack");
+        }
+    }
+}
+
+impl<'s> Deref for AnnotationStackGuard<'s> {
+    type Target = AnnotationStack;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target { self.stack }
+}
+impl<'s> DerefMut for AnnotationStackGuard<'s> {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target { self.stack }
 }
 
 
@@ -42,13 +80,13 @@ impl<'s> AnnotationStackFrame<'s> {
 #[derive(Debug)]
 pub struct AnnotationStack {
     /// The stack with annotation itself.
-    #[cfg(debug_assertions)]
-    stack  : Vec<(u64, Annotation)>,
-    #[cfg(not(debug_assertions))]
     stack  : Vec<Annotation>,
     /// The frames upon this stack, given in the number of annotations in them.
     /// 
     /// This is done this way to both be able to pop really efficiently, and be cache-friendly in the annotations themselves.
+    #[cfg(debug_assertions)]
+    frames : Vec<(u64, usize)>,
+    #[cfg(not(debug_assertions))]
     frames : Vec<usize>,
 }
 
@@ -77,8 +115,9 @@ impl AnnotationStack {
     /// 
     /// # Arguments
     /// - `annots`: The list of [`Annotation`]s to push.
-    pub fn push<'a>(&mut self, annots: impl IntoIterator<Item = &'a Annotation>) {
-        let annots: Vec<Annotation> = annots.into_iter().cloned().collect();
+    pub fn push<A: Into<Annotation>>(&mut self, annots: impl IntoIterator<Item = A>) {
+        // Convert the iterator to a list we know
+        let annots: Vec<Annotation> = annots.into_iter().map(|a| a.into()).collect();
 
         // Resize our internal arrays for optimal performance :sunglasses:
         if !annots.is_empty() && self.stack.len() + annots.len() >= self.stack.capacity() { self.stack.reserve(if annots.len() > self.stack.capacity() { annots.len() } else { self.stack.capacity() }); }
@@ -86,10 +125,10 @@ impl AnnotationStack {
 
         // Push the frame
         let frame_size: usize = annots.len();
-        #[cfg(debug_assertions)]
-        self.stack.extend(annots.into_iter().map(|a| (fastrand::u64(..), a)));
-        #[cfg(not(debug_assertions))]
         self.stack.extend(annots);
+        #[cfg(debug_assertions)]
+        self.frames.push((fastrand::u64(..), frame_size));
+        #[cfg(not(debug_assertions))]
         self.frames.push(frame_size);
     }
 
@@ -97,7 +136,7 @@ impl AnnotationStack {
     /// 
     /// Does nothing if there are no frames to push, but does emit a warning.
     pub fn pop(&mut self) {
-        if let Some(size) = self.frames.pop() {
+        if let Some((_, size)) = self.frames.pop() {
             let new_size: usize = self.stack.len().saturating_sub(size);
             self.stack.truncate(new_size);
         } else {
@@ -116,8 +155,29 @@ impl AnnotationStack {
     /// 
     /// # Returns
     /// A new [`AnnotationStackGuard`] that automatically pops this frame when it gets dropped.
-    pub fn frame<'a>(&mut self, annots: impl IntoIterator<Item = &'a Annotation>) -> AnnotationStackGuard {
-        
+    pub fn frame<A: Into<Annotation>>(&mut self, annots: impl IntoIterator<Item = A>) -> AnnotationStackGuard {
+        // Convert the iterator to a list we know
+        let annots: Vec<Annotation> = annots.into_iter().map(|a| a.into()).collect();
+
+        // Resize our internal arrays for optimal performance :sunglasses:
+        if !annots.is_empty() && self.stack.len() + annots.len() >= self.stack.capacity() { self.stack.reserve(if annots.len() > self.stack.capacity() { annots.len() } else { self.stack.capacity() }); }
+        if self.frames.len() == self.frames.capacity() { self.frames.reserve(self.frames.capacity()); }
+
+        // Push the frame
+        let id: u64 = fastrand::u64(..);
+        let frame_size: usize = annots.len();
+        self.stack.extend(annots);
+        #[cfg(debug_assertions)]
+        self.frames.push((id, frame_size));
+        #[cfg(not(debug_assertions))]
+        self.frames.push(frame_size);
+
+        // Now return a guard for the frame with that ID
+        AnnotationStackGuard {
+            stack : self,
+            #[cfg(debug_assertions)]
+            id,
+        }
     }
 
 
@@ -132,8 +192,6 @@ impl AnnotationStack {
     pub fn is_allowed(&self, code: WarningCode) -> bool {
         // Search in reverse order
         for annot in self.stack.iter().rev() {
-            #[cfg(debug_assertions)]
-            let annot = &annot.1;
             if let Annotation::Allow(allowed_code) = annot {
                 // Return if allowed
                 if *allowed_code == code { return true; }

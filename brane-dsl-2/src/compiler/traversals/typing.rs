@@ -4,7 +4,7 @@
 //  Created:
 //    14 Feb 2023, 13:33:32
 //  Last edited:
-//    22 May 2023, 19:12:18
+//    23 May 2023, 11:48:20
 //  Auto updated?
 //    Yes
 // 
@@ -22,7 +22,7 @@ use log::{debug, trace};
 use crate::errors::DslError;
 use crate::warnings::DslWarning;
 use crate::ast::symbol_tables::SymbolTable;
-use crate::ast::statements::{Statement, StatementKind};
+use crate::ast::statements::{FunctionDef, Statement, StatementKind};
 use crate::ast::toplevel::Program;
 use crate::compiler::utils::trace_trap;
 use crate::compiler::annot_stack::AnnotationStack;
@@ -42,16 +42,17 @@ fn trav_stmt(stmt: &mut Statement, stack: &mut AnnotationStack, table: &Rc<RefCe
     trace!(target: "typing", "Traversing {:?}", stmt.kind.variant());
     let _trap = trace_trap!(target: "typing", "Exiting {:?}", stmt.kind.variant());
 
+    // Push the statement's annotations
+    let mut stack = stack.frame(&stmt.annots);
+
     // Match on the specific kind of statement
     use StatementKind::*;
     match &mut stmt.kind {
         // Definitions
-        Import { name, version, st_entry } => {
-            false
-        },
+        Import { .. } => { /* Nothing to do */ false },
 
         FunctionDef(def) => {
-            false
+            trav_func_def(def, &mut *stack)
         },
 
         ClassDef { name, defs, st_entry } => {
@@ -88,6 +89,27 @@ fn trav_stmt(stmt: &mut Statement, stack: &mut AnnotationStack, table: &Rc<RefCe
         Annotation{ .. }       |
         ParentAnnotation{ .. } => { unreachable!(); },
     }
+}
+
+/// Traverses a function definition.
+/// 
+/// # Arguments
+/// - `def`: The [`FunctionDef`] to traverse.
+/// 
+fn trav_func_def(def: &mut FunctionDef, stack: &mut AnnotationStack) -> bool {
+    trace!(target: "typing", "Traversing FunctionDef");
+    let _trap = trace_trap!(target: "typing", "Exiting FunctionDef");
+
+    // We don't have a lot to do here, since we leave return value detection as a second, smaller pass, and argument deduction is for the body's contents
+
+    // Recurse into the body
+    let mut change: bool = false;
+    for s in &mut def.body.stmts {
+        change |= trav_stmt(s, stack, &def.body.table);
+    }
+
+    // Return whether anything was updated
+    change
 }
 
 
