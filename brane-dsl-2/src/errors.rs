@@ -4,7 +4,7 @@
 //  Created:
 //    07 Feb 2023, 10:10:18
 //  Last edited:
-//    14 Feb 2023, 10:06:34
+//    25 May 2023, 15:40:04
 //  Auto updated?
 //    Yes
 // 
@@ -23,6 +23,7 @@ use unicode_segmentation::UnicodeSegmentation as _;
 
 use crate::notes::{CompileNote, NomNote, PrettyNote};
 use crate::ast::spec::{TextPos, TextRange};
+use crate::ast::types::DataType;
 use crate::scanner::{Input as ScanInput, Token};
 use crate::parser::Input as ParseInput;
 
@@ -762,6 +763,39 @@ impl<'s> From<ResolveError> for DslError<'s> {
 
 
 
+/// Defines errors that may occur while resolving types.
+#[derive(Debug)]
+pub enum TypingError {
+    /// A variable assignment has an incorrect type
+    VariableAssign { name: String, def_type: DataType, got_type: DataType, source: Option<TextRange>, range: Option<TextRange> },
+}
+impl Display for TypingError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
+        use TypingError::*;
+        match self {
+            VariableAssign { name, def_type, got_type, .. } => write!(f, "Cannot assign value of type {got_type} to variable '{name}' of type {def_type}"),
+        }
+    }
+}
+impl Error for TypingError {}
+impl PrettyError for TypingError {
+    fn range(&self) -> Option<TextRange> {
+        use TypingError::*;
+        match self {
+            VariableAssign { range, .. } => *range,
+        }
+    }
+
+    fn notes(&self) -> Vec<Box<dyn PrettyNote>> {
+        use TypingError::*;
+        match self {
+            VariableAssign { source, .. } => vec![ Box::new(CompileNote::DefinedAt{ what: "Variable", range: *source }) ],
+        }
+    }
+}
+
+
+
 /// Defines error that occur while resolving symbol tables.
 #[derive(Debug)]
 pub enum ResolveError {
@@ -814,7 +848,7 @@ impl PrettyError for ResolveError {
 
 
 
-/// Defines any additiona parser errors that may occur during parsing.
+/// Defines any additional parser errors that may occur during parsing.
 #[derive(Debug)]
 pub enum ParseError<'s> {
     /// Failed to parse a boolean from the given string.

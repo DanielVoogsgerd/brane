@@ -4,7 +4,7 @@
 //  Created:
 //    13 Feb 2023, 11:54:08
 //  Last edited:
-//    22 May 2023, 18:50:14
+//    25 May 2023, 15:45:06
 //  Auto updated?
 //    Yes
 // 
@@ -147,7 +147,7 @@ fn trav_stmt(mut stmt: Statement, annot_buffer: &mut Vec<Annotation>, range_buff
         },
 
         ClassDef { defs, .. } => {
-            // Inject the annotation buffer into the function definition itself
+            // Inject the annotation buffer into the class definition itself
             stmt.annots = mem::take(annot_buffer);
             range_buffer.clear();
 

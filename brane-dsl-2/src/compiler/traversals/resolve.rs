@@ -4,7 +4,7 @@
 //  Created:
 //    11 Feb 2023, 17:46:03
 //  Last edited:
-//    23 May 2023, 11:47:25
+//    25 May 2023, 14:34:01
 //  Auto updated?
 //    Yes
 // 
@@ -24,8 +24,8 @@ use log::{debug, trace, warn};
 use specifications::version::Version;
 
 pub use crate::errors::ResolveError as Error;
-use crate::errors::DslError;
 pub use crate::warnings::ResolveWarning as Warning;
+use crate::errors::DslError;
 use crate::warnings::{DslWarning, Warning as _};
 use crate::ast::types::DataType;
 use crate::ast::symbol_tables::{DelayedEntry, DelayedEntryPtr, ExternalClassEntry, ExternalFuncEntry, LocalClassEntry, LocalClassEntryMember, LocalFuncEntry, PackageEntry, SymbolTable, VarEntry};

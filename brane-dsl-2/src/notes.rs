@@ -4,7 +4,7 @@
 //  Created:
 //    09 Feb 2023, 08:37:07
 //  Last edited:
-//    13 Feb 2023, 17:17:26
+//    25 May 2023, 15:40:25
 //  Auto updated?
 //    Yes
 // 
@@ -17,6 +17,8 @@
 use std::fmt::{Debug, Display, Formatter, Result as FResult};
 
 use console::{style, Style};
+
+use brane_shr::debug::Capitalizeable as _;
 
 use crate::errors::print_range;
 use crate::ast::spec::TextRange;
@@ -120,7 +122,7 @@ impl Display for CompileNote {
     fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
         use CompileNote::*;
         match self {
-            DefinedAt{ what, .. } => write!(f, "{} defined here", what),
+            DefinedAt{ what, .. } => write!(f, "{} defined here", what.capitalize()),
             DefinedIn{ what, .. } => write!(f, "Defined in {}", what),
             PartOf{ what, .. }    => write!(f, "Part of {}", what),
         }

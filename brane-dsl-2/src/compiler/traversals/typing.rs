@@ -4,7 +4,7 @@
 //  Created:
 //    14 Feb 2023, 13:33:32
 //  Last edited:
-//    23 May 2023, 11:48:20
+//    25 May 2023, 16:53:38
 //  Auto updated?
 //    Yes
 // 
@@ -13,16 +13,19 @@
 //!   we have.
 // 
 
-use std::cell::RefCell;
+use std::cell::{Ref, RefCell, RefMut};
 use std::rc::Rc;
 
 use enum_debug::EnumDebug as _;
 use log::{debug, trace};
 
+pub use crate::errors::TypingError as Error;
 use crate::errors::DslError;
 use crate::warnings::DslWarning;
-use crate::ast::symbol_tables::SymbolTable;
-use crate::ast::statements::{FunctionDef, Statement, StatementKind};
+use crate::ast::types::DataType;
+use crate::ast::symbol_tables::{DelayedEntry, LocalClassEntry, LocalClassEntryMember, LocalFuncEntry, SymbolTable, VarEntry};
+use crate::ast::expressions::{Expression, ExpressionKind};
+use crate::ast::statements::{ClassMemberDefKind, FunctionDef, Statement, StatementKind};
 use crate::ast::toplevel::Program;
 use crate::compiler::utils::trace_trap;
 use crate::compiler::annot_stack::AnnotationStack;
@@ -35,10 +38,14 @@ use crate::compiler::annot_stack::AnnotationStack;
 /// - `stmt`: The [`Statement`] to traverse.
 /// -` stack`: The [`AnnotationStack`] that we use to keep track of active annotations.
 /// - `table`: The [`SymbolTable`] of the current scope.
+/// - `errors`: A list of [`Error`]s that we will populate as and if they occur.
 /// 
 /// # Returns
 /// Whether any type information was updated or not. This can be used to detect whether we've "out-deduced".
-fn trav_stmt(stmt: &mut Statement, stack: &mut AnnotationStack, table: &Rc<RefCell<SymbolTable>>) -> bool {
+/// 
+/// # Errors
+/// This function may throw errors by pushing them to the given list of errors. The function will still continue if possible, however, in order to accumulate as much of them as possible.
+fn trav_stmt(stmt: &mut Statement, stack: &mut AnnotationStack, table: &Rc<RefCell<SymbolTable>>, errors: &mut Vec<Error>) -> bool {
     trace!(target: "typing", "Traversing {:?}", stmt.kind.variant());
     let _trap = trace_trap!(target: "typing", "Exiting {:?}", stmt.kind.variant());
 
@@ -52,15 +59,81 @@ fn trav_stmt(stmt: &mut Statement, stack: &mut AnnotationStack, table: &Rc<RefCe
         Import { .. } => { /* Nothing to do */ false },
 
         FunctionDef(def) => {
-            trav_func_def(def, &mut *stack)
+            // This is not a method (hence the `None`)
+            trav_func_def(def, None, &mut *stack, errors)
         },
 
-        ClassDef { name, defs, st_entry } => {
-            false
+        ClassDef { name: cname, defs, st_entry } => {
+            // Go through the definitions to find if anything needs resolving there
+            let mut changed: bool = false;
+            for def in defs {
+                // Push the annotations for these definitions onto the stack
+                let mut stack = stack.frame(&def.annots);
+
+                // Match on the kind itself
+                match &mut def.kind {
+                    ClassMemberDefKind::Property { name, data_type } => {
+                        // Simply populate the property's type as necessary
+                        let mut entry: RefMut<DelayedEntry<LocalClassEntry>> = st_entry.as_ref().unwrap().borrow_mut();
+                        let pentry: &mut LocalClassEntryMember = entry.defs.get_mut(&name.name).unwrap_or_else(|| panic!("Property '{}' in class '{}' has not been assigned an entry after resolve phase", name.name, cname.name));
+                        if let LocalClassEntryMember::Property(property) = pentry {
+                            if property.data_type.is_any() {
+                                property.data_type = data_type.data_type.clone();
+                                changed = true;
+                            } else if !data_type.data_type.is_any() && property.data_type != data_type.data_type {
+                                panic!("Property '{}' already has a type at definition ({}) but that does not match annotated type ({})", name.name, property.data_type, data_type.data_type);
+                            }
+                        } else {
+                            panic!("Property '{}' in class '{}' has been assigned a non-property member entry ({:?})", name.name, cname.name, pentry.variant());
+                        }
+                    },
+
+                    ClassMemberDefKind::Method(method) => {
+                        // For methods, we do the same as for normal functions - which is just calling this bad boy
+                        changed |= trav_func_def(method, Some(DataType::Class(st_entry.as_ref().unwrap().borrow().name.clone())), &mut *stack, errors);
+                    },
+
+                    // Annotations shouldn't occur anymore
+                    ClassMemberDefKind::Annotation { .. }       |
+                    ClassMemberDefKind::ParentAnnotation { .. } => { unreachable!(); },
+                }
+            }
+
+            // Done
+            changed
         },
 
         VarDef { name, data_type, value, st_entry } => {
-            false
+            // Attempt to resolve the variable definition
+            let (mut var_changed, var_type): (bool, DataType) = {
+                let mut entry: RefMut<DelayedEntry<VarEntry>> = st_entry.as_ref().unwrap().borrow_mut();
+                let changed: bool = if entry.data_type.is_any() {
+                    entry.data_type = data_type.data_type.clone();
+                    true
+                } else if !data_type.data_type.is_any() && entry.data_type != data_type.data_type {
+                    panic!("Variable '{}' already has a type at definition ({}) but that does not match annotated type ({})", name.name, entry.data_type, data_type.data_type);
+                } else {
+                    false
+                };
+                (changed, entry.data_type.clone())
+            };
+
+            // Then, recurse into the value expression
+            if let Some(value) = value {
+                let (expr_changed, expr_type): (bool, DataType) = trav_expr(value, &mut *stack, table, errors);
+                if var_type.is_any() {
+                    let mut entry: RefMut<DelayedEntry<VarEntry>> = st_entry.as_ref().unwrap().borrow_mut();
+                    entry.data_type = expr_type;
+                    var_changed = true;
+                } else if !expr_type.is_any() && var_type != expr_type {
+                    errors.push(Error::VariableAssign { name: name.name.clone(), def_type: var_type, got_type: expr_type, source: st_entry.as_ref().unwrap().borrow().range, range: name.range });
+                }
+
+                // Then, recurse into the value expression
+                var_changed | expr_changed
+            } else {
+                var_changed
+            }
         },
 
 
@@ -95,21 +168,79 @@ fn trav_stmt(stmt: &mut Statement, stack: &mut AnnotationStack, table: &Rc<RefCe
 /// 
 /// # Arguments
 /// - `def`: The [`FunctionDef`] to traverse.
+/// - `parent_class`: If not [`None`], then this function is a method of a class (who's type (i.e., [`DataType::Class(name)`]) is given).
+/// -` stack`: The [`AnnotationStack`] that we use to keep track of active annotations.
+/// - `errors`: A list of [`Error`]s that we will populate as and if they occur.
 /// 
-fn trav_func_def(def: &mut FunctionDef, stack: &mut AnnotationStack) -> bool {
+/// # Returns
+/// Whether any type information was updated or not. This can be used to detect whether we've "out-deduced".
+/// 
+/// # Errors
+/// This function may throw errors by pushing them to the given list of errors. The function will still continue if possible, however, in order to accumulate as much of them as possible.
+fn trav_func_def(def: &mut FunctionDef, parent_class: Option<DataType>, stack: &mut AnnotationStack, errors: &mut Vec<Error>) -> bool {
     trace!(target: "typing", "Traversing FunctionDef");
     let _trap = trace_trap!(target: "typing", "Exiting FunctionDef");
 
-    // We don't have a lot to do here, since we leave return value detection as a second, smaller pass, and argument deduction is for the body's contents
+    // Note: annotations have been processed on statement level (or class member level, if this is a method)
+
+    // Resolve arguments
+    let mut change: bool = false;
+    'args: {
+        let entry: Ref<DelayedEntry<LocalFuncEntry>> = def.st_entry.as_ref().unwrap().borrow();
+
+        // There isn't anything to do if the arguments are emtpy
+        if def.args.is_empty() { break 'args; }
+
+        // We can skip the first entry and instead assert it is the class, _if_ we are a method
+        let mut iter = def.args.iter_mut().enumerate();
+        if let Some(ctype) = parent_class {
+            // Check it's `self`
+            let a_entry: RefMut<DelayedEntry<VarEntry>> = entry.args[0].borrow_mut();
+            if a_entry.name != "self" {  }
+        }
+
+        // Otherwise (or consequently)
+        for (i, a) in iter {
+            // Propagate the argument's type
+            let mut a_entry: RefMut<DelayedEntry<VarEntry>> = entry.args[i].borrow_mut();
+            if a_entry.data_type.is_any() {
+                a_entry.data_type = a.data_type.data_type.clone();
+                change = true;
+            } else if !a.data_type.data_type.is_any() && a_entry.data_type != a.data_type.data_type {
+                panic!("Argument {} (in method '{}') already has a type at definition ({}) but that does not match annotated type ({})", i, entry.name, a_entry.data_type, a.data_type.data_type);
+            }
+        }
+    }
 
     // Recurse into the body
-    let mut change: bool = false;
     for s in &mut def.body.stmts {
-        change |= trav_stmt(s, stack, &def.body.table);
+        change |= trav_stmt(s, stack, &def.body.table, errors);
     }
 
     // Return whether anything was updated
     change
+}
+
+
+
+/// Traverses an expression, returning its evaluated type (if we have enough info to deduce it)
+/// 
+/// # Arguments
+/// - `expr`: The [`Expression`] to traverse.
+/// - `stack`: The [`AnnotationStack`] that we use to keep track of active annotations.
+/// - `errors`: A list of [`Error`]s that we will populate as and if they occur.
+/// 
+/// # Returns
+/// A tuple with a boolean describing whether any type information was updated and the evaluated type (or [`DataType::Any`]). The first value can be used to detect whether we've "out-deduced".
+/// 
+/// # Errors
+/// This function may throw errors by pushing them to the given list of errors. The function will still continue if possible, however, in order to accumulate as much of them as possible.
+fn trav_expr(expr: &mut Expression, stack: &mut AnnotationStack, table: &Rc<RefCell<SymbolTable>>, errors: &mut Vec<Error>) -> (bool, DataType) {
+    trace!(target: "typing", "Traversing {:?}", expr.kind.variant());
+    let _trap = trace_trap!(target: "typing", "Exiting {:?}", expr.kind.variant());
+
+    // Done!
+    (true, DataType::Any)
 }
 
 
@@ -133,13 +264,22 @@ pub fn traverse(tree: &mut Program, warnings: &mut Vec<DslWarning>) -> Result<()
     let mut stack: AnnotationStack = AnnotationStack::new();
     stack.push(annots.iter());
 
+    // Prepare errors list
+    let mut errors: Vec<Error> = vec![];
+
     // We start to traverse the tree to find as much as we can about type information on one hand, while making sure that what we find is consistent on the other.
     let mut updated: bool = true;
     while updated {
         // Go through all the statements again, hoping we won't do anything anymore
         updated = false;
         for s in stmts.iter_mut() {
-            updated |= trav_stmt(s, &mut stack, table);
+            updated |= trav_stmt(s, &mut stack, table, &mut errors);
+        }
+
+        // Do return statement analysis
+        for s in stmts.iter_mut() {
+            // let (update_occurred, fully_returns): (bool, bool) = trav_stmt_ret(s, &mut stack, table);
+            todo!();
         }
     }
 
