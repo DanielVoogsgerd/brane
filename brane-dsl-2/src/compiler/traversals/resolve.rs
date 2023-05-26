@@ -4,7 +4,7 @@
 //  Created:
 //    11 Feb 2023, 17:46:03
 //  Last edited:
-//    25 May 2023, 14:34:01
+//    26 May 2023, 08:35:31
 //  Auto updated?
 //    Yes
 // 
@@ -399,10 +399,11 @@ pub fn trav_stmt(stmt: &mut Statement, table: &Rc<RefCell<SymbolTable>>, stack: 
 
 
         // Control flow
-        For { name, start, stop, block, st_entry, .. } => {
+        For { name, start, stop, step, block, st_entry } => {
             // Recurse into the expressions first
             trav_expr(start, table, &mut *stack, warnings, errors);
             trav_expr(stop, table, &mut *stack, warnings, errors);
+            if let Some(step) = step { trav_expr(step, table, &mut *stack, warnings, errors); }
 
             // Only annotate new things if we haven't already
             if st_entry.is_none() {

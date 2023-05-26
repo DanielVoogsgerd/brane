@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 15:33:27
 //  Last edited:
-//    17 Feb 2023, 15:35:38
+//    26 May 2023, 08:34:40
 //  Auto updated?
 //    Yes
 // 
@@ -109,7 +109,7 @@ pub enum StatementKind {
         /// The expression that computes the stop value.
         stop  : Expression,
         /// The expression that computes the step value.
-        step  : Option<Literal>,
+        step  : Option<Expression>,
 
         /// The block of statements to be executed repeatedly.
         block : Block,

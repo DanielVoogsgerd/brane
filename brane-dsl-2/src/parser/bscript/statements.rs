@@ -4,7 +4,7 @@
 //  Created:
 //    08 Feb 2023, 10:19:08
 //  Last edited:
-//    13 Feb 2023, 17:34:30
+//    26 May 2023, 08:34:29
 //  Auto updated?
 //    Yes
 // 
@@ -507,7 +507,7 @@ fn for_loop<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Statement, E
                             ),
                             comb::opt(seq::preceded(
                                 tag_token!('t, 's, Token::Step),
-                                literals::parse,
+                                expressions::parse,
                             )),
                         )),
                         tag_token!('t, 's, Token::RightParen),
@@ -516,7 +516,7 @@ fn for_loop<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Statement, E
                 ),
             ),
         )),
-        |(for_kw, ((name, start, stop, step), body)): (&Token, ((Identifier, Expression, Expression, Option<Literal>), Block))| {
+        |(for_kw, ((name, start, stop, step), body)): (&Token, ((Identifier, Expression, Expression, Option<Expression>), Block))| {
             let range: Option<TextRange> = body.range.map(|r| TextRange::new(for_kw.start_of(), r.end));
             Statement {
                 kind : StatementKind::For {
