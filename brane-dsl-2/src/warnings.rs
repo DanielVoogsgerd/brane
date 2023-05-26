@@ -4,7 +4,7 @@
 //  Created:
 //    11 Feb 2023, 18:14:09
 //  Last edited:
-//    26 May 2023, 10:16:47
+//    26 May 2023, 16:58:00
 //  Auto updated?
 //    Yes
 // 
@@ -208,9 +208,11 @@ warning_codes!{
 
     // Type warnings
     /// Occurs when a block's return value is non-void and not used.
-    NonVoidBlock => "non_void_block",
+    NonVoidBlock     => "non_void_block",
+    /// Occurs when a statement's return value is non-void and not used.
+    NonVoidStatement => "non_void_stmt",
     /// Occurs when some code can never be reached.
-    DeadCode     => "dead_code",
+    DeadCode         => "dead_code",
 }
 
 
@@ -362,15 +364,20 @@ warning! {
         /// 
         /// `because_what` here gives answer to: 'Because of this ...'.
         NonVoidBlock { got_type: DataType, because_what: &'static str, because: Option<TextRange>, range: Option<TextRange> },
+        /// A statement that should return void does not.
+        NonVoidStatement { got_type: DataType, range: Option<TextRange> },
     },
     impl Display {
-        NonVoidBlock { got_type } => ("Block evaluates to a {got_type} value, but this value is unused"),
+        NonVoidBlock { got_type }     => ("Block evaluates to a {got_type} value, but this value is unused (add closing ';')"),
+        NonVoidStatement { got_type } => ("Statement evaluates to a {got_type} value, but this value is unused (add closing ';')"),
     },
     impl Range {
-        NonVoidBlock { range } => *range,
+        NonVoidBlock { range }     => *range,
+        NonVoidStatement { range } => *range,
     },
     impl Notes {
         NonVoidBlock { because_what, because } => vec![ Box::new(CompileNote::BecauseOf{ what: because_what, range: *because }) ],
+        NonVoidStatement {}                    => vec![],
     },
 }
 

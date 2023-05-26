@@ -4,7 +4,7 @@
 //  Created:
 //    07 Feb 2023, 10:10:18
 //  Last edited:
-//    26 May 2023, 08:16:28
+//    26 May 2023, 16:46:12
 //  Auto updated?
 //    Yes
 // 
@@ -770,6 +770,8 @@ pub enum TypingError {
     SelfInvalidType { method: String, class_type: DataType, got_type: DataType, class: Option<TextRange>, range: Option<TextRange> },
     /// A variable assignment has an incorrect type
     VariableAssign { name: String, def_type: DataType, got_type: DataType, source: Option<TextRange>, range: Option<TextRange> },
+    /// A While-loop had a non-boolean condition
+    WhileCondition { got_type: DataType, range: Option<TextRange> },
 }
 impl Display for TypingError {
     fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
@@ -777,6 +779,7 @@ impl Display for TypingError {
         match self {
             SelfInvalidType { method, class_type, got_type, .. } => write!(f, "The 'self' argument of method {method} has type {got_type}, but it should be the type of the parent class ({class_type})"),
             VariableAssign { name, def_type, got_type, .. }      => write!(f, "Cannot assign value of type {got_type} to variable '{name}' of type {def_type}"),
+            WhileCondition { got_type, .. }                      => write!(f, "A while-loop requires an expression that evaluates to a Boolean, not {got_type}"),
         }
     }
 }
@@ -787,6 +790,7 @@ impl PrettyError for TypingError {
         match self {
             SelfInvalidType { range, .. } => *range,
             VariableAssign { range, .. }  => *range,
+            WhileCondition { range, .. }  => *range,
         }
     }
 
@@ -795,6 +799,7 @@ impl PrettyError for TypingError {
         match self {
             SelfInvalidType { class, .. } => vec![ Box::new(CompileNote::PartOf{ what: "class", range: *class }) ],
             VariableAssign { source, .. } => vec![ Box::new(CompileNote::DefinedAt{ what: "Variable", range: *source }) ],
+            WhileCondition { .. }         => vec![],
         }
     }
 }
