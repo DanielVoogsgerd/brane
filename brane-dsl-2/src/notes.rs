@@ -4,7 +4,7 @@
 //  Created:
 //    09 Feb 2023, 08:37:07
 //  Last edited:
-//    25 May 2023, 15:40:25
+//    26 May 2023, 10:16:41
 //  Auto updated?
 //    Yes
 // 
@@ -117,6 +117,10 @@ pub enum CompileNote {
     /// 
     /// `what` here gives answer to: `Part of ...`.
     PartOf{ what: &'static str, range: Option<TextRange> },
+    /// Denotes a reason for a warning or error.
+    /// 
+    /// `what` here gives answer to: 'Because of this ...'.
+    BecauseOf { what: &'static str, range: Option<TextRange> },
 }
 impl Display for CompileNote {
     fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
@@ -125,6 +129,7 @@ impl Display for CompileNote {
             DefinedAt{ what, .. } => write!(f, "{} defined here", what.capitalize()),
             DefinedIn{ what, .. } => write!(f, "Defined in {}", what),
             PartOf{ what, .. }    => write!(f, "Part of {}", what),
+            BecauseOf{ what, .. } => write!(f, "Because of this {}", what),
         }
     }
 }
@@ -136,6 +141,7 @@ impl PrettyNote for CompileNote {
             DefinedAt{ range, .. } => *range,
             DefinedIn{ range, .. } => *range,
             PartOf{ range, .. }    => *range,
+            BecauseOf{ range, .. } => *range,
         }
     }
 }

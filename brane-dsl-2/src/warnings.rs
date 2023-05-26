@@ -4,7 +4,7 @@
 //  Created:
 //    11 Feb 2023, 18:14:09
 //  Last edited:
-//    14 Feb 2023, 13:08:03
+//    26 May 2023, 10:16:47
 //  Auto updated?
 //    Yes
 // 
@@ -21,6 +21,7 @@ use console::{style, Style};
 use crate::errors::print_range;
 use crate::notes::{CompileNote, PrettyNote};
 use crate::ast::spec::TextRange;
+use crate::ast::types::DataType;
 
 
 /***** HELPER MACROS *****/
@@ -185,6 +186,7 @@ macro_rules! warning {
 
 /***** AUXILLARY *****/
 warning_codes!{
+    // Annotation warnings
     /// Occurs when some unknown annotation is used.
     UnknownAnnotation  => "unknown_annot",
     /// Occurs when an illegal kind of annotation is given for a warning code.
@@ -194,6 +196,7 @@ warning_codes!{
     /// Occurs when an annotation is valid but unused.
     UnusedAnnotation   => "unused_annot",
 
+    // Resolve warnings
     /// Occurs when a package shadows another package in the same scope.
     DuplicatePackageImport         => "duplicate_package",
     /// Occurs when a function shadows another function in the same scope.
@@ -203,8 +206,11 @@ warning_codes!{
     /// Occurs when a property shadows another property in the same class.
     DuplicateClassMemberDefinition => "duplicate_class_member",
 
+    // Type warnings
+    /// Occurs when a block's return value is non-void and not used.
+    NonVoidBlock => "non_void_block",
     /// Occurs when some code can never be reached.
-    DeadCode => "dead_code",
+    DeadCode     => "dead_code",
 }
 
 
@@ -345,6 +351,27 @@ impl From<ResolveWarning> for DslWarning {
 impl From<AnnotationWarning> for DslWarning {
     #[inline]
     fn from(value: AnnotationWarning) -> Self { DslWarning::Annotation(value) }
+}
+
+
+
+warning! {
+    /// Describes warnings that may originate when resolving types.
+    TypingWarning {
+        /// A block that should return void does not.
+        /// 
+        /// `because_what` here gives answer to: 'Because of this ...'.
+        NonVoidBlock { got_type: DataType, because_what: &'static str, because: Option<TextRange>, range: Option<TextRange> },
+    },
+    impl Display {
+        NonVoidBlock { got_type } => ("Block evaluates to a {got_type} value, but this value is unused"),
+    },
+    impl Range {
+        NonVoidBlock { range } => *range,
+    },
+    impl Notes {
+        NonVoidBlock { because_what, because } => vec![ Box::new(CompileNote::BecauseOf{ what: because_what, range: *because }) ],
+    },
 }
 
 

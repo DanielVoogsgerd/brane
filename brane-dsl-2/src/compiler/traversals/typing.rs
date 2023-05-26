@@ -4,7 +4,7 @@
 //  Created:
 //    14 Feb 2023, 13:33:32
 //  Last edited:
-//    26 May 2023, 08:39:47
+//    26 May 2023, 10:50:12
 //  Auto updated?
 //    Yes
 // 
@@ -20,8 +20,9 @@ use enum_debug::EnumDebug as _;
 use log::{debug, trace};
 
 pub use crate::errors::TypingError as Error;
+pub use crate::warnings::TypingWarning as Warning;
 use crate::errors::DslError;
-use crate::warnings::DslWarning;
+use crate::warnings::{DslWarning, Warning as _};
 use crate::ast::spec::TextRange;
 use crate::ast::types::DataType;
 use crate::ast::symbol_tables::{DelayedEntry, LocalClassEntry, LocalClassEntryMember, LocalFuncEntry, SymbolTable, VarEntry};
@@ -47,7 +48,7 @@ use crate::compiler::annot_stack::AnnotationStack;
 /// 
 /// # Errors
 /// This function may throw errors by pushing them to the given list of errors. The function will still continue if possible, however, in order to accumulate as much of them as possible.
-fn trav_stmt(stmt: &mut Statement, stack: &mut AnnotationStack, table: &Rc<RefCell<SymbolTable>>, errors: &mut Vec<Error>) -> bool {
+fn trav_stmt(stmt: &mut Statement, stack: &mut AnnotationStack, table: &Rc<RefCell<SymbolTable>>, warnings: &mut Vec<Warning>, errors: &mut Vec<Error>) -> bool {
     trace!(target: "typing", "Traversing {:?}", stmt.kind.variant());
     let _trap = trace_trap!(target: "typing", "Exiting {:?}", stmt.kind.variant());
 
@@ -62,7 +63,7 @@ fn trav_stmt(stmt: &mut Statement, stack: &mut AnnotationStack, table: &Rc<RefCe
 
         FunctionDef(def) => {
             // This is not a method (hence the `None`)
-            trav_func_def(def, None, &mut *stack, errors)
+            trav_func_def(def, None, &mut *stack, warnings, errors)
         },
 
         ClassDef { name: cname, defs, st_entry } => {
@@ -92,7 +93,7 @@ fn trav_stmt(stmt: &mut Statement, stack: &mut AnnotationStack, table: &Rc<RefCe
 
                     ClassMemberDefKind::Method(method) => {
                         // For methods, we do the same as for normal functions - which is just calling this bad boy
-                        changed |= trav_func_def(method, Some((DataType::Class(st_entry.as_ref().unwrap().borrow().name.clone()), cname.range)), &mut *stack, errors);
+                        changed |= trav_func_def(method, Some((DataType::Class(st_entry.as_ref().unwrap().borrow().name.clone()), cname.range)), &mut *stack, warnings, errors);
                     },
 
                     // Annotations shouldn't occur anymore
@@ -122,7 +123,7 @@ fn trav_stmt(stmt: &mut Statement, stack: &mut AnnotationStack, table: &Rc<RefCe
 
             // Then, recurse into the value expression
             if let Some(value) = value {
-                let (expr_changed, expr_type): (bool, DataType) = trav_expr(value, &mut *stack, table, errors);
+                let (expr_changed, expr_type): (bool, DataType) = trav_expr(value, &mut *stack, table, warnings, errors);
                 if var_type.is_any() {
                     let mut entry: RefMut<DelayedEntry<VarEntry>> = st_entry.as_ref().unwrap().borrow_mut();
                     entry.data_type = expr_type;
@@ -156,20 +157,20 @@ fn trav_stmt(stmt: &mut Statement, stack: &mut AnnotationStack, table: &Rc<RefCe
 
             // Next, recurse into each of the expressions:
             // start...
-            let (echanged, etype): (bool, DataType) = trav_expr(start, &mut *stack, table, errors);
+            let (echanged, etype): (bool, DataType) = trav_expr(start, &mut *stack, table, warnings, errors);
             changed |= echanged;
             if etype != DataType::Integer {
                 errors.push(Error::VariableAssign { name: name.name.clone(), def_type: DataType::Integer, got_type: etype, source: name.range, range: start.range });
             }
             // ...stop...
-            let (echanged, etype): (bool, DataType) = trav_expr(stop, &mut *stack, table, errors);
+            let (echanged, etype): (bool, DataType) = trav_expr(stop, &mut *stack, table, warnings, errors);
             changed |= echanged;
             if etype != DataType::Integer {
                 errors.push(Error::VariableAssign { name: name.name.clone(), def_type: DataType::Integer, got_type: etype, source: name.range, range: stop.range });
             }
             // ...and step
             if let Some(step) = step {
-                let (echanged, etype): (bool, DataType) = trav_expr(step, &mut *stack, table, errors);
+                let (echanged, etype): (bool, DataType) = trav_expr(step, &mut *stack, table, warnings, errors);
                 changed |= echanged;
                 if etype != DataType::Integer {
                     errors.push(Error::VariableAssign { name: name.name.clone(), def_type: DataType::Integer, got_type: etype, source: name.range, range: step.range });
@@ -177,9 +178,10 @@ fn trav_stmt(stmt: &mut Statement, stack: &mut AnnotationStack, table: &Rc<RefCe
             }
 
             // Now recurse into the block
-            let (bchanged, btype): (bool, DataType) = trav_block(block, &mut *stack, table, errors);
+            let (bchanged, btype): (bool, Option<(DataType, Option<TextRange>)>) = trav_block(block, &mut *stack, table, warnings, errors);
             if !btype.is_void() {
-                
+                let warn: Warning = Warning::NonVoidBlock { got_type: btype, because_what: "for-loop", because: name.range, range: brange };
+                if stack.is_allowed(warn.code()) { warnings.push(warn); }
             }
 
             // Done
@@ -221,7 +223,7 @@ fn trav_stmt(stmt: &mut Statement, stack: &mut AnnotationStack, table: &Rc<RefCe
 /// 
 /// # Errors
 /// This function may throw errors by pushing them to the given list of errors. The function will still continue if possible, however, in order to accumulate as much of them as possible.
-fn trav_func_def(def: &mut FunctionDef, mut parent_class: Option<(DataType, Option<TextRange>)>, stack: &mut AnnotationStack, errors: &mut Vec<Error>) -> bool {
+fn trav_func_def(def: &mut FunctionDef, mut parent_class: Option<(DataType, Option<TextRange>)>, stack: &mut AnnotationStack, warnings: &mut Vec<Warning>, errors: &mut Vec<Error>) -> bool {
     trace!(target: "typing", "Traversing FunctionDef");
     let _trap = trace_trap!(target: "typing", "Exiting FunctionDef");
 
@@ -263,7 +265,7 @@ fn trav_func_def(def: &mut FunctionDef, mut parent_class: Option<(DataType, Opti
 
     // Recurse into the body now we've resolved the arguments as much as possible
     for s in &mut def.body.stmts {
-        changed |= trav_stmt(s, stack, &def.body.table, errors);
+        changed |= trav_stmt(s, stack, &def.body.table, warnings, errors);
     }
 
     // Return whether anything was updated
@@ -285,7 +287,7 @@ fn trav_func_def(def: &mut FunctionDef, mut parent_class: Option<(DataType, Opti
 /// 
 /// # Errors
 /// This function may throw errors by pushing them to the given list of errors. The function will still continue if possible, however, in order to accumulate as much of them as possible.
-fn trav_expr(expr: &mut Expression, stack: &mut AnnotationStack, table: &Rc<RefCell<SymbolTable>>, errors: &mut Vec<Error>) -> (bool, DataType) {
+fn trav_expr(expr: &mut Expression, stack: &mut AnnotationStack, table: &Rc<RefCell<SymbolTable>>, warnings: &mut Vec<Warning>, errors: &mut Vec<Error>) -> (bool, DataType) {
     trace!(target: "typing", "Traversing {:?}", expr.kind.variant());
     let _trap = trace_trap!(target: "typing", "Exiting {:?}", expr.kind.variant());
 
@@ -324,7 +326,7 @@ pub fn traverse(tree: &mut Program, warnings: &mut Vec<DslWarning>) -> Result<()
         // Go through all the statements again, hoping we won't do anything anymore
         updated = false;
         for s in stmts.iter_mut() {
-            updated |= trav_stmt(s, &mut stack, table, &mut errors);
+            updated |= trav_stmt(s, &mut stack, table, &mut warnings, &mut errors);
         }
 
         // Do return statement analysis
