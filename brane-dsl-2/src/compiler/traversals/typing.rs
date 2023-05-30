@@ -4,7 +4,7 @@
 //  Created:
 //    14 Feb 2023, 13:33:32
 //  Last edited:
-//    26 May 2023, 17:04:29
+//    30 May 2023, 10:41:09
 //  Auto updated?
 //    Yes
 // 
@@ -219,7 +219,7 @@ fn trav_stmt(stmt: &mut Statement, stack: &mut AnnotationStack, warnings: &mut V
                 }
             }
 
-            // Done (a for-loop never evaluates)
+            // Done (a while-loop never evaluates)
             (cchanged | bchanged, None)
         },
 
