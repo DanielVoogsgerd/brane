@@ -4,7 +4,7 @@
 //  Created:
 //    14 Feb 2023, 13:33:32
 //  Last edited:
-//    30 May 2023, 10:41:09
+//    30 May 2023, 18:44:39
 //  Auto updated?
 //    Yes
 // 
@@ -14,6 +14,7 @@
 // 
 
 use std::cell::{Ref, RefMut};
+use std::mem;
 
 use enum_debug::EnumDebug as _;
 use log::{debug, trace};
@@ -30,6 +31,63 @@ use crate::ast::statements::{ClassMemberDefKind, FunctionDef, Statement, Stateme
 use crate::ast::toplevel::Program;
 use crate::compiler::utils::trace_trap;
 use crate::compiler::annot_stack::AnnotationStack;
+
+
+/***** FIX FUNCTIONS *****/
+/// Applies the fix to the [`crate::warnings::WarningCode::NonVoidStatement`] warning.
+/// 
+/// This is done by wrapping the expression in the statement in an [`ExpressionKind::Discard`] such that the expression returns a void.
+/// 
+/// # Arguments
+/// - `stmt`: The [`Statement`] that we want to fix.
+/// 
+/// # Panics
+/// This function may panic if the [`Statement`] does not return a value - in other words, if it is not a [`StatementKind::Expression`].
+fn fix_nonvoid_stmt(stmt: &mut Statement) {
+    debug!("Applying NonVoidStatement fix to statement{}", if let Some(range) = &stmt.range { format!(" {range}") } else { String::new() });
+
+    // Match on the statement
+    match &mut stmt.kind {
+        StatementKind::Expression(expr) => {
+            // Take the ol' expression
+            let old: Expression = mem::take(expr);
+
+            // Simply wrap it in the discard
+            *expr = Expression {
+                range : old.range,
+                kind  : ExpressionKind::Discard { expr: Box::new(old) },
+            };
+        },
+
+        // The rest will cause panics!
+        kind => { panic!("Cannot apply NonVoidStatement fix to a {:?}", kind.variant()); },
+    }
+}
+
+/// Applies the fix to the [`crate::warnings::WarningCode::NonVoidBlock`] warning.
+/// 
+/// This is done by finding the last returning statement in the block, and then applying [`fix_nonvoid_stmt()`] to that statement.
+/// 
+/// # Arguments
+/// - `block`: The [`Block`] that we want to fix.
+/// 
+/// # Panics
+/// This function panics if the [`Block`] never returns in the first place.
+fn fix_nonvoid_block(block: &mut Block) {
+    debug!("Applying NonVoidBlock fix to block{}", if let Some(range) = &block.range { format!(" {range}") } else { String::new() });
+
+    // Go through the statement
+    let mut last: Option<&mut Statement> = None;
+    for s in &mut block.stmts {
+        if matches!(s.kind, StatementKind::Expression(_)) { last = Some(s); }
+    }
+
+    // Now apply the fix if any
+    fix_nonvoid_stmt(last.unwrap_or_else(|| panic!("Cannot apply NonVoidBlock fix to a block that does not evaluate to a value")));
+}
+
+
+
 
 
 /***** TRAVERSAL FUNCTIONS *****/
@@ -188,7 +246,7 @@ fn trav_stmt(stmt: &mut Statement, stack: &mut AnnotationStack, warnings: &mut V
                     if stack.is_allowed(warn.code()) { warnings.push(warn); }
 
                     // Add the semicolon for the user instead to fix it (and avoid repetitions of this warning)
-                    fix_nonvoid_block();
+                    fix_nonvoid_block(block);
                     // NOTE: This does not count as a state change, as we can behave as if this has been applied all along
                 }
             }
@@ -214,7 +272,7 @@ fn trav_stmt(stmt: &mut Statement, stack: &mut AnnotationStack, warnings: &mut V
                     if stack.is_allowed(warn.code()) { warnings.push(warn); }
 
                     // Add the semicolon for the user instead to fix it (and avoid repetitions of this warning)
-                    fix_nonvoid_block();
+                    fix_nonvoid_block(block);
                     // NOTE: This does not count as a state change, as we can behave as if this has been applied all along
                 }
             }
@@ -419,7 +477,7 @@ pub fn traverse(tree: &mut Program, warnings: &mut Vec<DslWarning>) -> Result<()
                     }
 
                     // Add the semicolon for the user instead to fix it (and avoid repetitions of this warning)
-                    fix_nonvoid_stmt();
+                    fix_nonvoid_stmt(s);
                     // NOTE: This does not count as a state change, as we can behave as if this has been applied all along
                 }
             }

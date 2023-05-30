@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 15:34:18
 //  Last edited:
-//    17 Feb 2023, 15:41:41
+//    30 May 2023, 18:38:36
 //  Auto updated?
 //    Yes
 // 
@@ -32,6 +32,15 @@ pub struct Expression {
     pub kind  : ExpressionKind,
     /// The range in the source text for this expression.
     pub range : Option<TextRange>,
+}
+impl Default for Expression {
+    /// Allows it to be [`std::mem::take()]`en.
+    fn default() -> Self {
+        Expression {
+            kind  : ExpressionKind::Literal(Literal{ kind: LiteralKind::Null, range: None }),
+            range : None,
+        }
+    }
 }
 impl Node for Expression {
     #[inline]
