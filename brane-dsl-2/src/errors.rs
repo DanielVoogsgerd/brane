@@ -4,7 +4,7 @@
 //  Created:
 //    07 Feb 2023, 10:10:18
 //  Last edited:
-//    26 May 2023, 16:46:12
+//    31 May 2023, 19:22:33
 //  Auto updated?
 //    Yes
 // 
@@ -701,6 +701,8 @@ pub enum DslError<'s> {
 
     /// Errors that originate in the resolve traversal.
     Resolve(ResolveError),
+    /// Errors that originate in the typing traversal.
+    Typing(TypingError),
 }
 impl<'s> Display for DslError<'s> {
     fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
@@ -714,11 +716,12 @@ impl<'s> Display for DslError<'s> {
 
             ParseUnexpectedTag{ got, .. } => write!(f, "Syntax error: Unexpected {}", if let Some(got) = got { got.variant().to_string() } else { "EOF".into() }),
             ParseExternalError{ err, .. } => write!(f, "Syntax error: {}", err),
-            ParseUnknownError{ kind, .. } => write!(f, "Syntax error: Parser returned unknown error '{:?}'", kind),
+            ParseUnknownError{ kind, .. } => write!(f, "Syntax error: Parser returned unknown error '{kind:?}'"),
             ParseLeftoverError{ .. }      => write!(f, "Syntax error: Failed to parse input"),
             ParseIncompleteError{ .. }    => write!(f, "Syntax error: Unexpected end-of-file (did you close all brackets, added all semicolons?)"),
 
-            Resolve(err) => write!(f, "{}", err),
+            Resolve(err) => write!(f, "{err}"),
+            Typing(err)  => write!(f, "{err}"),
         }
     }
 }
@@ -743,6 +746,7 @@ impl<'s> PrettyError for DslError<'s> {
             ParseIncompleteError{ range, .. } => *range,
 
             Resolve(err) => err.range(),
+            Typing(err)  => err.range(),
         }
     }
 
@@ -751,21 +755,34 @@ impl<'s> PrettyError for DslError<'s> {
         use DslError::*;
         match self {
             Resolve(err) => err.notes(),
+            Typing(err)  => err.notes(),
 
             _ => vec![],
         }
     }
 }
-impl<'s> From<ResolveError> for DslError<'s> {
+impl From<ResolveError> for DslError<'static> {
     #[inline]
     fn from(value: ResolveError) -> Self { Self::Resolve(value) }
+}
+impl From<TypingError> for DslError<'static> {
+    #[inline]
+    fn from(value: TypingError) -> Self { Self::Typing(value) }
 }
 
 
 
 /// Defines errors that may occur while resolving types.
-#[derive(Debug)]
+#[derive(Debug, Eq, Hash, PartialEq)]
 pub enum TypingError {
+    /// A for-loop had a non-integer start
+    ForStart { got_type: DataType, range: Option<TextRange> },
+    /// A for-loop had a non-integer step
+    ForStep { got_type: DataType, range: Option<TextRange> },
+    /// A for-loop had a non-integer stop
+    ForStop { got_type: DataType, range: Option<TextRange> },
+    /// A block in expression position does not evaluate to an expression
+    NonExpressionBlock { parent: Option<TextRange>, range: Option<TextRange> },
     /// A class method has a wrong type for the 'self' argument.
     SelfInvalidType { method: String, class_type: DataType, got_type: DataType, class: Option<TextRange>, range: Option<TextRange> },
     /// A variable assignment has an incorrect type
@@ -777,6 +794,10 @@ impl Display for TypingError {
     fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
         use TypingError::*;
         match self {
+            ForStart { got_type, .. }                            => write!(f, "A for-loop requires a start expression that evaluates to an Integer, not {got_type}"),
+            ForStep { got_type, .. }                             => write!(f, "A for-loop requires a step expression that evaluates to an Integer, not {got_type}"),
+            ForStop { got_type, .. }                             => write!(f, "A for-loop requires a stop expression that evaluates to an Integer, not {got_type}"),
+            NonExpressionBlock { .. }                            => write!(f, "Block in expression position must evaluate to a value"),
             SelfInvalidType { method, class_type, got_type, .. } => write!(f, "The 'self' argument of method {method} has type {got_type}, but it should be the type of the parent class ({class_type})"),
             VariableAssign { name, def_type, got_type, .. }      => write!(f, "Cannot assign value of type {got_type} to variable '{name}' of type {def_type}"),
             WhileCondition { got_type, .. }                      => write!(f, "A while-loop requires an expression that evaluates to a Boolean, not {got_type}"),
@@ -788,18 +809,26 @@ impl PrettyError for TypingError {
     fn range(&self) -> Option<TextRange> {
         use TypingError::*;
         match self {
-            SelfInvalidType { range, .. } => *range,
-            VariableAssign { range, .. }  => *range,
-            WhileCondition { range, .. }  => *range,
+            ForStart { range, .. }           => *range,
+            ForStep { range, .. }            => *range,
+            ForStop { range, .. }            => *range,
+            NonExpressionBlock { range, .. } => *range,
+            SelfInvalidType { range, .. }    => *range,
+            VariableAssign { range, .. }     => *range,
+            WhileCondition { range, .. }     => *range,
         }
     }
 
     fn notes(&self) -> Vec<Box<dyn PrettyNote>> {
         use TypingError::*;
         match self {
-            SelfInvalidType { class, .. } => vec![ Box::new(CompileNote::PartOf{ what: "class", range: *class }) ],
-            VariableAssign { source, .. } => vec![ Box::new(CompileNote::DefinedAt{ what: "Variable", range: *source }) ],
-            WhileCondition { .. }         => vec![],
+            ForStart { .. }                   => vec![],
+            ForStep { .. }                    => vec![],
+            ForStop { .. }                    => vec![],
+            NonExpressionBlock { source, .. } => vec![ Box::new(CompileNote::BecauseOf { what: "expression", range: source }) ],
+            SelfInvalidType { class, .. }     => vec![ Box::new(CompileNote::PartOf{ what: "class", range: *class }) ],
+            VariableAssign { source, .. }     => vec![ Box::new(CompileNote::DefinedAt{ what: "Variable", range: *source }) ],
+            WhileCondition { .. }             => vec![],
         }
     }
 }

@@ -4,7 +4,7 @@
 //  Created:
 //    14 Feb 2023, 13:33:32
 //  Last edited:
-//    30 May 2023, 18:44:39
+//    31 May 2023, 19:22:39
 //  Auto updated?
 //    Yes
 // 
@@ -17,6 +17,7 @@ use std::cell::{Ref, RefMut};
 use std::mem;
 
 use enum_debug::EnumDebug as _;
+use linked_hash_set::LinkedHashSet;
 use log::{debug, trace};
 
 pub use crate::errors::TypingError as Error;
@@ -104,7 +105,7 @@ fn fix_nonvoid_block(block: &mut Block) {
 /// 
 /// # Errors
 /// This function may throw errors by pushing them to the given list of errors. The function will still continue if possible, however, in order to accumulate as much of them as possible.
-fn trav_stmt(stmt: &mut Statement, stack: &mut AnnotationStack, warnings: &mut Vec<Warning>, errors: &mut Vec<Error>) -> (bool, Option<DataType>) {
+fn trav_stmt(stmt: &mut Statement, stack: &mut AnnotationStack, warnings: &mut LinkedHashSet<Warning>, errors: &mut LinkedHashSet<Error>) -> (bool, Option<DataType>) {
     trace!(target: "typing", "Traversing {:?}", stmt.kind.variant());
     let _trap = trace_trap!(target: "typing", "Exiting {:?}", stmt.kind.variant());
 
@@ -188,7 +189,7 @@ fn trav_stmt(stmt: &mut Statement, stack: &mut AnnotationStack, warnings: &mut V
                     entry.data_type = expr_type;
                     var_changed = true;
                 } else if !expr_type.is_any() && var_type != expr_type {
-                    errors.push(Error::VariableAssign { name: name.name.clone(), def_type: var_type, got_type: expr_type, source: st_entry.as_ref().unwrap().borrow().range, range: name.range });
+                    errors.insert(Error::VariableAssign { name: name.name.clone(), def_type: var_type, got_type: expr_type, source: st_entry.as_ref().unwrap().borrow().range, range: name.range });
                 }
 
                 // Then, recurse into the value expression (a definition never evaluates)
@@ -219,20 +220,20 @@ fn trav_stmt(stmt: &mut Statement, stack: &mut AnnotationStack, warnings: &mut V
             let (echanged, etype): (bool, DataType) = trav_expr(start, &mut *stack, warnings, errors);
             changed |= echanged;
             if etype != DataType::Integer {
-                errors.push(Error::VariableAssign { name: name.name.clone(), def_type: DataType::Integer, got_type: etype, source: name.range, range: start.range });
+                errors.insert(Error::VariableAssign { name: name.name.clone(), def_type: DataType::Integer, got_type: etype, source: name.range, range: start.range });
             }
             // ...stop...
             let (echanged, etype): (bool, DataType) = trav_expr(stop, &mut *stack, warnings, errors);
             changed |= echanged;
             if etype != DataType::Integer {
-                errors.push(Error::VariableAssign { name: name.name.clone(), def_type: DataType::Integer, got_type: etype, source: name.range, range: stop.range });
+                errors.insert(Error::VariableAssign { name: name.name.clone(), def_type: DataType::Integer, got_type: etype, source: name.range, range: stop.range });
             }
             // ...and step
             if let Some(step) = step {
                 let (echanged, etype): (bool, DataType) = trav_expr(step, &mut *stack, warnings, errors);
                 changed |= echanged;
                 if etype != DataType::Integer {
-                    errors.push(Error::VariableAssign { name: name.name.clone(), def_type: DataType::Integer, got_type: etype, source: name.range, range: step.range });
+                    errors.insert(Error::VariableAssign { name: name.name.clone(), def_type: DataType::Integer, got_type: etype, source: name.range, range: step.range });
                 }
             }
 
@@ -243,7 +244,7 @@ fn trav_stmt(stmt: &mut Statement, stack: &mut AnnotationStack, warnings: &mut V
                 if !btype.is_any() && !btype.is_void() {
                     // Emit the warning if it's not surpressed
                     let warn: Warning = Warning::NonVoidBlock { got_type: btype, because_what: "for-loop", because: stmt.range, range: brange };
-                    if stack.is_allowed(warn.code()) { warnings.push(warn); }
+                    if stack.is_allowed(warn.code()) { warnings.insert(warn); }
 
                     // Add the semicolon for the user instead to fix it (and avoid repetitions of this warning)
                     fix_nonvoid_block(block);
@@ -259,7 +260,7 @@ fn trav_stmt(stmt: &mut Statement, stack: &mut AnnotationStack, warnings: &mut V
             // Recurse into the expresion first
             let (cchanged, ctype): (bool, DataType) = trav_expr(cond, &mut *stack, warnings, errors);
             if ctype != DataType::Boolean {
-                errors.push(Error::WhileCondition { got_type: ctype, range: cond.range });
+                errors.insert(Error::WhileCondition { got_type: ctype, range: cond.range });
             }
 
             // Then recurse into the block
@@ -269,7 +270,7 @@ fn trav_stmt(stmt: &mut Statement, stack: &mut AnnotationStack, warnings: &mut V
                 if !btype.is_any() && !btype.is_void() {
                     // Emit the warning if it's not surpressed
                     let warn: Warning = Warning::NonVoidBlock { got_type: btype, because_what: "while-loop", because: stmt.range, range: brange };
-                    if stack.is_allowed(warn.code()) { warnings.push(warn); }
+                    if stack.is_allowed(warn.code()) { warnings.insert(warn); }
 
                     // Add the semicolon for the user instead to fix it (and avoid repetitions of this warning)
                     fix_nonvoid_block(block);
@@ -324,7 +325,7 @@ fn trav_stmt(stmt: &mut Statement, stack: &mut AnnotationStack, warnings: &mut V
 /// 
 /// # Errors
 /// This function may throw errors by pushing them to the given list of errors. The function will still continue if possible, however, in order to accumulate as much of them as possible.
-fn trav_func_def(def: &mut FunctionDef, mut parent_class: Option<(DataType, Option<TextRange>)>, stack: &mut AnnotationStack, warnings: &mut Vec<Warning>, errors: &mut Vec<Error>) -> bool {
+fn trav_func_def(def: &mut FunctionDef, mut parent_class: Option<(DataType, Option<TextRange>)>, stack: &mut AnnotationStack, warnings: &mut LinkedHashSet<Warning>, errors: &mut LinkedHashSet<Error>) -> bool {
     trace!(target: "typing", "Traversing FunctionDef");
     let _trap = trace_trap!(target: "typing", "Exiting FunctionDef");
 
@@ -358,7 +359,7 @@ fn trav_func_def(def: &mut FunctionDef, mut parent_class: Option<(DataType, Opti
                     changed = true;
                 } else if !ctype.is_any() && a_entry.data_type != ctype {
                     // Otherwise, we can error if it's not the class type
-                    errors.push(Error::SelfInvalidType { method: entry.name.clone(), class_type: ctype, got_type: a_entry.data_type.clone(), class: crange, range: a.name.range });
+                    errors.insert(Error::SelfInvalidType { method: entry.name.clone(), class_type: ctype, got_type: a_entry.data_type.clone(), class: crange, range: a.name.range });
                 }
             }
         }
@@ -388,12 +389,94 @@ fn trav_func_def(def: &mut FunctionDef, mut parent_class: Option<(DataType, Opti
 /// 
 /// # Errors
 /// This function may throw errors by pushing them to the given list of errors. The function will still continue if possible, however, in order to accumulate as much of them as possible.
-fn trav_expr(expr: &mut Expression, stack: &mut AnnotationStack, warnings: &mut Vec<Warning>, errors: &mut Vec<Error>) -> (bool, DataType) {
+fn trav_expr(expr: &mut Expression, stack: &mut AnnotationStack, warnings: &mut LinkedHashSet<Warning>, errors: &mut LinkedHashSet<Error>) -> (bool, DataType) {
     trace!(target: "typing", "Traversing {:?}", expr.kind.variant());
     let _trap = trace_trap!(target: "typing", "Exiting {:?}", expr.kind.variant());
 
-    // Done!
-    (false, DataType::Any)
+    // Match the expression type
+    use ExpressionKind::*;
+    match &mut expr.kind {
+        // Statement-carrying expressions
+        Block(block, annots) => {
+            // Add the block-specific annotations
+            let mut stack = stack.frame(annots);
+
+            // Recurse it as a block
+            match trav_block(block, &mut *stack, warnings, errors) {
+                (changed, Some((btype, _))) => (changed, btype),
+                // If the user did not return anything, throw an error and then return Any
+                (changed, None) => {
+                    errors.insert(Error::)
+                    (changed, DataType::Any)
+                },
+            }
+        },
+
+        If { cond, block, block_else, annots, annots_else } => {
+            (false, DataType::Any)
+        },
+        Parallel { branches, .. } => {
+            (false, DataType::Any)
+        },
+
+
+
+        // Operators
+        Cast { expr, .. } => {
+            (false, DataType::Any)
+        },
+        Discard { expr } => {
+            (false, DataType::Any)
+        },
+
+        Index { to_index, index } => {
+            (false, DataType::Any)
+        },
+        Proj { to_proj, .. } => {
+            (false, DataType::Any)
+        },
+        Call { to_call, args } => {
+            (false, DataType::Any)
+        },
+
+
+
+        // Arithmetic operators
+        Unary { expr, .. } => {
+            (false, DataType::Any)
+        },
+
+        Binary { lhs, rhs, op } => {
+            (false, DataType::Any)
+        },
+
+
+
+        // Values
+        Array { elems } => {
+            (false, DataType::Any)
+        },
+        LocalInstance { name, props, st_entry } => {
+            (false, DataType::Any)
+        },
+        RemoteInstance { name, package, props, st_entry } => {
+            (false, DataType::Any)
+        },
+
+        VarRef { name, st_entry } => {
+            (false, DataType::Any)
+        },
+        LocalFunctionRef { name, st_entry } => {
+            (false, DataType::Any)
+        },
+        ExternalFunctionRef { name, package, st_entry } => {
+            (false, DataType::Any)
+        },
+
+        Literal(literal) => {
+            (false, DataType::Any)
+        },
+    }
 }
 
 /// Traverses a block, returning its evaluated type if there was any.
@@ -409,7 +492,7 @@ fn trav_expr(expr: &mut Expression, stack: &mut AnnotationStack, warnings: &mut 
 /// 
 /// # Errors
 /// This function may throw errors by pushing them to the given list of errors. The function will still continue if possible, however, in order to accumulate as much of them as possible.
-fn trav_block(block: &mut Block, stack: &mut AnnotationStack, warnings: &mut Vec<Warning>, errors: &mut Vec<Error>) -> (bool, Option<(DataType, Option<TextRange>)>) {
+fn trav_block(block: &mut Block, stack: &mut AnnotationStack, warnings: &mut LinkedHashSet<Warning>, errors: &mut LinkedHashSet<Error>) -> (bool, Option<(DataType, Option<TextRange>)>) {
     trace!(target: "typing", "Traversing Block");
     let _trap = trace_trap!(target: "typing", "Exiting Block");
 
@@ -454,8 +537,9 @@ pub fn traverse(tree: &mut Program, warnings: &mut Vec<DslWarning>) -> Result<()
     stack.push(annots.iter());
 
     // Prepare warnings & errors lists
-    let mut warnings : Vec<Warning> = vec![];
-    let mut errors   : Vec<Error>   = vec![];
+    // NOTE: Because this is repeated, we actually want to avoid duplicate errors being thrown; so by using the LinkedHashSet, we actually get an ordered collection that will ignore duplicates
+    let mut warns  : LinkedHashSet<Warning> = LinkedHashSet::new();
+    let mut errors : LinkedHashSet<Error>   = LinkedHashSet::new();
 
     // We start to traverse the tree to find as much as we can about type information on one hand, while making sure that what we find is consistent on the other.
     let mut changed: bool = true;
@@ -464,7 +548,7 @@ pub fn traverse(tree: &mut Program, warnings: &mut Vec<DslWarning>) -> Result<()
         changed = false;
         for s in stmts.iter_mut() {
             // Traverse into the statement
-            let (schanged, stype): (bool, Option<DataType>) = trav_stmt(s, &mut stack, &mut warnings, &mut errors);
+            let (schanged, stype): (bool, Option<DataType>) = trav_stmt(s, &mut stack, &mut warns, &mut errors);
             changed |= schanged;
 
             // Throw a warning if this returns a non-void
@@ -473,7 +557,7 @@ pub fn traverse(tree: &mut Program, warnings: &mut Vec<DslWarning>) -> Result<()
                     // Emit the warning if it's not surpressed
                     let warn: Warning = Warning::NonVoidStatement { got_type: stype, range: s.range };
                     if stack.frame(&s.annots).is_allowed(warn.code()) {
-                        warnings.push(warn);
+                        warns.insert(warn);
                     }
 
                     // Add the semicolon for the user instead to fix it (and avoid repetitions of this warning)
@@ -490,7 +574,15 @@ pub fn traverse(tree: &mut Program, warnings: &mut Vec<DslWarning>) -> Result<()
         }
     }
 
-    // Done!
-    debug!(target: "typing", "Traversal complete");
-    Ok(())
+    // Update the warnings
+    warnings.extend(warns.into_iter().map(|w| w.into()));
+
+    // Done, return any errors if they occurred
+    if errors.is_empty() {
+        debug!(target: "typing", "Traversal success");
+        Ok(())
+    } else {
+        debug!(target: "typing", "Traversal failure");
+        Err(errors.into_iter().map(|e| e.into()).collect())
+    }
 }

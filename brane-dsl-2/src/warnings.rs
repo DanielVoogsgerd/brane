@@ -4,7 +4,7 @@
 //  Created:
 //    11 Feb 2023, 18:14:09
 //  Last edited:
-//    26 May 2023, 16:58:00
+//    31 May 2023, 19:14:41
 //  Auto updated?
 //    Yes
 // 
@@ -306,6 +306,8 @@ pub trait PrettyWarning: Warning + PrettyWarningAsDyn {
 /// Defines toplevel warnings for the BraneScript/Bakery compiler.
 #[derive(Debug)]
 pub enum DslWarning {
+    /// Defines warnings that originate from the typing traversal.
+    Typing(TypingWarning),
     /// Defines warnings that originate from the resolve traversal.
     Resolve(ResolveWarning),
     /// Defines warnings that originate from the annotation traversal.
@@ -315,8 +317,9 @@ impl Display for DslWarning {
     fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
         use DslWarning::*;
         match self {
-            Resolve(warn)    => write!(f, "{}", warn),
-            Annotation(warn) => write!(f, "{}", warn),
+            Typing(warn)     => write!(f, "{warn}"),
+            Resolve(warn)    => write!(f, "{warn}"),
+            Annotation(warn) => write!(f, "{warn}"),
         }
     }
 }
@@ -324,6 +327,7 @@ impl Warning for DslWarning {
     fn code(&self) -> WarningCode {
         use DslWarning::*;
         match self {
+            Typing(warn)     => warn.code(),
             Resolve(warn)    => warn.code(),
             Annotation(warn) => warn.code(),
         }
@@ -333,6 +337,7 @@ impl PrettyWarning for DslWarning {
     fn range(&self) -> Option<TextRange> {
         use DslWarning::*;
         match self {
+            Typing(warn)     => warn.range(),
             Resolve(warn)    => warn.range(),
             Annotation(warn) => warn.range(),
         }
@@ -341,10 +346,15 @@ impl PrettyWarning for DslWarning {
     fn notes(&self) -> Vec<Box<dyn PrettyNote>> {
         use DslWarning::*;
         match self {
+            Typing(warn)     => warn.notes(),
             Resolve(warn)    => warn.notes(),
             Annotation(warn) => warn.notes(),
         }
     }
+}
+impl From<TypingWarning> for DslWarning {
+    #[inline]
+    fn from(value: TypingWarning) -> Self { DslWarning::Typing(value) }
 }
 impl From<ResolveWarning> for DslWarning {
     #[inline]
@@ -359,6 +369,7 @@ impl From<AnnotationWarning> for DslWarning {
 
 warning! {
     /// Describes warnings that may originate when resolving types.
+    #[derive(Eq, Hash, PartialEq)]
     TypingWarning {
         /// A block that should return void does not.
         /// 
