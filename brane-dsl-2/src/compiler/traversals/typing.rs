@@ -4,7 +4,7 @@
 //  Created:
 //    14 Feb 2023, 13:33:32
 //  Last edited:
-//    31 May 2023, 19:22:39
+//    02 Jun 2023, 18:24:21
 //  Auto updated?
 //    Yes
 // 
@@ -219,21 +219,21 @@ fn trav_stmt(stmt: &mut Statement, stack: &mut AnnotationStack, warnings: &mut L
             // start...
             let (echanged, etype): (bool, DataType) = trav_expr(start, &mut *stack, warnings, errors);
             changed |= echanged;
-            if etype != DataType::Integer {
-                errors.insert(Error::VariableAssign { name: name.name.clone(), def_type: DataType::Integer, got_type: etype, source: name.range, range: start.range });
+            if !etype.is_any() && etype != DataType::Integer {
+                errors.insert(Error::ForStart { got_type: etype, range: start.range });
             }
             // ...stop...
             let (echanged, etype): (bool, DataType) = trav_expr(stop, &mut *stack, warnings, errors);
             changed |= echanged;
-            if etype != DataType::Integer {
-                errors.insert(Error::VariableAssign { name: name.name.clone(), def_type: DataType::Integer, got_type: etype, source: name.range, range: stop.range });
+            if !etype.is_any() && etype != DataType::Integer {
+                errors.insert(Error::ForStop { got_type: etype, range: stop.range });
             }
             // ...and step
             if let Some(step) = step {
                 let (echanged, etype): (bool, DataType) = trav_expr(step, &mut *stack, warnings, errors);
                 changed |= echanged;
-                if etype != DataType::Integer {
-                    errors.insert(Error::VariableAssign { name: name.name.clone(), def_type: DataType::Integer, got_type: etype, source: name.range, range: step.range });
+                if !etype.is_any() && etype != DataType::Integer {
+                    errors.insert(Error::ForStep { got_type: etype, range: step.range });
                 }
             }
 
@@ -259,7 +259,7 @@ fn trav_stmt(stmt: &mut Statement, stack: &mut AnnotationStack, warnings: &mut L
         While { cond, block } => {
             // Recurse into the expresion first
             let (cchanged, ctype): (bool, DataType) = trav_expr(cond, &mut *stack, warnings, errors);
-            if ctype != DataType::Boolean {
+            if !ctype.is_any() && ctype != DataType::Boolean {
                 errors.insert(Error::WhileCondition { got_type: ctype, range: cond.range });
             }
 
@@ -402,17 +402,42 @@ fn trav_expr(expr: &mut Expression, stack: &mut AnnotationStack, warnings: &mut 
             let mut stack = stack.frame(annots);
 
             // Recurse it as a block
-            match trav_block(block, &mut *stack, warnings, errors) {
-                (changed, Some((btype, _))) => (changed, btype),
-                // If the user did not return anything, throw an error and then return Any
-                (changed, None) => {
-                    errors.insert(Error::)
-                    (changed, DataType::Any)
-                },
-            }
+            let (changed, data_type): (bool, (DataType, _)) = trav_block(block, &mut *stack, warnings, errors);
+            (changed, data_type.0)
         },
 
         If { cond, block, block_else, annots, annots_else } => {
+            // Recurse into the expression
+            let (cchanged, ctype): (bool, DataType) = trav_expr(cond, stack, warnings, errors);
+            if !ctype.is_any() && ctype != DataType::Boolean {
+                errors.insert(Error::IfCondition { got_type: ctype, range: cond.range });
+            }
+
+            // Next, we recurse into the if-block, pushing its annotations
+            let (mut bchanged, mut btype): (bool, (DataType, Option<Option<TextRange>>)) = trav_block(block, &mut *stack.frame(annots), warnings, errors);
+
+            // Also do the else if any
+            if let Some(block_else) = block_else {
+                // Rescurse into the else-block, pushing its annotations
+                let (fchanged, ftype): (bool, (DataType, Option<Option<TextRange>>)) = trav_block(block_else, &mut *stack.frame(annots_else), warnings, errors);
+
+                // Compare it evaluates to the same thing as the true-block
+                if !btype.0.is_any() && !ftype.0.is_any() && btype.0 != ftype.0 {
+                    // Resolve the types
+                    let (ttype, trange): (DataType, Option<TextRange>) = (btype.0, btype.1.unwrap_or(block.range));
+                    let (ftype, frange): (DataType, Option<TextRange>) = (ftype.0, ftype.1.unwrap_or(block.range));
+                    errors.insert(Error::IncompatibleIfBranches { true_type: ttype, false_type: ftype, true_range: trange, false_range: frange, range: expr.range });
+                }
+
+                // Update the btype if it's any
+                if btype.0.is_any() {
+                    btype.0 = ftype.0;
+                }
+            } else if btype.0 != DataType::Void {
+                errors.insert(Error::MissingElseBranch { got_type: btype.0, got_range: btype.1.unwrap_or(block.range), range: expr.range });
+            }
+
+            // Done
             (false, DataType::Any)
         },
         Parallel { branches, .. } => {
@@ -488,18 +513,18 @@ fn trav_expr(expr: &mut Expression, stack: &mut AnnotationStack, warnings: &mut 
 /// - `errors`: A list of [`Error`]s that we will populate as and if they occur.
 /// 
 /// # Returns
-/// A tuple with a boolean describing whether any type information was updated and the evaluated type (or [`None`] if this block did not contain any non-definition statements). The type information is itself a tuple of the type and which statement produces it. Note that if there _is_ a statement but it does not return anything, [`DataType::Void`] is returned instead.
+/// A tuple with a boolean describing whether any type information was updated and the evaluated type. The type information it a tuple with the type found (or [`DataType::Void`] if it did not evaluate to a type), together with the source of the evaluation if any. The double [`Option`] allows us to distinguish between "no statement evaluating" and "statement evaluating that is auto-generated and has no link to source".
 /// 
 /// # Errors
 /// This function may throw errors by pushing them to the given list of errors. The function will still continue if possible, however, in order to accumulate as much of them as possible.
-fn trav_block(block: &mut Block, stack: &mut AnnotationStack, warnings: &mut LinkedHashSet<Warning>, errors: &mut LinkedHashSet<Error>) -> (bool, Option<(DataType, Option<TextRange>)>) {
+fn trav_block(block: &mut Block, stack: &mut AnnotationStack, warnings: &mut LinkedHashSet<Warning>, errors: &mut LinkedHashSet<Error>) -> (bool, (DataType, Option<Option<TextRange>>)) {
     trace!(target: "typing", "Traversing Block");
     let _trap = trace_trap!(target: "typing", "Exiting Block");
 
     // Note: annotations have been processed on statement/function level
 
     // These structures keep track of the return type of the entire block
-    let mut ret: Option<(DataType, Option<TextRange>)> = None;
+    let mut ret: (DataType, Option<Option<TextRange>>) = (DataType::Void, None);
 
     // Simply recurse into the statements
     let mut changed: bool = false;
@@ -508,7 +533,7 @@ fn trav_block(block: &mut Block, stack: &mut AnnotationStack, warnings: &mut Lin
 
         // Update the changed and the type
         changed |= schanged;
-        if let Some(stype) = stype { ret = Some((stype, s.range)); }
+        if let Some(stype) = stype { ret.1 = Some(s.range); }
     }
 
     // Done!
