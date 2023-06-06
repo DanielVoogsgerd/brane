@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 15:35:30
 //  Last edited:
-//    13 Feb 2023, 11:20:07
+//    06 Jun 2023, 09:04:46
 //  Auto updated?
 //    Yes
 // 
@@ -97,7 +97,7 @@ impl Node for MergeStrategy {
 }
 
 /// Determines the possible merge strategy variants.
-#[derive(Clone, Copy, Debug, EnumDebug)]
+#[derive(Clone, Copy, Debug, EnumDebug, Eq, Hash, PartialEq)]
 pub enum MergeStrategyKind {
     /// Take the value that arrived first. The statement will already return as soon as this statement is in, not the rest.
     First,
@@ -118,4 +118,26 @@ pub enum MergeStrategyKind {
 
     /// Returns all values as an Array.
     All,
+}
+impl MergeStrategyKind {
+    /// Returns the group of types that this strategy expects.
+    /// 
+    /// # Returns
+    /// A [`DataTypeGroup`] listing the allowed data types for this strategy.
+    pub fn allowed_data_types(&self) -> types::DataTypeGroup {
+        use MergeStrategyKind::*;
+        match self {
+            First         |
+            FirstBlocking |
+            Last          => types::DataTypeGroup::All,
+
+            Sum     |
+            Product => types::DataTypeGroup::Numeric,
+
+            Max |
+            Min => types::DataTypeGroup::Numeric,
+
+            All => types::DataTypeGroup::All,
+        }
+    }
 }

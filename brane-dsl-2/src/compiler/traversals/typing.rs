@@ -4,7 +4,7 @@
 //  Created:
 //    14 Feb 2023, 13:33:32
 //  Last edited:
-//    02 Jun 2023, 18:24:21
+//    06 Jun 2023, 08:52:41
 //  Auto updated?
 //    Yes
 // 
@@ -14,7 +14,6 @@
 // 
 
 use std::cell::{Ref, RefMut};
-use std::mem;
 
 use enum_debug::EnumDebug as _;
 use linked_hash_set::LinkedHashSet;
@@ -25,70 +24,14 @@ pub use crate::warnings::TypingWarning as Warning;
 use crate::errors::DslError;
 use crate::warnings::{DslWarning, Warning as _};
 use crate::ast::spec::TextRange;
-use crate::ast::types::DataType;
+use crate::ast::types::{DataType, DataTypeGroup};
 use crate::ast::symbol_tables::{DelayedEntry, LocalClassEntry, LocalClassEntryMember, LocalFuncEntry, VarEntry};
+use crate::ast::auxillary::MergeStrategyKind;
 use crate::ast::expressions::{Block, Expression, ExpressionKind};
 use crate::ast::statements::{ClassMemberDefKind, FunctionDef, Statement, StatementKind};
 use crate::ast::toplevel::Program;
 use crate::compiler::utils::trace_trap;
 use crate::compiler::annot_stack::AnnotationStack;
-
-
-/***** FIX FUNCTIONS *****/
-/// Applies the fix to the [`crate::warnings::WarningCode::NonVoidStatement`] warning.
-/// 
-/// This is done by wrapping the expression in the statement in an [`ExpressionKind::Discard`] such that the expression returns a void.
-/// 
-/// # Arguments
-/// - `stmt`: The [`Statement`] that we want to fix.
-/// 
-/// # Panics
-/// This function may panic if the [`Statement`] does not return a value - in other words, if it is not a [`StatementKind::Expression`].
-fn fix_nonvoid_stmt(stmt: &mut Statement) {
-    debug!("Applying NonVoidStatement fix to statement{}", if let Some(range) = &stmt.range { format!(" {range}") } else { String::new() });
-
-    // Match on the statement
-    match &mut stmt.kind {
-        StatementKind::Expression(expr) => {
-            // Take the ol' expression
-            let old: Expression = mem::take(expr);
-
-            // Simply wrap it in the discard
-            *expr = Expression {
-                range : old.range,
-                kind  : ExpressionKind::Discard { expr: Box::new(old) },
-            };
-        },
-
-        // The rest will cause panics!
-        kind => { panic!("Cannot apply NonVoidStatement fix to a {:?}", kind.variant()); },
-    }
-}
-
-/// Applies the fix to the [`crate::warnings::WarningCode::NonVoidBlock`] warning.
-/// 
-/// This is done by finding the last returning statement in the block, and then applying [`fix_nonvoid_stmt()`] to that statement.
-/// 
-/// # Arguments
-/// - `block`: The [`Block`] that we want to fix.
-/// 
-/// # Panics
-/// This function panics if the [`Block`] never returns in the first place.
-fn fix_nonvoid_block(block: &mut Block) {
-    debug!("Applying NonVoidBlock fix to block{}", if let Some(range) = &block.range { format!(" {range}") } else { String::new() });
-
-    // Go through the statement
-    let mut last: Option<&mut Statement> = None;
-    for s in &mut block.stmts {
-        if matches!(s.kind, StatementKind::Expression(_)) { last = Some(s); }
-    }
-
-    // Now apply the fix if any
-    fix_nonvoid_stmt(last.unwrap_or_else(|| panic!("Cannot apply NonVoidBlock fix to a block that does not evaluate to a value")));
-}
-
-
-
 
 
 /***** TRAVERSAL FUNCTIONS *****/
@@ -238,18 +181,12 @@ fn trav_stmt(stmt: &mut Statement, stack: &mut AnnotationStack, warnings: &mut L
             }
 
             // Now recurse into the block
-            let (bchanged, btype): (bool, Option<(DataType, Option<TextRange>)>) = trav_block(block, &mut *stack, warnings, errors);
-            if let Some((btype, brange)) = btype {
-                // Only return if it returned non-void
-                if !btype.is_any() && !btype.is_void() {
-                    // Emit the warning if it's not surpressed
-                    let warn: Warning = Warning::NonVoidBlock { got_type: btype, because_what: "for-loop", because: stmt.range, range: brange };
-                    if stack.is_allowed(warn.code()) { warnings.insert(warn); }
-
-                    // Add the semicolon for the user instead to fix it (and avoid repetitions of this warning)
-                    fix_nonvoid_block(block);
-                    // NOTE: This does not count as a state change, as we can behave as if this has been applied all along
-                }
+            let (bchanged, btype): (bool, (DataType, Option<Option<TextRange>>)) = trav_block(block, &mut *stack, warnings, errors);
+            // Only return if it returned non-void
+            if !btype.0.is_any() && !btype.0.is_void() {
+                // Emit the warning if it's not surpressed
+                let warn: Warning = Warning::NonVoidBlock { got_type: btype.0, because_what: "for-loop", because: stmt.range, range: btype.1.unwrap_or(block.range) };
+                if stack.is_allowed(warn.code()) { warnings.insert(warn); }
             }
 
             // Done (a for-loop never evaluates)
@@ -264,18 +201,12 @@ fn trav_stmt(stmt: &mut Statement, stack: &mut AnnotationStack, warnings: &mut L
             }
 
             // Then recurse into the block
-            let (bchanged, btype): (bool, Option<(DataType, Option<TextRange>)>) = trav_block(block, &mut *stack, warnings, errors);
-            if let Some((btype, brange)) = btype {
-                // Only return if it returned non-void
-                if !btype.is_any() && !btype.is_void() {
-                    // Emit the warning if it's not surpressed
-                    let warn: Warning = Warning::NonVoidBlock { got_type: btype, because_what: "while-loop", because: stmt.range, range: brange };
-                    if stack.is_allowed(warn.code()) { warnings.insert(warn); }
-
-                    // Add the semicolon for the user instead to fix it (and avoid repetitions of this warning)
-                    fix_nonvoid_block(block);
-                    // NOTE: This does not count as a state change, as we can behave as if this has been applied all along
-                }
+            let (bchanged, btype): (bool, (DataType, Option<Option<TextRange>>)) = trav_block(block, &mut *stack, warnings, errors);
+            // Only return if it returned non-void
+            if !btype.0.is_any() && !btype.0.is_void() {
+                // Emit the warning if it's not surpressed
+                let warn: Warning = Warning::NonVoidBlock { got_type: btype.0, because_what: "while-loop", because: stmt.range, range: btype.1.unwrap_or(block.range) };
+                if stack.is_allowed(warn.code()) { warnings.insert(warn); }
             }
 
             // Done (a while-loop never evaluates)
@@ -426,10 +357,11 @@ fn trav_expr(expr: &mut Expression, stack: &mut AnnotationStack, warnings: &mut 
                     // Resolve the types
                     let (ttype, trange): (DataType, Option<TextRange>) = (btype.0, btype.1.unwrap_or(block.range));
                     let (ftype, frange): (DataType, Option<TextRange>) = (ftype.0, ftype.1.unwrap_or(block.range));
-                    errors.insert(Error::IncompatibleIfBranches { true_type: ttype, false_type: ftype, true_range: trange, false_range: frange, range: expr.range });
+                    errors.insert(Error::IncompatibleIfBranches { true_type: ttype, false_type: ftype, true_range: trange, false_range: frange, if_range: expr.range });
                 }
 
                 // Update the btype if it's any
+                bchanged |= fchanged;
                 if btype.0.is_any() {
                     btype.0 = ftype.0;
                 }
@@ -438,9 +370,54 @@ fn trav_expr(expr: &mut Expression, stack: &mut AnnotationStack, warnings: &mut 
             }
 
             // Done
-            (false, DataType::Any)
+            (cchanged | bchanged, btype.0)
         },
-        Parallel { branches, .. } => {
+        Parallel { branches, strategy } => {
+            // Decide the type of the branches based on the strategy and the return type of the first
+            let mut first: Option<(DataType, Option<TextRange>)> = None;
+            for (b, annots) in branches {
+                // Push the annotations for this block
+                let mut stack = stack.frame(&*annots);
+
+                // Decide what to do
+                if let Some(strat) = strategy {
+                    // We are given an explicit strategy; so assert the branches evaluates to this
+                    let (bchanged, btype): (bool, (DataType, Option<Option<TextRange>>)) = trav_block(b, &mut *stack, warnings, errors);
+                    match strat.kind {
+                        // These require a specific kind
+                        // Numbers (integers _or_ float)
+                        MergeStrategyKind::Max     |
+                        MergeStrategyKind::Min     |
+                        MergeStrategyKind::Product |
+                        MergeStrategyKind::Sum     => {
+                            // Assert this block is any of the numeric types
+                            if !btype.0.is_part_of(DataTypeGroup::Numeric) {
+                                errors.insert(Error::UnmergeableParallelBranch { got_type: btype.0, expected_types: DataTypeGroup::Numeric, got_range: btype.1.unwrap_or(b.range), parallel_range: expr.range });
+                            }
+                        },
+
+                        // These do not require a specific type, just the same type
+                        MergeStrategyKind::All           |
+                        MergeStrategyKind::First         |
+                        MergeStrategyKind::FirstBlocking |
+                        MergeStrategyKind::Last          => {
+                            // We expect the same type across all branches
+                            if let Some(first) = first {
+                                if first.0 != btype.0 {
+                                    // It does not equate the first
+                                    errors.insert(Error::IncompatibleParallelBranch { got_type: btype.0, first_type: first.0, got_range: btype.1.unwrap_or(b.range), first_range: first.1, parallel_range: expr.range });
+                                }
+                            } else {
+                                first = Some((btype.0, btype.1.unwrap_or(b.range)));
+                            }
+                        },
+                    }
+                } else {
+                    
+                }
+            }
+
+            // Done
             (false, DataType::Any)
         },
 

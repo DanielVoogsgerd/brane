@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 16:07:39
 //  Last edited:
-//    31 May 2023, 19:08:44
+//    06 Jun 2023, 09:03:18
 //  Auto updated?
 //    Yes
 // 
@@ -20,6 +20,71 @@ use enum_debug::EnumDebug;
 
 
 /***** LIBRARY *****/
+/// Defines certain groups of types.
+#[derive(Clone, Copy, Debug, EnumDebug, Eq, Hash, PartialEq)]
+pub enum DataTypeGroup {
+    /// Defines anyone's game - i.e., every type.
+    All,
+    /// Defines anyone's game as long as it's not [`DataType::Void`].
+    NonVoid,
+
+    /// Defines the numeric types (i.e., integers and floats)
+    Numeric,
+}
+
+impl DataTypeGroup {
+    /// Returns whether the given data type is a part of this group.
+    /// 
+    /// # Arguments
+    /// - `data_type`: The [`DataType`] to check if it is a part of us.
+    /// 
+    /// # Returns
+    /// True if the given `data_type` is part of this group, or false otherwise.
+    #[inline]
+    pub fn contains(&self, data_type: impl AsRef<DataType>) -> bool {
+        let data_type: &DataType = data_type.as_ref();
+
+        // The group determines how we can check the data type
+        use DataTypeGroup::*;
+        match self {
+            All     => true,
+            NonVoid => !data_type.is_void(),
+
+            Numeric => matches!(data_type, DataType::Integer) || matches!(data_type, DataType::Real),
+        }
+    }
+}
+impl Display for DataTypeGroup {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
+        use DataTypeGroup::*;
+        match self {
+            All     => write!(f, "all"),
+            NonVoid => write!(f, "non-void"),
+
+            Numeric => write!(f, "numeric"),
+        }
+    }
+}
+
+impl AsRef<DataTypeGroup> for DataTypeGroup {
+    #[inline]
+    fn as_ref(&self) -> &Self { self }
+}
+impl AsMut<DataTypeGroup> for DataTypeGroup {
+    #[inline]
+    fn as_mut(&mut self) -> &mut Self { self }
+}
+impl From<&DataTypeGroup> for DataTypeGroup {
+    #[inline]
+    fn from(value: &DataTypeGroup) -> Self { *value }
+}
+impl From<&mut DataTypeGroup> for DataTypeGroup {
+    #[inline]
+    fn from(value: &mut DataTypeGroup) -> Self { *value }
+}
+
+
+
 /// Defines the allowed / supported data types by BraneScript and Bakery.
 #[derive(Clone, Debug, EnumDebug, Eq, Hash, PartialEq)]
 pub enum DataType {
@@ -49,6 +114,16 @@ pub enum DataType {
 }
 
 impl DataType {
+    /// Companion function for [`DataTypeGroup::contains()`], which can be used to check if this data type is part of the given group.
+    /// 
+    /// # Arguments
+    /// - `group`: The [`DataTypeGroup`] to see if we are part of.
+    /// 
+    /// # Returns
+    /// True if we are part of `group`, false if we are not.
+    #[inline]
+    pub fn is_part_of(&self, group: impl AsRef<DataTypeGroup>) -> bool { group.as_ref().contains(self) }
+
     /// Returns whether this DataType is `Any` or not.
     /// 
     /// If so, then it means that this DataType is effectively unknown until runtime, and the compiler should try to refine its type if possible.
@@ -114,4 +189,21 @@ impl FromStr for DataType {
 
     #[inline]
     fn from_str(s: &str) -> Result<Self, Self::Err> { return Ok(Self::from(s)) }
+}
+
+impl AsRef<DataType> for DataType {
+    #[inline]
+    fn as_ref(&self) -> &Self { self }
+}
+impl AsMut<DataType> for DataType {
+    #[inline]
+    fn as_mut(&mut self) -> &mut Self { self }
+}
+impl From<&DataType> for DataType {
+    #[inline]
+    fn from(value: &DataType) -> Self { value.clone() }
+}
+impl From<&mut DataType> for DataType {
+    #[inline]
+    fn from(value: &mut DataType) -> Self { value.clone() }
 }
