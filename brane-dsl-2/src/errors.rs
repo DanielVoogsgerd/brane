@@ -4,7 +4,7 @@
 //  Created:
 //    07 Feb 2023, 10:10:18
 //  Last edited:
-//    06 Jun 2023, 09:05:22
+//    06 Jun 2023, 15:16:00
 //  Auto updated?
 //    Yes
 // 
@@ -787,13 +787,13 @@ pub enum TypingError {
     /// The branches of an if-statement to not evaluate to the same ranges
     IncompatibleIfBranches { true_type: DataType, false_type: DataType, true_range: Option<TextRange>, false_range: Option<TextRange>, if_range: Option<TextRange> },
     /// A parallel-statement has a branch that does not have the same type as the first branch
-    IncompatibleParallelBranch { got_type: DataType, first_type: DataType, got_range: Option<TextRange>, first_range: Option<TextRange>, parallel_range: Option<TextRange> },
+    IncompatibleParallelBranch { i: usize, got_type: DataType, first_type: DataType, got_range: Option<TextRange>, first_range: Option<TextRange>, parallel_range: Option<TextRange> },
     /// An if-statement had a true-branch that evaluates to a non-void value, but not a false-branch
     MissingElseBranch { got_type: DataType, got_range: Option<TextRange>, range: Option<TextRange> },
     /// A class method has a wrong type for the 'self' argument.
     SelfInvalidType { method: String, class_type: DataType, got_type: DataType, class: Option<TextRange>, range: Option<TextRange> },
     /// A parallel-statement had a merge strategy that conflicts with a branch's return type.
-    UnmergeableParallelBranch { got_type: DataType, strategy: MergeStrategyKind, got_range: Option<TextRange>, strategy_range: Option<TextRange>, parallel_range: Option<TextRange> },
+    UnmergeableParallelBranch { i: usize, got_type: DataType, strategy: MergeStrategyKind, got_range: Option<TextRange>, strategy_range: Option<TextRange>, parallel_range: Option<TextRange> },
     /// A variable assignment has an incorrect type
     VariableAssign { name: String, def_type: DataType, got_type: DataType, source: Option<TextRange>, range: Option<TextRange> },
     /// A While-loop had a non-boolean condition
@@ -803,17 +803,17 @@ impl Display for TypingError {
     fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
         use TypingError::*;
         match self {
-            ForStart { got_type, .. }                               => write!(f, "A for-loop requires a start expression that evaluates to an Integer, not {got_type}"),
-            ForStep { got_type, .. }                                => write!(f, "A for-loop requires a step expression that evaluates to an Integer, not {got_type}"),
-            ForStop { got_type, .. }                                => write!(f, "A for-loop requires a stop expression that evaluates to an Integer, not {got_type}"),
-            IfCondition { got_type, .. }                            => write!(f, "An if-statement requires a condition expression that evalutes to a Boolean, not {got_type}"),
-            IncompatibleIfBranches { true_type, false_type, .. }    => write!(f, "Incompatible branches for if-statement; true-branch evaluates to {true_type}, but false-branch evaluates to {false_type}"),
-            IncompatibleParallelBranch { got_type, first_type, .. } => write!(f, "Incompatible branches for parallel-statement; first branch evaluates to {first_type}, but this branch evaluates to {got_type}"),
-            MissingElseBranch { got_type, .. }                      => write!(f, "True branch of if-statement evaluates to a type {got_type}, but not else-branch is given (i.e., nothing to evaluate to if the condition is false)"),
-            SelfInvalidType { method, class_type, got_type, .. }    => write!(f, "The 'self' argument of method {method} has type {got_type}, but it should be the type of the parent class ({class_type})"),
-            UnmergeableParallelBranch { got_type, strategy, .. }    => write!(f, "Parallel branch ")
-            VariableAssign { name, def_type, got_type, .. }         => write!(f, "Cannot assign value of type {got_type} to variable '{name}' of type {def_type}"),
-            WhileCondition { got_type, .. }                         => write!(f, "A while-loop requires an expression that evaluates to a Boolean, not {got_type}"),
+            ForStart { got_type, .. }                                  => write!(f, "A for-loop requires a start expression that evaluates to an Integer, not {got_type}"),
+            ForStep { got_type, .. }                                   => write!(f, "A for-loop requires a step expression that evaluates to an Integer, not {got_type}"),
+            ForStop { got_type, .. }                                   => write!(f, "A for-loop requires a stop expression that evaluates to an Integer, not {got_type}"),
+            IfCondition { got_type, .. }                               => write!(f, "An if-statement requires a condition expression that evalutes to a Boolean, not {got_type}"),
+            IncompatibleIfBranches { true_type, false_type, .. }       => write!(f, "Incompatible branches for if-statement; true-branch evaluates to {true_type}, but false-branch evaluates to {false_type}"),
+            IncompatibleParallelBranch { i, got_type, first_type, .. } => write!(f, "Incompatible branches for parallel-statement; first branch evaluates to {first_type}, but branch {i} evaluates to {got_type}"),
+            MissingElseBranch { got_type, .. }                         => write!(f, "True branch of if-statement evaluates to a type {got_type}, but not else-branch is given (i.e., nothing to evaluate to if the condition is false)"),
+            SelfInvalidType { method, class_type, got_type, .. }       => write!(f, "The 'self' argument of method {method} has type {got_type}, but it should be the type of the parent class ({class_type})"),
+            UnmergeableParallelBranch { i, got_type, strategy, .. }    => write!(f, "Parallel branch {i} evaluates to type {got_type}, but merge strategy {} only allows {} datatypes{}", strategy.variant(), strategy.allowed_data_types(), if strategy.allowed_data_types().is_finite() { format!(" ({})", strategy.allowed_data_types().display_list("or").unwrap()) } else { String::new() }),
+            VariableAssign { name, def_type, got_type, .. }            => write!(f, "Cannot assign value of type {got_type} to variable '{name}' of type {def_type}"),
+            WhileCondition { got_type, .. }                            => write!(f, "A while-loop requires an expression that evaluates to a Boolean, not {got_type}"),
         }
     }
 }
@@ -830,6 +830,7 @@ impl PrettyError for TypingError {
             IncompatibleParallelBranch { got_range, .. } => *got_range,
             MissingElseBranch { range, .. }              => *range,
             SelfInvalidType { range, .. }                => *range,
+            UnmergeableParallelBranch { got_range, .. }  => *got_range,
             VariableAssign { range, .. }                 => *range,
             WhileCondition { range, .. }                 => *range,
         }
@@ -838,16 +839,17 @@ impl PrettyError for TypingError {
     fn notes(&self) -> Vec<Box<dyn PrettyNote>> {
         use TypingError::*;
         match self {
-            ForStart { .. }                                                => vec![],
-            ForStep { .. }                                                 => vec![],
-            ForStop { .. }                                                 => vec![],
-            IfCondition { .. }                                             => vec![],
-            IncompatibleIfBranches { true_range, if_range, .. }            => vec![ Box::new(CompileNote::BecauseOf{ what: "this expression in the true-block", range: *true_range }), Box::new(CompileNote::PartOf{ what: "this if-statement", range: *if_range }) ],
-            IncompatibleParallelBranch { first_range, parallel_range, .. } => vec![ Box::new(CompileNote::BecauseOf{ what: "this expression in the first branch", range: *first_range }), Box::new(CompileNote::PartOf{ what:" this parallel-statement", range: *parallel_range }) ],
-            MissingElseBranch { .. }                                       => vec![],
-            SelfInvalidType { class, .. }                                  => vec![ Box::new(CompileNote::PartOf{ what: "class", range: *class }) ],
-            VariableAssign { source, .. }                                  => vec![ Box::new(CompileNote::DefinedAt{ what: "Variable", range: *source }) ],
-            WhileCondition { .. }                                          => vec![],
+            ForStart { .. }                                                  => vec![],
+            ForStep { .. }                                                   => vec![],
+            ForStop { .. }                                                   => vec![],
+            IfCondition { .. }                                               => vec![],
+            IncompatibleIfBranches { true_range, if_range, .. }              => vec![ Box::new(CompileNote::BecauseOf{ what: "expression in the true-block", range: *true_range }), Box::new(CompileNote::PartOf{ what: "this if-statement", range: *if_range }) ],
+            IncompatibleParallelBranch { first_range, parallel_range, .. }   => vec![ Box::new(CompileNote::BecauseOf{ what: "expression in the first branch", range: *first_range }), Box::new(CompileNote::PartOf{ what:" this parallel-statement", range: *parallel_range }) ],
+            MissingElseBranch { .. }                                         => vec![],
+            SelfInvalidType { class, .. }                                    => vec![ Box::new(CompileNote::PartOf{ what: "class", range: *class }) ],
+            UnmergeableParallelBranch { strategy_range, parallel_range, .. } => vec![ Box::new(CompileNote::BecauseOf{ what: "merge strategy", range: *strategy_range }), Box::new(CompileNote::PartOf { what: "this parallel-statement", range: *parallel_range }) ],
+            VariableAssign { source, .. }                                    => vec![ Box::new(CompileNote::DefinedAt{ what: "Variable", range: *source }) ],
+            WhileCondition { .. }                                            => vec![],
         }
     }
 }

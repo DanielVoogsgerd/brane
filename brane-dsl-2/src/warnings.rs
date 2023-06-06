@@ -4,7 +4,7 @@
 //  Created:
 //    11 Feb 2023, 18:14:09
 //  Last edited:
-//    31 May 2023, 19:14:41
+//    06 Jun 2023, 15:28:44
 //  Auto updated?
 //    Yes
 // 
@@ -205,6 +205,8 @@ warning_codes!{
     DuplicateClassDefinition       => "duplicate_class",
     /// Occurs when a property shadows another property in the same class.
     DuplicateClassMemberDefinition => "duplicate_class_member",
+    /// Occurs when a parallel statement is encountered that has no branches.
+    EmptyParallel                  => "empty_parallel",
 
     // Type warnings
     /// Occurs when a block's return value is non-void and not used.
@@ -397,32 +399,37 @@ warning! {
 warning! {
     /// Describes warnings taht may originate when resolving symbol table entries.
     ResolveWarning {
-        /// A duplicate package declaration (import).
-        DuplicatePackageImport { name: String, range: Option<TextRange>, prev: Option<TextRange> },
-        /// A duplicate function delcaration.
-        DuplicateFuncDefinition { name: String, range: Option<TextRange>, prev: Option<TextRange> },
         /// A duplicate class declaration.
         DuplicateClassDefinition{ name: String, range: Option<TextRange>, prev: Option<TextRange> },
         /// A duplicate proprety declaration.
         DuplicateClassMemberDefinition{ name: String, class: String, range: Option<TextRange>, prev: Option<TextRange>, prev_variant: &'static str },
+        /// A duplicate function delcaration.
+        DuplicateFuncDefinition { name: String, range: Option<TextRange>, prev: Option<TextRange> },
+        /// A duplicate package declaration (import).
+        DuplicatePackageImport { name: String, range: Option<TextRange>, prev: Option<TextRange> },
+        /// A parallel statement without branches was found.
+        EmptyParallel { range: Option<TextRange> },
     },
     impl Display {
-        DuplicatePackageImport{ name }                => ("Package '{}' was already imported (not overwriting)", name),
-        DuplicateFuncDefinition{ name }               => ("Function '{}' was already defined (not overwriting)", name),
         DuplicateClassDefinition{ name }              => ("Class '{}' was already defined (not overwriting)", name),
         DuplicateClassMemberDefinition{ name, class } => ("Class member '{}' was already defined in class '{}' (not overwriting)", name, class),
+        DuplicateFuncDefinition{ name }               => ("Function '{}' was already defined (not overwriting)", name),
+        DuplicatePackageImport{ name }                => ("Package '{}' was already imported (not overwriting)", name),
+        EmptyParallel{}                               => ("Parallel statement has no branches (it does nothing)"),
     },
     impl Range {
-        DuplicatePackageImport{ range }         => *range,
-        DuplicateFuncDefinition{ range }        => *range,
         DuplicateClassDefinition{ range }       => *range,
         DuplicateClassMemberDefinition{ range } => *range,
+        DuplicateFuncDefinition{ range }        => *range,
+        DuplicatePackageImport{ range }         => *range,
+        EmptyParallel{ range }                  => *range,
     },
     impl Notes {
-        DuplicatePackageImport{ prev }                       => vec![ Box::new(CompileNote::DefinedAt{ what: "Package", range: *prev }) ],
-        DuplicateFuncDefinition{ prev }                      => vec![ Box::new(CompileNote::DefinedAt{ what: "Function", range: *prev }) ],
         DuplicateClassDefinition{ prev }                     => vec![ Box::new(CompileNote::DefinedAt{ what: "Class", range: *prev }) ],
         DuplicateClassMemberDefinition{ prev, prev_variant } => vec![ Box::new(CompileNote::DefinedAt{ what: prev_variant, range: *prev }) ],
+        DuplicateFuncDefinition{ prev }                      => vec![ Box::new(CompileNote::DefinedAt{ what: "Function", range: *prev }) ],
+        DuplicatePackageImport{ prev }                       => vec![ Box::new(CompileNote::DefinedAt{ what: "Package", range: *prev }) ],
+        EmptyParallel{}                                      => vec![],
     },
 }
 

@@ -4,7 +4,7 @@
 //  Created:
 //    11 Feb 2023, 17:46:03
 //  Last edited:
-//    26 May 2023, 08:35:31
+//    06 Jun 2023, 15:29:18
 //  Auto updated?
 //    Yes
 // 
@@ -571,6 +571,12 @@ fn trav_expr(expr: &mut Expression, table: &Rc<RefCell<SymbolTable>>, stack: &mu
             }
         },
         Parallel { branches, .. } => {
+            // Emit a warning if no branches were found
+            if branches.is_empty() {
+                let warn: Warning = Warning::EmptyParallel { range: expr.range };
+                if stack.is_allowed(warn.code()) { warnings.push(warn); }
+            }
+
             // Do each of the branches
             for (b, a) in branches {
                 stack.push(a.iter());

@@ -4,7 +4,7 @@
 //  Created:
 //    14 Feb 2023, 13:33:32
 //  Last edited:
-//    06 Jun 2023, 08:52:41
+//    06 Jun 2023, 15:33:51
 //  Auto updated?
 //    Yes
 // 
@@ -24,9 +24,9 @@ pub use crate::warnings::TypingWarning as Warning;
 use crate::errors::DslError;
 use crate::warnings::{DslWarning, Warning as _};
 use crate::ast::spec::TextRange;
-use crate::ast::types::{DataType, DataTypeGroup};
+use crate::ast::types::DataType;
 use crate::ast::symbol_tables::{DelayedEntry, LocalClassEntry, LocalClassEntryMember, LocalFuncEntry, VarEntry};
-use crate::ast::auxillary::MergeStrategyKind;
+use crate::ast::auxillary::{MergeStrategy, MergeStrategyKind};
 use crate::ast::expressions::{Block, Expression, ExpressionKind};
 use crate::ast::statements::{ClassMemberDefKind, FunctionDef, Statement, StatementKind};
 use crate::ast::toplevel::Program;
@@ -374,51 +374,74 @@ fn trav_expr(expr: &mut Expression, stack: &mut AnnotationStack, warnings: &mut 
         },
         Parallel { branches, strategy } => {
             // Decide the type of the branches based on the strategy and the return type of the first
+            let mut changed: bool = false;
             let mut first: Option<(DataType, Option<TextRange>)> = None;
-            for (b, annots) in branches {
-                // Push the annotations for this block
+            for (i, (b, annots)) in branches.iter_mut().enumerate() {
+                // Push the annotations for this block and evaluate its type
                 let mut stack = stack.frame(&*annots);
+                let (bchanged, btype): (bool, (DataType, Option<Option<TextRange>>)) = trav_block(b, &mut *stack, warnings, errors);
 
                 // Decide what to do
                 if let Some(strat) = strategy {
                     // We are given an explicit strategy; so assert the branches evaluates to this
-                    let (bchanged, btype): (bool, (DataType, Option<Option<TextRange>>)) = trav_block(b, &mut *stack, warnings, errors);
-                    match strat.kind {
-                        // These require a specific kind
-                        // Numbers (integers _or_ float)
-                        MergeStrategyKind::Max     |
-                        MergeStrategyKind::Min     |
-                        MergeStrategyKind::Product |
-                        MergeStrategyKind::Sum     => {
-                            // Assert this block is any of the numeric types
-                            if !btype.0.is_part_of(DataTypeGroup::Numeric) {
-                                errors.insert(Error::UnmergeableParallelBranch { got_type: btype.0, expected_types: DataTypeGroup::Numeric, got_range: btype.1.unwrap_or(b.range), parallel_range: expr.range });
-                            }
-                        },
 
-                        // These do not require a specific type, just the same type
-                        MergeStrategyKind::All           |
-                        MergeStrategyKind::First         |
-                        MergeStrategyKind::FirstBlocking |
-                        MergeStrategyKind::Last          => {
-                            // We expect the same type across all branches
-                            if let Some(first) = first {
-                                if first.0 != btype.0 {
-                                    // It does not equate the first
-                                    errors.insert(Error::IncompatibleParallelBranch { got_type: btype.0, first_type: first.0, got_range: btype.1.unwrap_or(b.range), first_range: first.1, parallel_range: expr.range });
-                                }
-                            } else {
-                                first = Some((btype.0, btype.1.unwrap_or(b.range)));
-                            }
-                        },
+                    // First, match if the type agrees with the strategy
+                    if !btype.0.is_part_of(strat.kind.allowed_data_types()) {
+                        errors.insert(Error::UnmergeableParallelBranch { i, got_type: btype.0, strategy: strat.kind, got_range: btype.1.unwrap_or(b.range), strategy_range: strat.range, parallel_range: expr.range });
                     }
+
+                    // Next, assert it is the same type as the other branches
+                    if let Some(first) = first {
+                        if first.0 != btype.0 {
+                            // It does not equate the first
+                            errors.insert(Error::IncompatibleParallelBranch { i, got_type: btype.0, first_type: first.0, got_range: btype.1.unwrap_or(b.range), first_range: first.1, parallel_range: expr.range });
+                        }
+                    } else {
+                        // This _is_ the first; store the type and where we found it
+                        first = Some((btype.0, btype.1.unwrap_or(b.range)));
+                    }
+
                 } else {
-                    
+                    // We can now play a game of "deduce-the-strategy"; so note that this means that we are only doing it once, for the first branch
+                    if btype.0.is_void() {
+                        // Nothing given, so let us assume this means strategy "none"
+                        *strategy = Some(MergeStrategy { kind: MergeStrategyKind::Discard, range: None });
+                        changed = true;
+                        first = Some((btype.0, btype.1.unwrap_or(b.range)))
+                    } else {
+                        // We will assume all
+                        *strategy = Some(MergeStrategy { kind: MergeStrategyKind::All, range: None });
+                        changed = true;
+                        first = Some((btype.0, btype.1.unwrap_or(b.range)))
+                    }
+
                 }
+
+                // Process whether anything changed before we move on
+                changed |= bchanged;
             }
 
-            // Done
-            (false, DataType::Any)
+            // Now deduce the evaluated type based on the found type and the strategy
+            if let Some(strat) = strategy {
+                match strat.kind {
+                    // We note a few special cases
+                    MergeStrategyKind::All           => (changed, DataType::Array(Box::new(first.unwrap().0))),
+                    MergeStrategyKind::Discard       => (changed, DataType::Void),
+
+                    // In all other cases, we can return the type of the first branch - which we at this point know to be valid
+                    MergeStrategyKind::First         |
+                    MergeStrategyKind::FirstBlocking |
+                    MergeStrategyKind::Last          |
+                    MergeStrategyKind::Max           |
+                    MergeStrategyKind::Min           |
+                    MergeStrategyKind::Product       |
+                    MergeStrategyKind::Sum           => (changed, first.unwrap().0),
+                }
+            } else {
+                // No branches in this parallel statement; return void
+                // Note: we already emitted a warning for missing branches in the `resolve` traversal
+                (changed, DataType::Void)
+            }
         },
 
 
@@ -561,10 +584,6 @@ pub fn traverse(tree: &mut Program, warnings: &mut Vec<DslWarning>) -> Result<()
                     if stack.frame(&s.annots).is_allowed(warn.code()) {
                         warns.insert(warn);
                     }
-
-                    // Add the semicolon for the user instead to fix it (and avoid repetitions of this warning)
-                    fix_nonvoid_stmt(s);
-                    // NOTE: This does not count as a state change, as we can behave as if this has been applied all along
                 }
             }
         }

@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 15:35:30
 //  Last edited:
-//    06 Jun 2023, 09:04:46
+//    06 Jun 2023, 15:23:01
 //  Auto updated?
 //    Yes
 // 
@@ -87,7 +87,8 @@ impl Display for MergeStrategy {
             Max => write!(f, "max"),
             Min => write!(f, "min"),
 
-            All => write!(f, "all"),
+            All     => write!(f, "all"),
+            Discard => write!(f, "discard"),
         }
     }
 }
@@ -118,6 +119,8 @@ pub enum MergeStrategyKind {
 
     /// Returns all values as an Array.
     All,
+    /// Returns none of the values
+    Discard,
 }
 impl MergeStrategyKind {
     /// Returns the group of types that this strategy expects.
@@ -137,7 +140,8 @@ impl MergeStrategyKind {
             Max |
             Min => types::DataTypeGroup::Numeric,
 
-            All => types::DataTypeGroup::All,
+            All     => types::DataTypeGroup::All,
+            Discard => types::DataTypeGroup::None,
         }
     }
 }
