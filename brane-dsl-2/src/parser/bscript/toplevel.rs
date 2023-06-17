@@ -4,7 +4,7 @@
 //  Created:
 //    08 Feb 2023, 13:20:01
 //  Last edited:
-//    13 Feb 2023, 14:29:34
+//    17 Jun 2023, 10:13:01
 //  Auto updated?
 //    Yes
 // 
@@ -17,7 +17,9 @@ use std::rc::Rc;
 
 use nom::IResult;
 use nom::{combinator as comb, multi};
+use nom::error::{ErrorKind, FromExternalError as _};
 
+use crate::errors::ParseError;
 use crate::ast::spec::TextRange;
 use crate::ast::symbol_tables::SymbolTable;
 use crate::ast::statements::Statement;
@@ -38,23 +40,52 @@ use super::statements;
 /// # Errors
 /// This function errors if we failed to parse a program for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
 pub(crate) fn parse<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Program, Error<'t, 's>> {
-    comb::map(
-        multi::many0(statements::parse),
-        |stmts: Vec<Statement>| {
-            // Compute the entire program's range
-            let range: Option<TextRange> = match (stmts.first(), stmts.last()) {
-                (Some(Statement{ range: Some(TextRange{ start, .. }), .. }), Some(Statement{ range: Some(TextRange{ end, .. }), .. })) => Some(TextRange::new(start, end)),
-                _                                                                                                                      => None,
-            };
+    // NEW
+    // Parse the first statement if any, where we accept it if there was something else/nothing.
+    let (mut input, mut stmts): (Input, Vec<Statement>) = match statements::parse(input) {
+        // Parsing success
+        Ok((input, stmt)) => (input, vec![ stmt ]),
 
-            // Return the program
-            Program {
-                stmts,
-                range,
+        // Handles the 'multi*0*` part
+        Err(nom::Err::Error(_)) => { return Ok((input, Program{
+            stmts : vec![],
+            range : None,
 
-                table  : Rc::new(RefCell::new(SymbolTable::empty())),
-                annots : vec![],
-            }
-        }
-    )(input)
+            annots : vec![],
+            table  : Rc::new(RefCell::new(SymbolTable::empty())),
+        })); },
+
+        // Incomplete output
+        Err(nom::Err::Incomplete(needed)) => { return Err(nom::Err::Error(Error::from_external_error(input, ErrorKind::Eof, ParseError::IncompleteStatement { needed }))) },
+        // Parsing error (not just failed)
+        Err(nom::Err::Failure(err))       => { return Err(nom::Err::Failure(err)); },
+    };
+
+    // Now we do the remainder of a bit of a custom multi::many0, which expects a separating `;` or not based on the statement just parsed
+    loop {
+        
+    }
+
+
+
+    // // OLD
+    // comb::map(
+    //     multi::many0(statements::parse),
+    //     |stmts: Vec<Statement>| {
+    //         // Compute the entire program's range
+    //         let range: Option<TextRange> = match (stmts.first(), stmts.last()) {
+    //             (Some(Statement{ range: Some(TextRange{ start, .. }), .. }), Some(Statement{ range: Some(TextRange{ end, .. }), .. })) => Some(TextRange::new(start, end)),
+    //             _                                                                                                                      => None,
+    //         };
+
+    //         // Return the program
+    //         Program {
+    //             stmts,
+    //             range,
+
+    //             table  : Rc::new(RefCell::new(SymbolTable::empty())),
+    //             annots : vec![],
+    //         }
+    //     }
+    // )(input)
 }

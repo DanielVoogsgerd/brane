@@ -4,7 +4,7 @@
 //  Created:
 //    07 Feb 2023, 10:10:18
 //  Last edited:
-//    06 Jun 2023, 15:16:00
+//    17 Jun 2023, 10:11:31
 //  Auto updated?
 //    Yes
 // 
@@ -18,6 +18,7 @@ use std::fmt::{Display, Formatter, Result as FResult};
 use console::{style, Style};
 use enum_debug::EnumDebug;
 use log::debug;
+use nom::Needed;
 use nom::error::{ContextError, ErrorKind, FromExternalError, ParseError as NomParseError, VerboseError, VerboseErrorKind};
 use unicode_segmentation::UnicodeSegmentation as _;
 
@@ -924,6 +925,9 @@ pub enum ParseError<'s> {
     UnknownMergeStrategy{ raw: String },
     /// No merge strategy given.
     NoMergeStrategy,
+
+    /// An incomplete statement was uncountered.
+    IncompleteStatement { needed: Needed },
 }
 impl<'s> Display for ParseError<'s> {
     fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
@@ -935,6 +939,8 @@ impl<'s> Display for ParseError<'s> {
 
             UnknownMergeStrategy{ raw } => write!(f, "Unknown merge strategy '{}'", raw),
             NoMergeStrategy             => write!(f, "Specify a merge strategy, or omit the brackets"),
+
+            IncompleteStatement { needed } => write!(f, "Encountered incomplete statement{}", match needed { Needed::Size(n) => format!(" (needed {n} more tokens)"), Needed::Unknown => String::new() }),
         }
     }
 }
