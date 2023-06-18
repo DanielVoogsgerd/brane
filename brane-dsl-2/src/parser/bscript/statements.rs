@@ -4,7 +4,7 @@
 //  Created:
 //    08 Feb 2023, 10:19:08
 //  Last edited:
-//    26 May 2023, 08:34:29
+//    18 Jun 2023, 20:18:19
 //  Auto updated?
 //    Yes
 // 
@@ -14,7 +14,9 @@
 
 use nom::IResult;
 use nom::{branch, combinator as comb, multi, sequence as seq};
+use nom::error::{ErrorKind, FromExternalError as _};
 
+use crate::errors::{NomError, ParseError};
 use crate::ast::spec::TextRange;
 use crate::ast::auxillary::{DataType, Identifier};
 use crate::ast::expressions::{Block, Expression, ExpressionKind, Literal};
@@ -694,4 +696,231 @@ pub(crate) fn parse<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Stat
         // Miscellaneous
         expr,
     ))(input)
+}
+
+
+
+/// Parses as much statements off the top of the given tokenstream as it can.
+/// 
+/// Note that the delimiters between statements (`;`) is dynamic based on the statements parsed. This means the grammar is not fully context-free anymore.
+/// 
+/// # Arguments
+/// - `input`: The new tokenstream to parse from.
+/// 
+/// # Returns
+/// A tuple of the remaining, unparsed tokenstream and the parsed statement.
+/// 
+/// # Errors
+/// This function errors if we failed to parse a statement for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
+pub(crate) fn parse_multi0<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Vec<Statement>, Error<'t, 's>> {
+    // Parse the first statement if any, where we accept it if there was something else/nothing.
+    let (mut input, mut stmts): (Input, Vec<Statement>) = match parse(input) {
+        // Parsing success
+        Ok((input, stmt)) => (input, vec![ stmt ]),
+
+        // Handles the 'multi*0*` part
+        Err(nom::Err::Error(_)) => { return Ok((input, vec![])); },
+
+        // Incomplete output
+        Err(nom::Err::Incomplete(needed)) => { return Err(nom::Err::Error(NomError::from_external_error(input, ErrorKind::Eof, ParseError::IncompleteStatement { needed }))) },
+        // Parsing error (not just failed)
+        Err(nom::Err::Failure(err))       => { return Err(nom::Err::Failure(err)); },
+    };
+
+    // Now we do the remainder of a bit of a custom multi::many0, which expects a separating `;` or not based on the statement just parsed
+    loop {
+        use StatementKind::*;
+
+        // Parse a semicolon, perhaps, and then a statement, perhaps
+        let (next_input, semicolon): (Input, Token) = match tag_token!('t, 's, Token::Semicolon)(input) {
+            Ok(res)      => res,
+            Err(nom::Err::Error())
+        };
+
+        // Parse the next element and use that to decide if we need a semicolon
+        let (next_input, next): (Input, Statement) = parse(input)?;
+        match stmts.last().unwrap() {
+            // Needs semicolon
+            Import { .. } => { /* Nothing to do */ (false, None) },
+
+            FunctionDef(def) => {
+                // This is not a method (hence the `None`)
+                let changed: bool = trav_func_def(def, None, &mut *stack, warnings, errors);
+
+                // Return whether we've changed, but a definition never evaluates
+                (changed, None)
+            },
+
+            ClassDef { name: cname, defs, st_entry } => {
+                // Go through the definitions to find if anything needs resolving there
+                let mut changed: bool = false;
+                for def in defs {
+                    // Push the annotations for these definitions onto the stack
+                    let mut stack = stack.frame(&def.annots);
+
+                    // Match on the kind itself
+                    match &mut def.kind {
+                        ClassMemberDefKind::Property { name, data_type } => {
+                            // Simply populate the property's type as necessary
+                            let mut entry: RefMut<DelayedEntry<LocalClassEntry>> = st_entry.as_ref().unwrap().borrow_mut();
+                            let pentry: &mut LocalClassEntryMember = entry.defs.get_mut(&name.name).unwrap_or_else(|| panic!("Property '{}' in class '{}' has not been assigned an entry after resolve phase", name.name, cname.name));
+                            if let LocalClassEntryMember::Property(property) = pentry {
+                                if property.data_type.is_any() {
+                                    property.data_type = data_type.data_type.clone();
+                                    changed = true;
+                                } else if !data_type.data_type.is_any() && property.data_type != data_type.data_type {
+                                    panic!("Property '{}' already has a type at definition ({}) but that does not match annotated type ({})", name.name, property.data_type, data_type.data_type);
+                                }
+                            } else {
+                                panic!("Property '{}' in class '{}' has been assigned a non-property member entry ({:?})", name.name, cname.name, pentry.variant());
+                            }
+                        },
+
+                        ClassMemberDefKind::Method(method) => {
+                            // For methods, we do the same as for normal functions - which is just calling this bad boy
+                            changed |= trav_func_def(method, Some((DataType::Class(st_entry.as_ref().unwrap().borrow().name.clone()), cname.range)), &mut *stack, warnings, errors);
+                        },
+
+                        // Annotations shouldn't occur anymore
+                        ClassMemberDefKind::Annotation { .. }       |
+                        ClassMemberDefKind::ParentAnnotation { .. } => { unreachable!(); },
+                    }
+                }
+
+                // Done (a definition never evaluates)
+                (changed, None)
+            },
+
+            VarDef { name, data_type, value, st_entry } => {
+                // Attempt to resolve the variable definition
+                let (mut var_changed, var_type): (bool, DataType) = {
+                    let mut entry: RefMut<DelayedEntry<VarEntry>> = st_entry.as_ref().unwrap().borrow_mut();
+                    let changed: bool = if entry.data_type.is_any() {
+                        entry.data_type = data_type.data_type.clone();
+                        true
+                    } else if !data_type.data_type.is_any() && entry.data_type != data_type.data_type {
+                        panic!("Variable '{}' already has a type at definition ({}) but that does not match annotated type ({})", name.name, entry.data_type, data_type.data_type);
+                    } else {
+                        false
+                    };
+                    (changed, entry.data_type.clone())
+                };
+
+                // Then, recurse into the value expression
+                if let Some(value) = value {
+                    let (expr_changed, expr_type): (bool, DataType) = trav_expr(value, &mut *stack, warnings, errors);
+                    if var_type.is_any() {
+                        let mut entry: RefMut<DelayedEntry<VarEntry>> = st_entry.as_ref().unwrap().borrow_mut();
+                        entry.data_type = expr_type;
+                        var_changed = true;
+                    } else if !expr_type.is_any() && var_type != expr_type {
+                        errors.insert(Error::VariableAssign { name: name.name.clone(), def_type: var_type, got_type: expr_type, source: st_entry.as_ref().unwrap().borrow().range, range: name.range });
+                    }
+
+                    // Then, recurse into the value expression (a definition never evaluates)
+                    (var_changed | expr_changed, None)
+                } else {
+                    (var_changed, None)
+                }
+            },
+
+
+
+            // Control flow
+            For { name, start, stop, step, block, st_entry } => {
+                // Resolve the loop variable
+                let mut changed: bool = false;
+                {
+                    let mut entry: RefMut<DelayedEntry<VarEntry>> = st_entry.as_ref().unwrap().borrow_mut();
+                    if entry.data_type.is_any() {
+                        entry.data_type = DataType::Integer;
+                        changed = true;
+                    } else if entry.data_type != DataType::Integer {
+                        panic!("For-loop loop variable '{}' has non-Integer type {}", name.name, entry.data_type);
+                    }
+                }
+
+                // Next, recurse into each of the expressions:
+                // start...
+                let (echanged, etype): (bool, DataType) = trav_expr(start, &mut *stack, warnings, errors);
+                changed |= echanged;
+                if !etype.is_any() && etype != DataType::Integer {
+                    errors.insert(Error::ForStart { got_type: etype, range: start.range });
+                }
+                // ...stop...
+                let (echanged, etype): (bool, DataType) = trav_expr(stop, &mut *stack, warnings, errors);
+                changed |= echanged;
+                if !etype.is_any() && etype != DataType::Integer {
+                    errors.insert(Error::ForStop { got_type: etype, range: stop.range });
+                }
+                // ...and step
+                if let Some(step) = step {
+                    let (echanged, etype): (bool, DataType) = trav_expr(step, &mut *stack, warnings, errors);
+                    changed |= echanged;
+                    if !etype.is_any() && etype != DataType::Integer {
+                        errors.insert(Error::ForStep { got_type: etype, range: step.range });
+                    }
+                }
+
+                // Now recurse into the block
+                let (bchanged, btype): (bool, (DataType, Option<Option<TextRange>>)) = trav_block(block, &mut *stack, warnings, errors);
+                // Only return if it returned non-void
+                if !btype.0.is_any() && !btype.0.is_void() {
+                    // Emit the warning if it's not surpressed
+                    let warn: Warning = Warning::NonVoidBlock { got_type: btype.0, because_what: "for-loop", because: stmt.range, range: btype.1.unwrap_or(block.range) };
+                    if stack.is_allowed(warn.code()) { warnings.insert(warn); }
+                }
+
+                // Done (a for-loop never evaluates)
+                (changed | bchanged, None)
+            },
+
+            While { cond, block } => {
+                // Recurse into the expresion first
+                let (cchanged, ctype): (bool, DataType) = trav_expr(cond, &mut *stack, warnings, errors);
+                if !ctype.is_any() && ctype != DataType::Boolean {
+                    errors.insert(Error::WhileCondition { got_type: ctype, range: cond.range });
+                }
+
+                // Then recurse into the block
+                let (bchanged, btype): (bool, (DataType, Option<Option<TextRange>>)) = trav_block(block, &mut *stack, warnings, errors);
+                // Only return if it returned non-void
+                if !btype.0.is_any() && !btype.0.is_void() {
+                    // Emit the warning if it's not surpressed
+                    let warn: Warning = Warning::NonVoidBlock { got_type: btype.0, because_what: "while-loop", because: stmt.range, range: btype.1.unwrap_or(block.range) };
+                    if stack.is_allowed(warn.code()) { warnings.insert(warn); }
+                }
+
+                // Done (a while-loop never evaluates)
+                (cchanged | bchanged, None)
+            },
+
+            Return { value } => {
+                // Recurse into the return statement to process the value
+                let changed: bool = if let Some(value) = value {
+                    trav_expr(value, &mut *stack, warnings, errors).0
+                } else {
+                    false
+                };
+
+                // NOTE: We do nothing with the return value for the simple fact that we do return type checking in a separate pass.
+
+                // Return (the `Return` never evalutes)
+                (changed, None)
+            },
+
+
+
+            // Miscellaneous
+            Expression(expr) => {
+                // Evaluate the expression, which we can directly return (since the expression type _does_ evaluate)
+                let (changed, data_type): (bool, DataType) = trav_expr(expr, &mut *stack, warnings, errors);
+                (changed, Some(data_type))
+            },
+
+            // Should not occur anymore
+            Annotation{ .. }       |
+            ParentAnnotation{ .. } => { unreachable!(); },
+        }
+    }
 }
