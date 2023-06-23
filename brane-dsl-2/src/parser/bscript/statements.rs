@@ -4,7 +4,7 @@
 //  Created:
 //    08 Feb 2023, 10:19:08
 //  Last edited:
-//    22 Jun 2023, 19:21:21
+//    23 Jun 2023, 22:49:35
 //  Auto updated?
 //    Yes
 // 
@@ -12,7 +12,6 @@
 //!   Defines parsers for statements as allowed in BraneScript.
 // 
 
-use enum_debug::EnumDebug as _;
 use nom::IResult;
 use nom::{branch, combinator as comb, multi, sequence as seq};
 use nom::error::{ErrorKind, FromExternalError as _};
@@ -29,62 +28,48 @@ use super::{auxillary, blocks, expressions, literals};
 
 
 /***** HELPER FUNCTIONS *****/
-/// Helper function (to be used as a closure) that extends the range of the given statement over the given semicolon, and then returns the former only.
-/// 
-/// # Arguments
-/// - `input`: The tuple encoding the [`Statement`] who's range to extend on the first position, and the [`Token`] to extend the statement's range over on the second.
-/// 
-/// # Returns
-/// The given `input.0`, with its range extended.
-#[inline]
-fn extend_stmt_range_with_semicolon(input: (Statement, &Token)) -> Statement {
-    let (mut stmt, semicolon): (Statement, &Token) = input;
-    stmt.range = stmt.range.map(|s| TextRange::new(s.start, semicolon.range().end));
-    stmt
-}
+// /// Helper function (to be used as a closure) that extends the range of the given statement over the given semicolon, and then returns the former only.
+// /// 
+// /// # Arguments
+// /// - `input`: The tuple encoding the [`Statement`] who's range to extend on the first position, and the [`Token`] to extend the statement's range over on the second.
+// /// 
+// /// # Returns
+// /// The given `input.0`, with its range extended.
+// #[inline]
+// fn extend_stmt_range_with_semicolon(input: (Statement, &Token)) -> Statement {
+//     let (mut stmt, semicolon): (Statement, &Token) = input;
+//     stmt.range = stmt.range.map(|s| TextRange::new(s.start, semicolon.range().end));
+//     stmt
+// }
 
 
 
 
 
 /***** HELPER SCANNING FUNCTIONS *****/
-// /// Parses a statement that never ends in a semicolon.
+// /// Parses a mandatory semicolon.
+// /// 
+// /// This is the same as using [`tag_token!`] on a [`Token::Semicolon`], except that it [`comb::cut`]s the error and returns a custom [`ParseError::MissingSemicolon`] error upon failure.
 // /// 
 // /// # Arguments
-// /// - `input`: The new TokenStream to parse from.
+// /// - `input`: The TokenStream to parse a semicolon from.
 // /// 
 // /// # Returns
-// /// A tuple of the remaining, unparsed tokenstream and the parsed statement.
+// /// A tuple of the remaining, unparsed tokenstream and the parsed semicolon.
 // /// 
 // /// # Errors
-// /// This function errors if we failed to parse a statement for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
-// fn stmt_with_semicolon<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Statement, Error<'t, 's>> {
-    
+// /// This function errors if we failed to parse a semicolon for whatever reason. In that case, a [`nom::Err::Failure`] should be expected.
+// #[inline]
+// fn mandatory_semicolon<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, &'t Token<'s>, Error<'t, 's>> {
+//     comb::cut(tag_token!('t, 's, Token::Semicolon))(input).map_err(|err| match err {
+//         // Convert the failure into a missing semicolon one
+//         nom::Err::Failure(_) => nom::Err::Failure(NomError::from_external_error(input, ErrorKind::Tag, ParseError::MissingSemicolon { what: "Expression".into() })),
+
+//         // Propagate the other errors, although they _should_ not occur due to the cut
+//         nom::Err::Error(err)      => nom::Err::Error(err),
+//         nom::Err::Incomplete(err) => nom::Err::Incomplete(err),
+//     })
 // }
-
-/// Parses a mandatory semicolon.
-/// 
-/// This is the same as using [`tag_token!`] on a [`Token::Semicolon`], except that it [`comb::cut`]s the error and returns a custom [`ParseError::MissingSemicolon`] error upon failure.
-/// 
-/// # Arguments
-/// - `input`: The TokenStream to parse a semicolon from.
-/// 
-/// # Returns
-/// A tuple of the remaining, unparsed tokenstream and the parsed semicolon.
-/// 
-/// # Errors
-/// This function errors if we failed to parse a semicolon for whatever reason. In that case, a [`nom::Err::Failure`] should be expected.
-#[inline]
-fn mandatory_semicolon<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, &'t Token<'s>, Error<'t, 's>> {
-    comb::cut(tag_token!('t, 's, Token::Semicolon))(input).map_err(|err| match err {
-        // Convert the failure into a missing semicolon one
-        nom::Err::Failure(_) => nom::Err::Failure(NomError::from_external_error(input, ErrorKind::Tag, ParseError::MissingSemicolon { what: "Expression".into() })),
-
-        // Propagate the other errors, although they _should_ not occur due to the cut
-        nom::Err::Error(err)      => nom::Err::Error(err),
-        nom::Err::Incomplete(err) => nom::Err::Incomplete(err),
-    })
-}
 
 /// Parses an annotation from the head of the given token stream.
 /// 
@@ -732,97 +717,164 @@ fn expr<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Statement, Error
 /// # Errors
 /// This function errors if we failed to parse a statement for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
 pub(crate) fn parse<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Statement, Error<'t, 's>> {
-    // branch::alt((
-    //     // Annotations (note the reverse order to be able to better `cut()`)
-    //     parent_annots,
-    //     annots,
+    branch::alt((
+        // Annotations (note the reverse order to be able to better `cut()`)
+        parent_annots,
+        annots,
 
-    //     // Definitions
-    //     import,
-    //     comb::map(func_def, |d| {
-    //         let range: Option<TextRange> = d.range;
-    //         Statement{ kind: StatementKind::FunctionDef(d), annots: vec![], range }
-    //     }),
-    //     class_def,
-    //     var_def,
+        // Definitions
+        import,
+        comb::map(func_def, |d| {
+            let range: Option<TextRange> = d.range;
+            Statement{ kind: StatementKind::FunctionDef(d), annots: vec![], range }
+        }),
+        class_def,
+        var_def,
 
-    //     // Control flow
-    //     for_loop,
-    //     while_loop,
-    //     return_stmt,
+        // Control flow
+        for_loop,
+        while_loop,
+        return_stmt,
 
-    //     // Miscellaneous
-    //     expr,
-    // ))(input)
+        // Miscellaneous
+        expr,
+    ))(input)
 
-    // Note that we iterate until we find a non-empty semicolon
-    loop {
-        branch::alt((
-            // Some statements never take semicolons
-            comb::map(
-                seq::pair(
-                    branch::alt((
-                        // Annotations (note the reverse order to be able to better `cut()`)
-                        parent_annots,
-                        annots,
+    // /// Defines a function that does the actual parsing, with prevention of recursing into it again.
+    // /// 
+    // /// This allows us to tentatively check if there is something else to parse.
+    // /// 
+    // /// # Arguments
+    // /// - `recurse`: Whether to allow recursion for this parsing run or not.
+    // /// 
+    // /// # Returns
+    // /// A new parser for a statement (or an empty semicolon) that recurses one deeper or not based on the `recurse`-flag.
+    // fn parse_recursive<'t, 's: 't>(recurse: bool) -> impl FnMut(Input<'t, 's>) -> IResult<Input<'t, 's>, Statement, Error<'t, 's>> {
+    //     move |mut input| {
+    //         // Note that we iterate until we find a non-empty semicolon
+    //         loop {
+    //             // Attempt to parse a valid statement, may be empty
+    //             let (new_input, stmt): (Input, Option<Statement>) = branch::alt((
+    //                 // Some statements never take semicolons
+    //                 comb::map(
+    //                     branch::alt((
+    //                         // Annotations (note the reverse order to be able to better `cut()`)
+    //                         parent_annots,
+    //                         annots,
+    
+    //                         // Definitions
+    //                         comb::map(func_def, |d| {
+    //                             let range: Option<TextRange> = d.range;
+    //                             Statement{ kind: StatementKind::FunctionDef(d), annots: vec![], range }
+    //                         }),
+    //                         class_def,
+    
+    //                         // Control flow
+    //                         for_loop,
+    //                         while_loop,
+    //                     )),
+    //                     |stmt: Statement| Some(stmt),
+    //                 ),
+        
+    //                 // Some statements always take semicolons
+    //                 comb::map(
+    //                     seq::pair(
+    //                         branch::alt((
+    //                             // Definitions
+    //                             import,
+    //                             var_def,
+            
+    //                             // Control flow
+    //                             return_stmt,
+    //                         )),
+    //                         mandatory_semicolon,
+    //                     ),
+    //                     |parsed: (Statement, &Token)| Some(extend_stmt_range_with_semicolon(parsed)),
+    //                 ),
+        
+    //                 // One particular type of statement has a mandatory semicolon only if it's not the last statement
+    //                 comb::map(
+    //                     seq::pair(
+    //                         expr,
+    //                         // NOTE: This relies on short-circuit behaviour of the alt.
+    //                         branch::alt((
+    //                             // The expression is the last one...
+    //                             |input| {
+    //                                 // We only actually recurse if we're searching; otherwise, just the presence of the expression itself is enough
+    //                                 if recurse {
+    //                                     comb::value(None, comb::peek(comb::not(parse_recursive(false))))(input)
+    //                                 } else {
+    //                                     Ok((input, None))
+    //                                 }
+    //                             },
+    //                             // ...OR there is a semicolon
+    //                             comb::map(mandatory_semicolon, |semicolon: &Token| Some(semicolon)),
+    //                         )),
+    //                     ),
+    //                     |(expr, semicolon): (Statement, Option<&Token>)| {
+    //                         // Optionally add the semicolon to the range, if any
+    //                         if let Some(semicolon) = semicolon {
+    //                             Some(extend_stmt_range_with_semicolon((expr, semicolon)))
+    //                         } else {
+    //                             Some(expr)
+    //                         }
+    //                     }
+    //                 ),
+        
+    //                 // ...or there's just the semicolon
+    //                 comb::value(None, tag_token!('t, 's, Token::Semicolon)),
+    //             ))(input)?;
 
-                        // Definitions
-                        comb::map(func_def, |d| {
-                            let range: Option<TextRange> = d.range;
-                            Statement{ kind: StatementKind::FunctionDef(d), annots: vec![], range }
-                        }),
-                        class_def,
+    //             // If we parsed anything, quit
+    //             if let Some(stmt) = stmt {
+    //                 return Ok((new_input, stmt));
+    //             } else if new_input.is_empty() {
+    //                 // Nothing left to parse!
+    //                 return Err(nom::Err::Incomplete(nom::Needed::Unknown));
+    //             } else {
+    //                 // Attempt to parse a next statement, since we parsed an empty semicolon
+    //                 input = new_input;
+    //             }
+    //         }
+    //     }
+    // }
 
-                        // Control flow
-                        for_loop,
-                        while_loop,
-                    )),
-                    mandatory_semicolon,
-                ),
-                extend_stmt_range_with_semicolon,
-            ),
 
-            // Some statements always take semicolons
-            branch::alt((
-                // Definitions
-                import,
-                var_def,
-
-                // Control flow
-                return_stmt,
-            )),
-
-            // And one particular type of statement has a mandatory semicolon only if it's not the last statement
-            // NOTE: We assume short-circuit behaviour here
-            branch::alt((
-                // The expression is the last one...
-                // TODO: This is probably infinitely recursing
-                seq::terminated(expr, comb::peek(comb::not(parse))),
-                // ...OR it has a semicolon
-                comb::map(
-                    seq::pair(expr, mandatory_semicolon),
-                    extend_stmt_range_with_semicolon,
-                ),
-            )),
-        ))(input)?
-    }
+    // // Call the recursive parser, with recursion the first time
+    // parse_recursive(true)(input)
 }
 
 
 
-// /// Parses as much statements off the top of the given tokenstream as it can.
-// /// 
-// /// Note that the delimiters between statements (`;`) is dynamic based on the statements parsed. This means the grammar is not fully context-free anymore.
-// /// 
-// /// # Arguments
-// /// - `input`: The new tokenstream to parse from.
-// /// 
-// /// # Returns
-// /// A tuple of the remaining, unparsed tokenstream and the parsed statement.
-// /// 
-// /// # Errors
-// /// This function errors if we failed to parse a statement for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
-// pub(crate) fn parse_multi0<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Vec<Statement>, Error<'t, 's>> {
+/// Parses as much statements off the top of the given tokenstream as it can.
+/// 
+/// Note that the delimiters between statements (`;`) is dynamic based on the statements parsed. This means the grammar is not fully context-free anymore.
+/// 
+/// # Arguments
+/// - `input`: The new tokenstream to parse from.
+/// 
+/// # Returns
+/// A tuple of the remaining, unparsed tokenstream and the parsed statement.
+/// 
+/// # Errors
+/// This function errors if we failed to parse a statement for whatever reason. A `nom::Err::Error` means that it may be something else on top of there, but `nom::Err::Failure` means that the stream will never be valid.
+pub(crate) fn parse_multi0<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Vec<Statement>, Error<'t, 's>> {
+    // Parse as many statements as possible
+    let (input, stmts): (Input, Vec<Statement>) = multi::many0(parse)(input)?;
+
+    // Assert that any expression only has a semicolon at the end
+    for (i, s) in stmts.iter().enumerate() {
+        if let StatementKind::Expression(expr) = &s.kind {
+            // Check if it has a semicolon and is not the last one
+            if matches!(expr.kind, ExpressionKind::Discard { .. }) && i < stmts.len() - 1 {
+                return Err(nom::Err::Failure(Error::from_external_error(input, kind, e)));
+            }
+        }
+    }
+
+    // OK, done
+    Ok((input, stmts))
+
 //     // Parse the first statement if any, where we accept it if there was something else/nothing.
 //     let (mut input, mut stmts): (Input, Vec<Statement>) = match parse(input) {
 //         // Parsing success
@@ -909,4 +961,4 @@ pub(crate) fn parse<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's>, Stat
 //         input = next_input;
 //         stmts.push(next?);
 //     }
-// }
+}

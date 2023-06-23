@@ -4,7 +4,7 @@
 //  Created:
 //    14 Feb 2023, 13:33:32
 //  Last edited:
-//    06 Jun 2023, 15:33:51
+//    23 Jun 2023, 22:26:42
 //  Auto updated?
 //    Yes
 // 
@@ -355,8 +355,8 @@ fn trav_expr(expr: &mut Expression, stack: &mut AnnotationStack, warnings: &mut 
                 // Compare it evaluates to the same thing as the true-block
                 if !btype.0.is_any() && !ftype.0.is_any() && btype.0 != ftype.0 {
                     // Resolve the types
-                    let (ttype, trange): (DataType, Option<TextRange>) = (btype.0, btype.1.unwrap_or(block.range));
-                    let (ftype, frange): (DataType, Option<TextRange>) = (ftype.0, ftype.1.unwrap_or(block.range));
+                    let (ttype, trange): (DataType, Option<TextRange>) = (btype.0.clone(), btype.1.unwrap_or(block.range));
+                    let (ftype, frange): (DataType, Option<TextRange>) = (ftype.0.clone(), ftype.1.unwrap_or(block.range));
                     errors.insert(Error::IncompatibleIfBranches { true_type: ttype, false_type: ftype, true_range: trange, false_range: frange, if_range: expr.range });
                 }
 
@@ -366,7 +366,7 @@ fn trav_expr(expr: &mut Expression, stack: &mut AnnotationStack, warnings: &mut 
                     btype.0 = ftype.0;
                 }
             } else if btype.0 != DataType::Void {
-                errors.insert(Error::MissingElseBranch { got_type: btype.0, got_range: btype.1.unwrap_or(block.range), range: expr.range });
+                errors.insert(Error::MissingElseBranch { got_type: btype.0.clone(), got_range: btype.1.unwrap_or(block.range), range: expr.range });
             }
 
             // Done
@@ -387,14 +387,14 @@ fn trav_expr(expr: &mut Expression, stack: &mut AnnotationStack, warnings: &mut 
 
                     // First, match if the type agrees with the strategy
                     if !btype.0.is_part_of(strat.kind.allowed_data_types()) {
-                        errors.insert(Error::UnmergeableParallelBranch { i, got_type: btype.0, strategy: strat.kind, got_range: btype.1.unwrap_or(b.range), strategy_range: strat.range, parallel_range: expr.range });
+                        errors.insert(Error::UnmergeableParallelBranch { i, got_type: btype.0.clone(), strategy: strat.kind, got_range: btype.1.unwrap_or(b.range), strategy_range: strat.range, parallel_range: expr.range });
                     }
 
                     // Next, assert it is the same type as the other branches
-                    if let Some(first) = first {
+                    if let Some(first) = &first {
                         if first.0 != btype.0 {
                             // It does not equate the first
-                            errors.insert(Error::IncompatibleParallelBranch { i, got_type: btype.0, first_type: first.0, got_range: btype.1.unwrap_or(b.range), first_range: first.1, parallel_range: expr.range });
+                            errors.insert(Error::IncompatibleParallelBranch { i, got_type: btype.0, first_type: first.0.clone(), got_range: btype.1.unwrap_or(b.range), first_range: first.1, parallel_range: expr.range });
                         }
                     } else {
                         // This _is_ the first; store the type and where we found it
