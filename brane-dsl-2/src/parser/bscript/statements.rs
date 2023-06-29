@@ -4,7 +4,7 @@
 //  Created:
 //    08 Feb 2023, 10:19:08
 //  Last edited:
-//    23 Jun 2023, 22:49:35
+//    29 Jun 2023, 16:10:15
 //  Auto updated?
 //    Yes
 // 
@@ -862,12 +862,13 @@ pub(crate) fn parse_multi0<'t, 's>(input: Input<'t, 's>) -> IResult<Input<'t, 's
     // Parse as many statements as possible
     let (input, stmts): (Input, Vec<Statement>) = multi::many0(parse)(input)?;
 
-    // Assert that any expression only has a semicolon at the end
+    // Assert that any non-last expression has a semicolon at the end
     for (i, s) in stmts.iter().enumerate() {
+        if i >= stmts.len() - 1 { continue; }
         if let StatementKind::Expression(expr) = &s.kind {
-            // Check if it has a semicolon and is not the last one
-            if matches!(expr.kind, ExpressionKind::Discard { .. }) && i < stmts.len() - 1 {
-                return Err(nom::Err::Failure(Error::from_external_error(input, kind, e)));
+            // Check if it has a semicolon
+            if matches!(expr.kind, ExpressionKind::Discard { .. }) {
+                return Err(nom::Err::Failure(Error::from_external_error(input, kind, ParseError::MissingSemicolon {  })));
             }
         }
     }
