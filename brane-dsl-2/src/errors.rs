@@ -4,7 +4,7 @@
 //  Created:
 //    07 Feb 2023, 10:10:18
 //  Last edited:
-//    22 Jun 2023, 18:43:04
+//    04 Jul 2023, 08:43:18
 //  Auto updated?
 //    Yes
 // 
@@ -928,8 +928,8 @@ pub enum ParseError<'s> {
 
     /// An incomplete statement was uncountered.
     IncompleteStatement { needed: Needed },
-    /// A statement that needed a semicolon was found without
-    MissingSemicolon { what: String },
+    // /// A statement that needed a semicolon was found without
+    // MissingSemicolon { what: String },
 }
 impl<'s> Display for ParseError<'s> {
     fn fmt(&self, f: &mut Formatter<'_>) -> FResult {
@@ -943,7 +943,7 @@ impl<'s> Display for ParseError<'s> {
             NoMergeStrategy             => write!(f, "Specify a merge strategy, or omit the brackets"),
 
             IncompleteStatement { needed } => write!(f, "Encountered incomplete statement{}", match needed { Needed::Size(n) => format!(" (needed {n} more tokens)"), Needed::Unknown => String::new() }),
-            MissingSemicolon { what }      => write!(f, "Missing semicolon after {what} statement"),
+            // MissingSemicolon { what }      => write!(f, "Missing semicolon after {what} statement"),
         }
     }
 }

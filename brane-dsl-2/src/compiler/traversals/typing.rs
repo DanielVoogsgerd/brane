@@ -4,7 +4,7 @@
 //  Created:
 //    14 Feb 2023, 13:33:32
 //  Last edited:
-//    23 Jun 2023, 22:26:42
+//    04 Jul 2023, 08:58:35
 //  Auto updated?
 //    Yes
 // 
@@ -132,6 +132,7 @@ fn trav_stmt(stmt: &mut Statement, stack: &mut AnnotationStack, warnings: &mut L
                     entry.data_type = expr_type;
                     var_changed = true;
                 } else if !expr_type.is_any() && var_type != expr_type {
+                    /* TODO: Catch implicit casts */
                     errors.insert(Error::VariableAssign { name: name.name.clone(), def_type: var_type, got_type: expr_type, source: st_entry.as_ref().unwrap().borrow().range, range: name.range });
                 }
 
@@ -163,12 +164,14 @@ fn trav_stmt(stmt: &mut Statement, stack: &mut AnnotationStack, warnings: &mut L
             let (echanged, etype): (bool, DataType) = trav_expr(start, &mut *stack, warnings, errors);
             changed |= echanged;
             if !etype.is_any() && etype != DataType::Integer {
+                // TODO: Catch implicit casts
                 errors.insert(Error::ForStart { got_type: etype, range: start.range });
             }
             // ...stop...
             let (echanged, etype): (bool, DataType) = trav_expr(stop, &mut *stack, warnings, errors);
             changed |= echanged;
             if !etype.is_any() && etype != DataType::Integer {
+                // TODO: Catch implicit casts
                 errors.insert(Error::ForStop { got_type: etype, range: stop.range });
             }
             // ...and step
@@ -176,6 +179,7 @@ fn trav_stmt(stmt: &mut Statement, stack: &mut AnnotationStack, warnings: &mut L
                 let (echanged, etype): (bool, DataType) = trav_expr(step, &mut *stack, warnings, errors);
                 changed |= echanged;
                 if !etype.is_any() && etype != DataType::Integer {
+                    // TODO: Catch implicit casts
                     errors.insert(Error::ForStep { got_type: etype, range: step.range });
                 }
             }
@@ -197,6 +201,7 @@ fn trav_stmt(stmt: &mut Statement, stack: &mut AnnotationStack, warnings: &mut L
             // Recurse into the expresion first
             let (cchanged, ctype): (bool, DataType) = trav_expr(cond, &mut *stack, warnings, errors);
             if !ctype.is_any() && ctype != DataType::Boolean {
+                // TODO: Catch any implicit type casts
                 errors.insert(Error::WhileCondition { got_type: ctype, range: cond.range });
             }
 
@@ -352,6 +357,7 @@ fn trav_expr(expr: &mut Expression, stack: &mut AnnotationStack, warnings: &mut 
                 // Rescurse into the else-block, pushing its annotations
                 let (fchanged, ftype): (bool, (DataType, Option<Option<TextRange>>)) = trav_block(block_else, &mut *stack.frame(annots_else), warnings, errors);
 
+                // TODO: Deduce false-block type backwards if we know the type of the true-block (and vice-versa)
                 // Compare it evaluates to the same thing as the true-block
                 if !btype.0.is_any() && !ftype.0.is_any() && btype.0 != ftype.0 {
                     // Resolve the types
@@ -393,6 +399,8 @@ fn trav_expr(expr: &mut Expression, stack: &mut AnnotationStack, warnings: &mut 
                     // Next, assert it is the same type as the other branches
                     if let Some(first) = &first {
                         if first.0 != btype.0 {
+                            // TODO: Catch implicit casts
+                            // TODO: Deduce the type of other branches backwards once we have one
                             // It does not equate the first
                             errors.insert(Error::IncompatibleParallelBranch { i, got_type: btype.0, first_type: first.0.clone(), got_range: btype.1.unwrap_or(b.range), first_range: first.1, parallel_range: expr.range });
                         }
@@ -422,8 +430,8 @@ fn trav_expr(expr: &mut Expression, stack: &mut AnnotationStack, warnings: &mut 
             }
 
             // Now deduce the evaluated type based on the found type and the strategy
-            if let Some(strat) = strategy {
-                match strat.kind {
+            match strat.kind {
+                    if let Some(strat) = strategy {
                     // We note a few special cases
                     MergeStrategyKind::All           => (changed, DataType::Array(Box::new(first.unwrap().0))),
                     MergeStrategyKind::Discard       => (changed, DataType::Void),
