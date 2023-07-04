@@ -4,7 +4,7 @@
 //  Created:
 //    06 Feb 2023, 15:32:54
 //  Last edited:
-//    17 Feb 2023, 16:36:02
+//    04 Jul 2023, 11:32:45
 //  Auto updated?
 //    Yes
 // 
@@ -21,6 +21,7 @@ pub mod spec;
 pub mod types;
 pub mod symbol_tables;
 pub mod auxillary;
+pub mod identifiers;
 pub mod expressions;
 pub mod statements;
 pub mod toplevel;
