@@ -4,7 +4,7 @@
 //  Created:
 //    15 Nov 2022, 09:18:40
 //  Last edited:
-//    18 Apr 2023, 10:08:37
+//    21 Aug 2023, 13:28:36
 //  Auto updated?
 //    Yes
 // 
@@ -78,6 +78,9 @@ enum CtlSubcommand {
         /// The docker-compose file that we start.
         #[clap(short, global=true, long, help = concat!("The docker-compose.yml file that defines the services to start. You can use '$NODE' to match either 'central' or 'worker', depending how we started. If omitted, will use the baked-in counterpart (although that only works for the default version, v", env!("CARGO_PKG_VERSION") , ")."))]
         file           : Option<PathBuf>,
+        /// If given, skip canonicalizing paths for volumes.
+        #[clap(long, global=true, help="If given, skips canonicalizing volume paths. This is useful for if it points to a location to which the current user does not have access. However, also note that that this requires you to manually provide absolute paths only.")]
+        skip_volume_canonicalization : bool,
 
         /// The specific Brane version to start.
         #[clap(short, long, default_value = env!("CARGO_PKG_VERSION"), help = "The Brane version to import.")]
@@ -108,6 +111,9 @@ enum CtlSubcommand {
         /// The docker-compose file that we start.
         #[clap(short, long, help = concat!("The docker-compose.yml file that defines the services to stop. You can use '$NODE' to match either 'central' or 'worker', depending how we started. If omitted, will use the baked-in counterpart (although that only works for the default version, v", env!("CARGO_PKG_VERSION"), ")."))]
         file : Option<PathBuf>,
+        /// If given, skip canonicalizing paths for volumes.
+        #[clap(long, global=true, help="If given, skips canonicalizing volume paths. This is useful for if it points to a location to which the current user does not have access. However, also note that that this requires you to manually provide absolute paths only.")]
+        skip_volume_canonicalization : bool,
     },
 
     #[clap(name = "version", about = "Returns the version of this CTL tool and/or the local node.")]
@@ -411,11 +417,11 @@ async fn main() {
             
         },
 
-        CtlSubcommand::Start{ exe, file, docker_socket, docker_version, version, image_dir, local_aux, skip_import, profile_dir, kind, } => {
-            if let Err(err) = lifetime::start(exe, file, args.node_config, DockerOptions{ socket: docker_socket, version: docker_version }, StartOpts{ compose_verbose: args.debug || args.trace, version, image_dir, local_aux, skip_import, profile_dir }, *kind).await { error!("{}", err); std::process::exit(1); }
+        CtlSubcommand::Start{ exe, file, docker_socket, docker_version, skip_volume_canonicalization, version, image_dir, local_aux, skip_import, profile_dir, kind, } => {
+            if let Err(err) = lifetime::start(exe, file, args.node_config, DockerOptions{ socket: docker_socket, version: docker_version }, StartOpts{ compose_verbose: args.debug || args.trace, version, image_dir, local_aux, skip_import, skip_volume_canonicalization, profile_dir }, *kind).await { error!("{}", err); std::process::exit(1); }
         },
-        CtlSubcommand::Stop{ exe, file } => {
-            if let Err(err) = lifetime::stop(args.debug || args.trace, exe, file, args.node_config) { error!("{}", err); std::process::exit(1); }
+        CtlSubcommand::Stop{ exe, file, skip_volume_canonicalization } => {
+            if let Err(err) = lifetime::stop(args.debug || args.trace, exe, file, args.node_config, skip_volume_canonicalization) { error!("{}", err); std::process::exit(1); }
         },
 
         CtlSubcommand::Version { arch: _, kind: _, ctl: _, node: _ } => {

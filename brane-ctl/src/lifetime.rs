@@ -4,7 +4,7 @@
 //  Created:
 //    22 Nov 2022, 11:19:22
 //  Last edited:
-//    13 Apr 2023, 10:28:07
+//    21 Aug 2023, 13:38:41
 //  Auto updated?
 //    Yes
 // 
@@ -455,17 +455,25 @@ async fn load_images(docker: &Docker, images: HashMap<impl AsRef<str>, ImageSour
 /// - `version`: The Brane version to launch.
 /// - `node_config_path`: The path of the NodeConfig file to mount.
 /// - `node_config`: The NodeConfig to set ports and attach volumes for.
+/// - `skip_volume_canonicalization`: If given, does not canonicalize volume paths.
 /// 
 /// # Returns
 /// A HashMap of environment variables to use for running Docker compose.
 /// 
 /// # Errors
 /// This function errors if we fail to canonicalize any of the paths in `node_config`.
-fn construct_envs(version: &Version, node_config_path: &Path, node_config: &NodeConfig) -> Result<HashMap<&'static str, OsString>, Error> {
+fn construct_envs(version: &Version, node_config_path: &Path, node_config: &NodeConfig, skip_volume_canonicalization: bool) -> Result<HashMap<&'static str, OsString>, Error> {
+    // Canonicalize the volume path if told to do so.
+    let config_dir: Cow<Path> = if skip_volume_canonicalization {
+        Cow::Borrowed(node_config_path)
+    } else {
+        Cow::Owned(canonicalize(node_config_path)?)
+    };
+
     // Set the global ones first
     let mut res: HashMap<&str, OsString> = HashMap::from([
         ("BRANE_VERSION", OsString::from(version.to_string())),
-        ("NODE_CONFIG_PATH", canonicalize(node_config_path)?.as_os_str().into()),
+        ("NODE_CONFIG_PATH", config_dir.as_os_str().into()),
     ]);
 
     // Match on the node kind
@@ -482,6 +490,20 @@ fn construct_envs(version: &Version, node_config_path: &Path, node_config: &Node
                 aux_scylla: _, aux_kafka: _, aux_zookeeper: _,
             } = &node.services;
 
+            // Canonicalize the volume paths if told to do so.
+            let infra_file: Cow<Path>;
+            let certs_dir: Cow<Path>;
+            let pckgs_dir: Cow<Path>;
+            if skip_volume_canonicalization {
+                infra_file = if infra.is_relative() { Cow::Owned(node_config_dir.join(infra)) } else { Cow::Borrowed(infra) };
+                certs_dir = if certs.is_relative() { Cow::Owned(node_config_dir.join(certs)) } else { Cow::Borrowed(certs) };
+                pckgs_dir = if packages.is_relative() { Cow::Owned(node_config_dir.join(packages)) } else { Cow::Borrowed(packages) };
+            } else {
+                infra_file = Cow::Owned(canonicalize_join(node_config_dir, infra)?);
+                certs_dir = Cow::Owned(canonicalize_join(node_config_dir, certs)?);
+                pckgs_dir = Cow::Owned(canonicalize_join(node_config_dir, packages)?);
+            }
+
             // Add the environment variables, which are basically just central-specific paths and ports to mount in the compose file
             res.extend([
                 // Names
@@ -490,9 +512,9 @@ fn construct_envs(version: &Version, node_config_path: &Path, node_config: &Node
                 ("PLR_NAME", OsString::from(&plr.name.as_str())),
 
                 // Paths
-                ("INFRA", canonicalize_join(node_config_dir, infra)?.as_os_str().into()),
-                ("CERTS", canonicalize_join(node_config_dir, certs)?.as_os_str().into()),
-                ("PACKAGES", canonicalize_join(node_config_dir, packages)?.as_os_str().into()),
+                ("INFRA", infra_file.as_os_str().into()),
+                ("CERTS", certs_dir.as_os_str().into()),
+                ("PACKAGES", pckgs_dir.as_os_str().into()),
     
                 // Ports
                 ("API_PORT", OsString::from(format!("{}", api.bind.port()))),
@@ -501,15 +523,32 @@ fn construct_envs(version: &Version, node_config_path: &Path, node_config: &Node
 
             // Only add the proxy stuff if given
             if let PrivateOrExternalService::Private(name) = prx {
+                // Canonicalize the path first
+                let proxy_file: Cow<Path> = if skip_volume_canonicalization {
+                    let path: &Path = proxy.as_ref().ok_or(Error::MissingProxyPath)?;
+                    if path.is_relative() { Cow::Owned(node_config_dir.join(path)) } else { Cow::Borrowed(path) }
+                } else {
+                    Cow::Owned(canonicalize_join(node_config_dir, proxy.as_ref().ok_or(Error::MissingProxyPath)?)?)
+                };
+
+                // Add the proxy-specific environment variables
                 res.extend([
                     ("PRX_NAME", OsString::from(&name.name.as_str())),
-                    ("PROXY", canonicalize_join(node_config_dir, proxy.as_ref().ok_or(Error::MissingProxyPath)?)?.as_os_str().into()),
+                    ("PROXY", proxy_file.as_os_str().into()),
                 ]);
             }
             if let Some(path) = proxy {
+                // Canonicalize the path first
+                let proxy_file: Cow<Path> = if skip_volume_canonicalization {
+                    if path.is_relative() { Cow::Owned(node_config_dir.join(path)) } else { Cow::Borrowed(path) }
+                } else {
+                    Cow::Owned(canonicalize_join(node_config_dir, path)?)
+                };
+
+                // Add the proxy-specific environment variables
                 res.extend([
                     ("PRX_NAME", OsString::from(&prx.try_private().ok_or(Error::MissingProxyService)?.name.as_str())),
-                    ("PROXY", canonicalize_join(node_config_dir, path)?.as_os_str().into()),
+                    ("PROXY", proxy_file.as_os_str().into()),
                 ]);
             }
         },
@@ -525,6 +564,35 @@ fn construct_envs(version: &Version, node_config_path: &Path, node_config: &Node
                 reg, job, chk, prx,
             } = &node.services;
 
+            // Canonicalize the volume paths if told to do so.
+            let backend_file: Cow<Path>;
+            let policy_file: Cow<Path>;
+            let certs_dir: Cow<Path>;
+            let pckgs_dir: Cow<Path>;
+            let data_dir: Cow<Path>;
+            let results_dir: Cow<Path>;
+            let tmp_data_dir: Cow<Path>;
+            let tmp_results_dir: Cow<Path>;
+            if skip_volume_canonicalization {
+                backend_file = if backend.is_relative() { Cow::Owned(node_config_dir.join(backend)) } else { Cow::Borrowed(backend) };
+                policy_file = if policies.is_relative() { Cow::Owned(node_config_dir.join(policies)) } else { Cow::Borrowed(policies) };
+                certs_dir = if certs.is_relative() { Cow::Owned(node_config_dir.join(certs)) } else { Cow::Borrowed(certs) };
+                pckgs_dir = if packages.is_relative() { Cow::Owned(node_config_dir.join(packages)) } else { Cow::Borrowed(packages) };
+                data_dir = if data.is_relative() { Cow::Owned(node_config_dir.join(data)) } else { Cow::Borrowed(data) };
+                results_dir = if results.is_relative() { Cow::Owned(node_config_dir.join(results)) } else { Cow::Borrowed(results) };
+                tmp_data_dir = if temp_data.is_relative() { Cow::Owned(node_config_dir.join(temp_data)) } else { Cow::Borrowed(temp_data) };
+                tmp_results_dir = if temp_results.is_relative() { Cow::Owned(node_config_dir.join(temp_results)) } else { Cow::Borrowed(temp_results) };
+            } else {
+                backend_file = Cow::Owned(canonicalize_join(node_config_dir, backend)?);
+                policy_file = Cow::Owned(canonicalize_join(node_config_dir, policies)?);
+                certs_dir = Cow::Owned(canonicalize_join(node_config_dir, certs)?);
+                pckgs_dir = Cow::Owned(canonicalize_join(node_config_dir, packages)?);
+                data_dir = Cow::Owned(canonicalize_join(node_config_dir, data)?);
+                results_dir = Cow::Owned(canonicalize_join(node_config_dir, results)?);
+                tmp_data_dir = Cow::Owned(canonicalize_join(node_config_dir, temp_data)?);
+                tmp_results_dir = Cow::Owned(canonicalize_join(node_config_dir, temp_results)?);
+            }
+
             // Add the environment variables, which are basically just central-specific paths to mount in the compose file
             res.extend([
                 // Also add the location ID
@@ -536,14 +604,14 @@ fn construct_envs(version: &Version, node_config_path: &Path, node_config: &Node
                 ("CHK_NAME", OsString::from(&chk.name.as_str())),
 
                 // Paths
-                ("BACKEND", canonicalize_join(node_config_dir, backend)?.as_os_str().into()),
-                ("POLICIES", canonicalize_join(node_config_dir, policies)?.as_os_str().into()),
-                ("CERTS", canonicalize_join(node_config_dir, certs)?.as_os_str().into()),
-                ("PACKAGES", canonicalize_join(node_config_dir, packages)?.as_os_str().into()),
-                ("DATA", canonicalize_join(node_config_dir, data)?.as_os_str().into()),
-                ("RESULTS", canonicalize_join(node_config_dir, results)?.as_os_str().into()),
-                ("TEMP_DATA", canonicalize_join(node_config_dir, temp_data)?.as_os_str().into()),
-                ("TEMP_RESULTS", canonicalize_join(node_config_dir, temp_results)?.as_os_str().into()),
+                ("BACKEND", backend_file.as_os_str().into()),
+                ("POLICIES", policy_file.as_os_str().into()),
+                ("CERTS", certs_dir.as_os_str().into()),
+                ("PACKAGES", pckgs_dir.as_os_str().into()),
+                ("DATA", data_dir.as_os_str().into()),
+                ("RESULTS", results_dir.as_os_str().into()),
+                ("TEMP_DATA", tmp_data_dir.as_os_str().into()),
+                ("TEMP_RESULTS", tmp_results_dir.as_os_str().into()),
 
                 // Ports
                 ("REG_PORT", OsString::from(format!("{}", reg.bind.port()))),
@@ -552,15 +620,32 @@ fn construct_envs(version: &Version, node_config_path: &Path, node_config: &Node
 
             // Only add the proxy stuff if given
             if let PrivateOrExternalService::Private(name) = prx {
+                // Canonicalize the path first
+                let proxy_file: Cow<Path> = if skip_volume_canonicalization {
+                    let path: &Path = proxy.as_ref().ok_or(Error::MissingProxyPath)?;
+                    if path.is_relative() { Cow::Owned(node_config_dir.join(path)) } else { Cow::Borrowed(path) }
+                } else {
+                    Cow::Owned(canonicalize_join(node_config_dir, proxy.as_ref().ok_or(Error::MissingProxyPath)?)?)
+                };
+
+                // Add the proxy-specific environment variables
                 res.extend([
                     ("PRX_NAME", OsString::from(&name.name.as_str())),
-                    ("PROXY", canonicalize_join(node_config_dir, proxy.as_ref().ok_or(Error::MissingProxyPath)?)?.as_os_str().into()),
+                    ("PROXY", proxy_file.as_os_str().into()),
                 ]);
             }
             if let Some(path) = proxy {
+                // Canonicalize the path first
+                let proxy_file: Cow<Path> = if skip_volume_canonicalization {
+                    if path.is_relative() { Cow::Owned(node_config_dir.join(path)) } else { Cow::Borrowed(path) }
+                } else {
+                    Cow::Owned(canonicalize_join(node_config_dir, path)?)
+                };
+
+                // Add the proxy-specific environment variables
                 res.extend([
                     ("PRX_NAME", OsString::from(&prx.try_private().ok_or(Error::MissingProxyService)?.name.as_str())),
-                    ("PROXY", canonicalize_join(node_config_dir, path)?.as_os_str().into()),
+                    ("PROXY", proxy_file.as_os_str().into()),
                 ]);
             }
         },
@@ -574,14 +659,25 @@ fn construct_envs(version: &Version, node_config_path: &Path, node_config: &Node
                 prx,
             } = &node.services;
 
+            // Canonicalize the volume paths if told to do so.
+            let proxy_file: Cow<Path>;
+            let certs_dir: Cow<Path>;
+            if skip_volume_canonicalization {
+                proxy_file = if proxy.is_relative() { Cow::Owned(node_config_dir.join(proxy)) } else { Cow::Borrowed(proxy) };
+                certs_dir = if certs.is_relative() { Cow::Owned(node_config_dir.join(certs)) } else { Cow::Borrowed(certs) };
+            } else {
+                proxy_file = Cow::Owned(canonicalize_join(node_config_dir, proxy)?);
+                certs_dir = Cow::Owned(canonicalize_join(node_config_dir, certs)?);
+            }
+
             // Add the environment variables for the proxy
             res.extend([
                 // Names
                 ("PRX_NAME", OsString::from(&prx.name.as_str())),
 
                 // Paths
-                ("PROXY", canonicalize_join(node_config_dir, proxy)?.as_os_str().into()),
-                ("CERTS", canonicalize_join(node_config_dir, certs)?.as_os_str().into()),
+                ("PROXY", proxy_file.as_os_str().into()),
+                ("CERTS", certs_dir.as_os_str().into()),
             ]);
         },
     }
@@ -708,7 +804,7 @@ pub async fn start(exe: impl AsRef<str>, file: Option<PathBuf>, node_config_path
             }
 
             // Construct the environment variables
-            let envs: HashMap<&str, OsString> = construct_envs(&opts.version, &node_config_path, &node_config)?;
+            let envs: HashMap<&str, OsString> = construct_envs(&opts.version, &node_config_path, &node_config, opts.skip_volume_canonicalization)?;
 
             // Launch the docker-compose command
             run_compose(opts.compose_verbose, resolve_exe(exe)?, resolve_node(file, "central"), "brane-central", overridefile, envs)?;
@@ -738,7 +834,7 @@ pub async fn start(exe: impl AsRef<str>, file: Option<PathBuf>, node_config_path
             }
 
             // Construct the environment variables
-            let envs: HashMap<&str, OsString> = construct_envs(&opts.version, &node_config_path, &node_config)?;
+            let envs: HashMap<&str, OsString> = construct_envs(&opts.version, &node_config_path, &node_config, opts.skip_volume_canonicalization)?;
 
             // Launch the docker-compose command
             run_compose(opts.compose_verbose, resolve_exe(exe)?, resolve_node(file, "worker"), format!("brane-worker-{}", node_config.node.worker().name), overridefile, envs)?;
@@ -766,7 +862,7 @@ pub async fn start(exe: impl AsRef<str>, file: Option<PathBuf>, node_config_path
             }
 
             // Construct the environment variables
-            let envs: HashMap<&str, OsString> = construct_envs(&opts.version, &node_config_path, &node_config)?;
+            let envs: HashMap<&str, OsString> = construct_envs(&opts.version, &node_config_path, &node_config, opts.skip_volume_canonicalization)?;
 
             // Launch the docker-compose command
             run_compose(opts.compose_verbose, resolve_exe(exe)?, resolve_node(file, "proxy"), "brane-proxy", overridefile, envs)?;
@@ -789,13 +885,14 @@ pub async fn start(exe: impl AsRef<str>, file: Option<PathBuf>, node_config_path
 /// - `exe`: The `docker-compose` executable to run.
 /// - `file`: The docker-compose file file to use to stop.
 /// - `node_config_path`: The path to the node config file that we use to deduce the project name.
+/// - `skip_volume_canonicalization`: If given, skip canonicalizing paths for volumes.
 /// 
 /// # Returns
 /// Nothing, but does change the local Docker daemon to stop the services if they are running.
 /// 
 /// # Errors
 /// This function errors if we failed to run docker-compose.
-pub fn stop(compose_verbose: bool, exe: impl AsRef<str>, file: Option<PathBuf>, node_config_path: impl Into<PathBuf>) -> Result<(), Error> {
+pub fn stop(compose_verbose: bool, exe: impl AsRef<str>, file: Option<PathBuf>, node_config_path: impl Into<PathBuf>, skip_volume_canonicalization: bool) -> Result<(), Error> {
     let exe              : &str    = exe.as_ref();
     let node_config_path : PathBuf = node_config_path.into();
     info!("Stopping node from Docker compose file '{}', defined in '{}'", file.as_ref().map(|f| f.display().to_string()).unwrap_or_else(|| "<baked-in>".into()), node_config_path.display());
@@ -812,7 +909,7 @@ pub fn stop(compose_verbose: bool, exe: impl AsRef<str>, file: Option<PathBuf>, 
     let file: PathBuf = resolve_docker_compose_file(file, node_config.node.kind(), Version::from_str(env!("CARGO_PKG_VERSION")).unwrap())?;
 
     // Construct the environment variables
-    let envs: HashMap<&str, OsString> = construct_envs(&Version::latest(), &node_config_path, &node_config)?;
+    let envs: HashMap<&str, OsString> = construct_envs(&Version::latest(), &node_config_path, &node_config, skip_volume_canonicalization)?;
 
     // Resolve the filename and deduce the project name
     let file  : PathBuf = resolve_node(file, match node_config.node.kind() { NodeKind::Central => "central", NodeKind::Worker => "worker", NodeKind::Proxy => "proxy" });

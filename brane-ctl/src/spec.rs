@@ -4,7 +4,7 @@
 //  Created:
 //    21 Nov 2022, 17:27:52
 //  Last edited:
-//    13 Apr 2023, 10:27:48
+//    21 Aug 2023, 13:23:27
 //  Auto updated?
 //    Yes
 // 
@@ -205,6 +205,8 @@ pub struct StartOpts {
     pub local_aux   : bool,
     /// Do not import any images if given, but instead assume they are already loaded.
     pub skip_import : bool,
+    /// Do not canonicalize volume paths if given.
+    pub skip_volume_canonicalization : bool,
     /// If given, mounts the given profile directory to examine profiling results conveniently.
     pub profile_dir : Option<PathBuf>
 }
