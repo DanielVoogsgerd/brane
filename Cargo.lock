@@ -1756,6 +1756,11 @@ dependencies = [
 ]
 
 [[package]]
+name = "error-trace"
+version = "1.0.0"
+source = "git+https://github.com/Lut99/error-trace-rs#38f412039449f1f74c54c6656211cb7b9e8f8861"
+
+[[package]]
 name = "expanduser"
 version = "1.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2884,6 +2889,7 @@ name = "make"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "error-trace",
  "humanlog",
  "log",
 ]
