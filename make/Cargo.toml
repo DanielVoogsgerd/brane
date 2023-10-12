@@ -1,0 +1,12 @@
+[package]
+name = "make"
+version = "0.1.0"
+edition = "2021"
+authors = [ "Tim Müller" ]
+description = "Build system for the Brane framework, which has grown sufficiently complex to warrant some serious software engineering."
+
+
+[dependencies]
+clap = { version = "4.4", features = ["derive"] }
+humanlog = { git = "https://github.com/Lut99/humanlog-rs" }
+log = "0.4"
