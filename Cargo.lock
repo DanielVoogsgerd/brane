@@ -615,7 +615,7 @@ dependencies = [
  "clap",
  "console",
  "cwl",
- "dialoguer",
+ "dialoguer 0.10.4",
  "dirs-2",
  "dotenvy",
  "enum-debug",
@@ -961,7 +961,7 @@ version = "2.0.0"
 dependencies = [
  "async-compression 0.3.15",
  "console",
- "dialoguer",
+ "dialoguer 0.10.4",
  "enum-debug",
  "fs2",
  "futures-util",
@@ -998,7 +998,7 @@ dependencies = [
  "chrono",
  "clap",
  "console",
- "dialoguer",
+ "dialoguer 0.10.4",
  "dirs-2",
  "enum-debug",
  "futures-util",
@@ -1549,6 +1549,19 @@ dependencies = [
  "console",
  "shell-words",
  "tempfile",
+ "zeroize",
+]
+
+[[package]]
+name = "dialoguer"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "658bce805d770f407bc62102fca7c2c64ceef2fbcb2b8bd19d2765ce093980de"
+dependencies = [
+ "console",
+ "shell-words",
+ "tempfile",
+ "thiserror",
  "zeroize",
 ]
 
@@ -2889,9 +2902,13 @@ name = "make"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "dialoguer 0.11.0",
  "error-trace",
  "humanlog",
+ "lazy_static",
  "log",
+ "semver 1.0.19",
+ "ureq",
 ]
 
 [[package]]
@@ -5252,6 +5269,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a156c684c91ea7d62626509bce3cb4e1d9ed5c4d978f7b4352658f96a4c26b4a"
 
 [[package]]
+name = "ureq"
+version = "2.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f5ccd538d4a604753ebc2f17cd9946e89b77bf87f6a8e2309667c6f2e87855e3"
+dependencies = [
+ "base64 0.21.4",
+ "flate2",
+ "log",
+ "once_cell",
+ "rustls",
+ "rustls-webpki",
+ "url",
+ "webpki-roots",
+]
+
+[[package]]
 name = "url"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5452,6 +5485,12 @@ dependencies = [
  "js-sys",
  "wasm-bindgen",
 ]
+
+[[package]]
+name = "webpki-roots"
+version = "0.25.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "14247bb57be4f377dfb94c72830b8ce8fc6beac03cf4bf7b9732eadd414123fc"
 
 [[package]]
 name = "winapi"

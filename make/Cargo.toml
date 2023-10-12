@@ -8,6 +8,10 @@ description = "Build system for the Brane framework, which has grown sufficientl
 
 [dependencies]
 clap = { version = "4.4", features = ["derive"] }
+dialoguer = "0.11"
 error-trace = { git = "https://github.com/Lut99/error-trace-rs" }
 humanlog = { git = "https://github.com/Lut99/humanlog-rs" }
+lazy_static = "1.4"
 log = "0.4"
+semver = "1.0"
+ureq = "2.8"

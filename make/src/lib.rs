@@ -4,7 +4,7 @@
 //  Created:
 //    12 Oct 2023, 10:28:32
 //  Last edited:
-//    12 Oct 2023, 12:06:29
+//    12 Oct 2023, 17:42:21
 //  Auto updated?
 //    Yes
 // 
@@ -15,5 +15,7 @@
 
 // Declare submodules
 pub mod args;
+pub mod command;
 pub mod develop;
 pub mod release;
+pub mod utils;

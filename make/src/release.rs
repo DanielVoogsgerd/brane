@@ -4,7 +4,7 @@
 //  Created:
 //    12 Oct 2023, 12:08:56
 //  Last edited:
-//    12 Oct 2023, 12:09:05
+//    12 Oct 2023, 16:32:05
 //  Auto updated?
 //    Yes
 // 
@@ -14,6 +14,8 @@
 
 use std::error;
 use std::fmt::{Display, Formatter, Result as FResult};
+
+use log::info;
 
 
 /***** ERRORS *****/
@@ -50,5 +52,6 @@ impl error::Error for Error {
 /// # Errors
 /// This function may error if we failed to build the target.
 pub fn build_target() -> Result<(), Error> {
+    info!("Building in `release`-mode");
     Ok(())
 }

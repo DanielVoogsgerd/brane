@@ -4,7 +4,7 @@
 //  Created:
 //    12 Oct 2023, 10:25:30
 //  Last edited:
-//    12 Oct 2023, 12:10:14
+//    12 Oct 2023, 16:31:51
 //  Auto updated?
 //    Yes
 // 
@@ -15,7 +15,7 @@
 use clap::Parser as _;
 use error_trace::ErrorTrace as _;
 use humanlog::{DebugMode, HumanLogger};
-use log::{debug, error, info};
+use log::{error, info};
 
 use make::args::{BuildModeSubcommand, ToplevelArguments};
 use make::{develop, release};
@@ -37,15 +37,11 @@ fn main() {
     // Alright well switch on the build mode first
     match args.build_mode {
         BuildModeSubcommand::Release(release) => {
-            debug!("Building in release mode");
-
             // Delegate to the proper module
             if let Err(err) = release::build_target() { error!("{}", err.trace()); std::process::exit(1); }
         },
 
         BuildModeSubcommand::Develop(develop) => {
-            debug!("Building in development mode");
-
             // Delegate to the proper module
             if let Err(err) = develop::build_target() { error!("{}", err.trace()); std::process::exit(1); }
         },
