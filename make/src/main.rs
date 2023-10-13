@@ -4,7 +4,7 @@
 //  Created:
 //    12 Oct 2023, 10:25:30
 //  Last edited:
-//    12 Oct 2023, 16:31:51
+//    13 Oct 2023, 11:05:27
 //  Auto updated?
 //    Yes
 // 
@@ -41,9 +41,14 @@ fn main() {
             if let Err(err) = release::build_target() { error!("{}", err.trace()); std::process::exit(1); }
         },
 
-        BuildModeSubcommand::Develop(develop) => {
+        BuildModeSubcommand::Develop(mut develop) => {
+            // Propagate some alias stuff
+            if !develop.no_install {
+                develop.no_install_cargo = false;
+            }
+
             // Delegate to the proper module
-            if let Err(err) = develop::build_target() { error!("{}", err.trace()); std::process::exit(1); }
+            if let Err(err) = develop::build_target(develop) { error!("{}", err.trace()); std::process::exit(1); }
         },
     }
 }

@@ -4,7 +4,7 @@
 //  Created:
 //    12 Oct 2023, 10:28:47
 //  Last edited:
-//    12 Oct 2023, 10:54:13
+//    13 Oct 2023, 15:48:21
 //  Auto updated?
 //    Yes
 // 
@@ -12,7 +12,7 @@
 //!   Defines the CLI arguments of the `make` executable.
 // 
 
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 
 
 /***** LIBRARY *****/
@@ -56,7 +56,16 @@ pub struct ReleaseArguments {
 /// Defines the arguments of the `develop`-subcommand.
 #[derive(Debug, Parser)]
 pub struct DevelopArguments {
-    
+    /// Do not install anything
+    #[clap(long, global=true, help="If given, will not ask to install any missing dependencies. Alias for specifying '--no-install-cargo'.")]
+    pub no_install       : bool,
+    /// Do not install Cargo.
+    #[clap(long, global=true, help="If given, will not ask to install Cargo if it's not found.")]
+    pub no_install_cargo : bool,
+
+    /// The target to build.
+    #[clap(subcommand)]
+    pub target : TargetSubcommand,
 }
 
 
@@ -107,10 +116,25 @@ pub struct TargetArguments {
 /// Defines additional arguments for the `test`-target.
 #[derive(Debug, Parser)]
 pub struct TestArguments {
+    /// The test to execute. Will execute all if omitted.
+    #[clap(name="TEST", help="The test to execute. If omitted, executes all tests.")]
+    pub test : Option<TestOption>,
+
     /// The remainder of the common arguments
     #[clap(flatten)]
     pub common : TargetArguments,
 }
+
+/// Defines the possible tests to execute.
+#[derive(Clone, Copy, Debug, ValueEnum)]
+pub enum TestOption {
+    /// Run unit tests
+    Unit,
+    /// Run clippy tests
+    Clippy,
+}
+
+
 
 /// Defines additional arguments for the `instance`-target.
 #[derive(Debug, Parser)]
@@ -120,6 +144,8 @@ pub struct InstanceArguments {
     pub common : TargetArguments,
 }
 
+
+
 /// Defines additional arguments for the `worker-instance`-target.
 #[derive(Debug, Parser)]
 pub struct WorkerInstanceArguments {
@@ -127,6 +153,8 @@ pub struct WorkerInstanceArguments {
     #[clap(flatten)]
     pub common : TargetArguments,
 }
+
+
 
 /// Defines additional arguments for the `proxy-instance`-target.
 #[derive(Debug, Parser)]

@@ -2902,12 +2902,16 @@ name = "make"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "console",
  "dialoguer 0.11.0",
  "error-trace",
+ "hex",
  "humanlog",
+ "indicatif",
  "lazy_static",
  "log",
  "semver 1.0.19",
+ "sha2",
  "ureq",
 ]
 
