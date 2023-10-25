@@ -4,7 +4,7 @@
 //  Created:
 //    09 Sep 2022, 13:23:41
 //  Last edited:
-//    02 Oct 2023, 17:08:43
+//    25 Oct 2023, 12:06:41
 //  Auto updated?
 //    Yes
 // 
@@ -27,7 +27,7 @@ use tokio::task::JoinHandle;
 
 use brane_ast::{DataType, MergeStrategy, Workflow};
 use brane_ast::spec::{BuiltinClasses, BuiltinFunctions};
-use brane_ast::locations::Location;
+use brane_ast::locations::{Location, WorkLocation};
 use brane_ast::ast::{ClassDef, ComputeTaskDef, DataName, Edge, EdgeInstr, FunctionDef, TaskDef};
 use specifications::data::{AccessKind, AvailabilityKind};
 use specifications::profiling::{ProfileScopeHandle, ProfileScopeHandleOwned};
@@ -1535,7 +1535,7 @@ impl<G: CustomGlobalState, L: CustomLocalState> Thread<G, L> {
                     let data_name : String   = self.stack.pop().unwrap().try_as_string().unwrap();
 
                     // Try to find out where this res lives, currently
-                    let loc: &String = match self.fstack.table().results().get(&res_name) {
+                    let loc: &WorkLocation = match self.fstack.table().results().get(&res_name) {
                         Some(loc) => loc,
                         None      => { return EdgeResult::Err(Error::UnknownResult{ edge: pc.1, name: res_name }); },
                     };

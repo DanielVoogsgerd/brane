@@ -4,7 +4,7 @@
 //  Created:
 //    24 Oct 2022, 15:42:52
 //  Last edited:
-//    02 Oct 2023, 17:08:19
+//    25 Oct 2023, 12:06:16
 //  Auto updated?
 //    Yes
 // 
@@ -18,13 +18,14 @@ use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
+use brane_ast::locations::WorkLocation;
 use brane_ast::ast::{ClassDef, FunctionDef, SymTable, TaskDef, VarDef};
 
 
 /***** CONSTANTS *****/
 lazy_static::lazy_static!(
     /// A static, empty map we can refer to.
-    static ref EMPTY_RESULTS: HashMap<String, String> = HashMap::new();
+    static ref EMPTY_RESULTS: HashMap<String, WorkLocation> = HashMap::new();
 );
 
 
@@ -284,7 +285,7 @@ impl VirtualSymTable {
 
     /// Returns the intermediate results in the scopes.
     #[inline]
-    pub fn results(&self) -> &HashMap<String, String> { if !self.scopes.is_empty() { &self.scopes[0].results } else { &EMPTY_RESULTS } }
+    pub fn results(&self) -> &HashMap<String, WorkLocation> { if !self.scopes.is_empty() { &self.scopes[0].results } else { &EMPTY_RESULTS } }
 }
 
 impl Default for VirtualSymTable {

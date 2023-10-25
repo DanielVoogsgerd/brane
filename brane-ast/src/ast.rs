@@ -4,7 +4,7 @@
 //  Created:
 //    30 Aug 2022, 11:55:49
 //  Last edited:
-//    23 Jan 2023, 10:42:50
+//    25 Oct 2023, 12:05:01
 //  Auto updated?
 //    Yes
 // 
@@ -32,7 +32,7 @@ use specifications::version::Version;
 
 use crate::errors::DataNameDeserializeError;
 use crate::data_type::DataType;
-use crate::locations::{Location, Locations};
+use crate::locations::{Location, Locations, WorkLocation};
 use crate::state::TableList;
 
 
@@ -137,7 +137,7 @@ pub struct SymTable {
     pub vars    : TableList<VarDef>,
 
     /// Lists intermediate results defined in this workflow and maps them to where to find them (the name of the location).
-    pub results : HashMap<String, String>,
+    pub results : HashMap<String, WorkLocation>,
 }
 
 impl SymTable {
@@ -169,7 +169,7 @@ impl SymTable {
     /// # Returns
     /// A new SymTable instance with the given definitions already added.
     #[inline]
-    pub fn with(funcs: TableList<FunctionDef>, tasks: TableList<TaskDef>, classes: TableList<ClassDef>, vars: TableList<VarDef>, results: HashMap<String, String>) -> Self {
+    pub fn with(funcs: TableList<FunctionDef>, tasks: TableList<TaskDef>, classes: TableList<ClassDef>, vars: TableList<VarDef>, results: HashMap<String, WorkLocation>) -> Self {
         Self {
             funcs,
             tasks,

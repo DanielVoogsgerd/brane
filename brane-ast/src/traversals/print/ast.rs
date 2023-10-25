@@ -4,7 +4,7 @@
 //  Created:
 //    31 Aug 2022, 09:25:11
 //  Last edited:
-//    03 Jul 2023, 16:11:21
+//    25 Oct 2023, 12:01:31
 //  Auto updated?
 //    Yes
 // 
@@ -170,7 +170,7 @@ fn pass_edges(writer: &mut impl Write, index: usize, edges: &[Edge], table: &Vir
                         TaskDef::Compute(def) => format!("{}{}::{}", def.package, if !def.version.is_latest() { format!("<{}>", def.version) } else { String::new() }, def.function.name),
                         TaskDef::Transfer     => "__builtin::transfer".into(),
                     },
-                    if locs.is_restrictive() { format!(" <limited to: {}>", locs.restricted().join(",")) } else { String::new() },
+                    if locs.is_restrictive() { format!(" <limited to: {}>", locs.restricted().iter().map(|loc| format!("{loc}")).collect::<Vec<String>>().join(",")) } else { String::new() },
                     if let Some(at) = at { format!(" @{at}") } else { String::new() },
                     if !input.is_empty() || result.is_some() { format!(" [{} -> {}]",
                         if !input.is_empty() { input.iter().map(|(name, avail)| format!("'{}'{}", name, if let Some(avail) = avail { format!(" ({avail:?})") } else { String::new() })).collect::<Vec<String>>().join(", ").to_string() } else { "''".into() },

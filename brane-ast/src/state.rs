@@ -4,7 +4,7 @@
 //  Created:
 //    16 Sep 2022, 08:22:47
 //  Last edited:
-//    01 Mar 2023, 09:50:25
+//    25 Oct 2023, 12:05:48
 //  Auto updated?
 //    Yes
 // 
@@ -28,6 +28,7 @@ use specifications::package::Capability;
 use specifications::version::Version;
 
 use crate::spec::{BuiltinClasses, BuiltinFunctions};
+use crate::locations::WorkLocation;
 use crate::ast::{ClassDef, ComputeTaskDef, Edge, FunctionDef, SymTable, TaskDef, VarDef};
 
 
@@ -494,7 +495,7 @@ pub struct TableState {
     pub vars    : TableList<VarState>,
 
     /// The list of results introduced in this workflow.
-    pub results : HashMap<String, String>,
+    pub results : HashMap<String, WorkLocation>,
 }
 
 impl TableState {
@@ -664,7 +665,7 @@ impl From<TableState> for SymTable {
         for v in value.vars { vars.push(v.into()); }
 
         // Finally finally, the data & resultes
-        let results : HashMap<String, String> = value.results;
+        let results : HashMap<String, WorkLocation> = value.results;
 
         // Done; return them as a table
         Self::with(funcs, tasks, classes, vars, results)
