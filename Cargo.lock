@@ -160,7 +160,7 @@ dependencies = [
  "num-traits",
  "rusticata-macros",
  "thiserror",
- "time 0.3.34",
+ "time 0.3.36",
 ]
 
 [[package]]
@@ -517,7 +517,7 @@ dependencies = [
  "serde_yaml 0.9.32",
  "specifications 3.0.0",
  "tempfile",
- "time 0.3.34",
+ "time 0.3.36",
  "tokio",
  "tokio-stream",
  "tokio-tar",
@@ -1356,7 +1356,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7efb37c3e1ccb1ff97164ad95ac1606e8ccd35b3fa0a7d99a304c7f4a428cc24"
 dependencies = [
  "percent-encoding",
- "time 0.3.34",
+ "time 0.3.36",
  "version_check",
 ]
 
@@ -1389,7 +1389,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
- "time 0.3.34",
+ "time 0.3.36",
  "url",
 ]
 
@@ -1659,7 +1659,7 @@ checksum = "62c6fcf842f17f8c78ecf7c81d75c5ce84436b41ee07e03f490fbb5f5a8731d8"
 dependencies = [
  "diesel_derives",
  "libsqlite3-sys",
- "time 0.3.34",
+ "time 0.3.36",
 ]
 
 [[package]]
@@ -4311,7 +4311,7 @@ dependencies = [
  "indexmap 1.9.3",
  "serde",
  "serde_json",
- "time 0.3.34",
+ "time 0.3.36",
 ]
 
 [[package]]
@@ -4329,7 +4329,7 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "serde_with_macros 3.6.1",
- "time 0.3.34",
+ "time 0.3.36",
 ]
 
 [[package]]
@@ -4457,7 +4457,7 @@ dependencies = [
  "num-bigint",
  "num-traits",
  "thiserror",
- "time 0.3.34",
+ "time 0.3.36",
 ]
 
 [[package]]
@@ -4469,7 +4469,7 @@ dependencies = [
  "atty",
  "colored",
  "log",
- "time 0.3.34",
+ "time 0.3.36",
  "winapi",
 ]
 
@@ -4481,7 +4481,7 @@ checksum = "16257adbfaef1ee58b1363bdc0664c9b8e1e30aed86049635fb5f147d065a9c0"
 dependencies = [
  "log",
  "termcolor",
- "time 0.3.34",
+ "time 0.3.36",
 ]
 
 [[package]]
@@ -4977,9 +4977,9 @@ dependencies = [
 
 [[package]]
 name = "time"
-version = "0.3.34"
+version = "0.3.36"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c8248b6521bb14bc45b4067159b9b6ad792e2d6d754d6c41fb50e29fefe38749"
+checksum = "5dfd88e563464686c916c7e46e623e520ddc6d79fa6641390f2e3fa86e83e885"
 dependencies = [
  "deranged",
  "itoa",
@@ -4989,7 +4989,7 @@ dependencies = [
  "powerfmt",
  "serde",
  "time-core",
- "time-macros 0.2.17",
+ "time-macros 0.2.18",
 ]
 
 [[package]]
@@ -5010,9 +5010,9 @@ dependencies = [
 
 [[package]]
 name = "time-macros"
-version = "0.2.17"
+version = "0.2.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ba3a3ef41e6672a2f0f001392bb5dcd3ff0a9992d618ca761a11c3121547774"
+checksum = "3f252a68540fde3a3877aeea552b832b40ab9a69e318efd078774a01ddee1ccf"
 dependencies = [
  "num-conv",
  "time-core",
@@ -5902,7 +5902,7 @@ dependencies = [
  "oid-registry",
  "rusticata-macros",
  "thiserror",
- "time 0.3.34",
+ "time 0.3.36",
 ]
 
 [[package]]
