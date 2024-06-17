@@ -4,16 +4,42 @@ on:
   push:
 
 jobs:
-  matrix:
+  check-essential:
+    name: "Cargo Check (Stable)"
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
-        rust: [stable, nightly]
+        os: [ubuntu-latest, macos]
+        rust: [stable]
 
-    uses: ./.github/workflows/ci-common.yml
+    uses: ./.github/workflows/mixin-cargo-check.yml
     with:
       os: "${{ matrix.os }}"
       rust-version: "${{ matrix.rust }}"
 
+  check-future:
+    name: "Cargo Check (Stable)"
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos]
+        rust: [nightly]
 
+    uses: ./.github/workflows/mixin-cargo-check.yml
+    with:
+      os: "${{ matrix.os }}"
+      rust-version: "${{ matrix.rust }}"
+
+  test:
+    needs: check-essential
+    name: "Cargo Test"
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        rust: [stable, nightly]
+
+    uses: ./.github/workflows/mixin-cargo-test.yml
+    with:
+      os: "${{ matrix.os }}"
+      rust-version: "${{ matrix.rust }}"
