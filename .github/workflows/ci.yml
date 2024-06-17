@@ -4,101 +4,16 @@ on:
   push:
 
 jobs:
-  cargo-check:
-    name: Cargo Check (Matrix)
-    runs-on: ${{ matrix.os }}
+  matrix:
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
         rust: [stable, nightly]
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
+    uses: ./.github/workflows/ci-common.yml
+    with:
+      os: "${{ matrix.os }}"
+      rust-version: "${{ matrix.rust }}"
 
-      - name: Install rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: ${{ matrix.rust }}
-          override: true
-          components: rustfmt, clippy
 
-      - name: Install protoc
-        uses: arduino/setup-protoc@v3
-        with:
-          version: 21.11
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Check project
-        run: cargo check --workspace
-
-  cargo-test:
-    needs: cargo-check
-    name: Cargo Test (Matrix)
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Install rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: ${{ matrix.rust }}
-          override: true
-          components: rustfmt, clippy
-
-      - name: Install protoc
-        uses: arduino/setup-protoc@v3
-        with:
-          version: 21.11
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Run unit tests
-        run: cargo test --workspace
-  #
-  # cargo-clippy:
-  #   needs: cargo-check
-  #   name: Cargo Clippy (Matrix)
-  #   runs-on: ${{ matrix.os }}
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       os: [ubuntu-latest, macos-latest]
-  #
-  #   steps:
-  #     - name: Checkout repository
-  #       uses: actions/checkout@v2
-  #
-  #     - name: Installing dependencies to build `protoc`... (Linux)
-  #       if: runner.os == 'Linux'
-  #       run: sudo apt-get update && sudo apt-get install -y curl cmake gcc g++ make
-  #
-  #     - name: Install `protoc` to compile protobuf files (Linux)
-  #       if: runner.os == 'Linux'
-  #       run: |
-  #         curl -L https://github.com/protocolbuffers/protobuf/archive/refs/tags/v3.21.11.tar.gz | tar -xz \
-  #         && cd ./protobuf-3.21.11 \
-  #         && cmake -Dprotobuf_BUILD_TESTS=off . \
-  #         && cmake --build . -j $(nproc) \
-  #         && sudo mv $(readlink protoc) /usr/bin/protoc \
-  #         && cd ../ \
-  #         && rm -r ./protobuf-3.21.11
-  #
-  #     - name: Install `protoc` to compile protobuf files (MacOS)
-  #       if: runner.os == 'macOS'
-  #       run: brew install protobuf
-  #
-  #     - name: Build project (Linux)
-  #       if: runner.os == 'Linux'
-  #       run: PROTOC="./protoc" cargo build -v
-  #
-  #     - name: Run unit tests
-  #       run: cargo clippy --workspace
