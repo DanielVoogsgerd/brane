@@ -24,7 +24,6 @@ pub use crate::errors::FrameStackError as Error;
 use crate::pc::ProgramCounter;
 use crate::value::Value;
 
-
 /***** HELPER SRUCTS *****/
 /// Defines a single Frame on the FrameStack.
 #[derive(Clone, Debug)]
@@ -50,10 +49,6 @@ impl Frame {
     #[inline]
     fn new(def: usize, ret: ProgramCounter) -> Self { Self { def, vars: HashMap::new(), ret } }
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// Implements a FrameStack, which is used to keep track of function calls and their expected return types.

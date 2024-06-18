@@ -24,15 +24,10 @@ use specifications::container::{ContainerInfoError, Image, LocalContainerInfoErr
 use specifications::package::{PackageInfoError, PackageKindError};
 use specifications::version::{ParseError as VersionParseError, Version};
 
-
 /***** GLOBALS *****/
 lazy_static! {
     static ref CLI_LINE_SEPARATOR: String = (0..80).map(|_| '-').collect::<String>();
 }
-
-
-
-
 
 /***** ERROR ENUMS *****/
 /// Collects toplevel and uncategorized errors in the brane-cli package.
@@ -138,8 +133,6 @@ impl Error for CliError {
         }
     }
 }
-
-
 
 /// Collects errors during the build subcommand
 #[derive(Debug)]
@@ -467,8 +460,6 @@ impl Error for BuildError {
     }
 }
 
-
-
 /// Collects errors relating to certificate management.
 #[derive(Debug)]
 pub enum CertsError {
@@ -614,8 +605,6 @@ impl Error for CertsError {
     }
 }
 
-
-
 /// Defines errors originating from the `brane check`-subcommand.
 #[derive(Debug)]
 pub enum CheckError {
@@ -674,8 +663,6 @@ impl Error for CheckError {
         }
     }
 }
-
-
 
 /// Collects errors during the build subcommand
 #[derive(Debug)]
@@ -914,8 +901,6 @@ impl Error for DataError {
     }
 }
 
-
-
 /// Collects errors during the import subcommand
 #[derive(Debug)]
 pub enum ImportError {
@@ -957,8 +942,6 @@ impl Error for ImportError {
         }
     }
 }
-
-
 
 /// Collects errors  during the identity-related subcommands (login, logout).
 #[derive(Debug)]
@@ -1109,8 +1092,6 @@ impl Error for InstanceError {
     }
 }
 
-
-
 /// Lists the errors that can occur when trying to do stuff with packages
 ///
 /// Note: `Image` is boxed to avoid the error enum growing too large (see `clippy::reslt_large_err`).
@@ -1182,8 +1163,6 @@ impl std::error::Error for PackageError {
         }
     }
 }
-
-
 
 /// Collects errors during the registry subcommands
 #[derive(Debug)]
@@ -1298,8 +1277,6 @@ impl Display for RegistryError {
 }
 impl Error for RegistryError {}
 
-
-
 /// Collects errors during the repl subcommand
 #[derive(Debug)]
 pub enum ReplError {
@@ -1349,8 +1326,6 @@ impl Error for ReplError {
         }
     }
 }
-
-
 
 /// Collects errors during the run subcommand.
 #[derive(Debug)]
@@ -1516,8 +1491,6 @@ impl From<std::io::Error> for RunError {
     fn from(value: std::io::Error) -> Self { RunError::WriteError { err: value } }
 }
 
-
-
 /// Collects errors during the test subcommand.
 #[derive(Debug)]
 pub enum TestError {
@@ -1584,8 +1557,6 @@ impl Display for TestError {
 }
 impl Error for TestError {}
 
-
-
 /// Collects errors relating to the verify command.
 #[derive(Debug)]
 pub enum VerifyError {
@@ -1602,8 +1573,6 @@ impl Display for VerifyError {
     }
 }
 impl Error for VerifyError {}
-
-
 
 /// Collects errors relating to the version command.
 #[derive(Debug)]
@@ -1643,8 +1612,6 @@ impl Display for VersionError {
     }
 }
 impl Error for VersionError {}
-
-
 
 /// Collects errors of utilities that don't find an origin in just one subcommand.
 #[derive(Debug)]
@@ -1813,8 +1780,6 @@ impl Display for UtilError {
 }
 impl Error for UtilError {}
 
-
-
 /// Defines errors that relate to finding our directories.
 #[derive(Debug)]
 pub enum DirError {
@@ -1833,8 +1798,6 @@ impl Display for DirError {
     }
 }
 impl Error for DirError {}
-
-
 
 /// Declares errors that relate to parsing hostnames from a string.
 #[derive(Debug)]
@@ -1855,8 +1818,6 @@ impl Display for HostnameParseError {
 }
 impl Error for HostnameParseError {}
 
-
-
 /// Declares errors that relate to the offline VM.
 #[derive(Debug)]
 pub enum OfflineVmError {
@@ -1875,8 +1836,6 @@ impl Display for OfflineVmError {
     }
 }
 impl Error for OfflineVmError {}
-
-
 
 /// A really specific error enum for errors relating to fetching delegates.
 #[derive(Debug)]

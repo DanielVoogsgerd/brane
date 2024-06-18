@@ -27,16 +27,11 @@ use specifications::version::Version;
 
 use crate::errors::HostnameParseError;
 
-
 /***** STATICS *****/
 lazy_static::lazy_static! {
     /// The default Docker API version that we're using.
     pub static ref API_DEFAULT_VERSION: String = format!("{}", brane_tsk::docker::API_DEFAULT_VERSION);
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// An auxillary struct that defines a hostname-only argument, optionally with some scheme.
@@ -116,8 +111,6 @@ impl FromStr for Hostname {
     }
 }
 
-
-
 /// Parses a version number that scopes a particular operation down. In other words, can be a specific version number or `all`.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct VersionFix(pub Option<Version>);
@@ -137,8 +130,6 @@ impl FromStr for VersionFix {
         Ok(Self(Some(Version::from_str(s)?)))
     }
 }
-
-
 
 /// The global state for the OfflineVm.
 #[derive(Clone, Debug)]

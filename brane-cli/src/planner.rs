@@ -26,7 +26,6 @@ use log::debug;
 use parking_lot::Mutex;
 use specifications::data::{AccessKind, AvailabilityKind, DataIndex, DataName};
 
-
 /***** HELPER FUNCTIONS *****/
 /// Helper function that plans the given list of edges.
 ///
@@ -330,10 +329,6 @@ fn plan_deferred(table: &SymTable, edges: &mut [Edge], pc: usize, merge: Option<
     // Done
     Ok(())
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// The planner is in charge of assigning locations to tasks in a workflow. This one is very simple, assigning 'localhost' to whatever it sees.

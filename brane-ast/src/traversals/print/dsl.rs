@@ -19,7 +19,6 @@ use brane_dsl::location::AllowedLocations;
 
 pub use crate::errors::AstError as Error;
 
-
 /***** TESTS *****/
 #[cfg(test)]
 pub mod tests {
@@ -30,7 +29,6 @@ pub mod tests {
 
     use super::*;
     use crate::{compile_program_to, CompileResult, CompileStage};
-
 
     /// 'Tests' the traversal by printing the AST for every node.
     #[test]
@@ -77,10 +75,6 @@ pub mod tests {
     }
 }
 
-
-
-
-
 /***** MACROS ******/
 /// Generates the correct number of spaces for an indent.
 macro_rules! indent {
@@ -89,17 +83,9 @@ macro_rules! indent {
     };
 }
 
-
-
-
-
 /***** CONSTANTS *****/
 /// Determines the increase in indentation for every nested level.
 const INDENT_SIZE: usize = 4;
-
-
-
-
 
 /***** TRAVERSAL FUNCTIONS *****/
 /// Prints a Stmt node.
@@ -800,10 +786,6 @@ pub fn pass_literal(writer: &mut impl Write, literal: &Literal) -> std::io::Resu
     // Done
     Ok(())
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// Starts printing the root of the AST (i.e., a series of statements).

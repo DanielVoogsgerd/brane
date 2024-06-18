@@ -24,7 +24,6 @@ use enum_debug::EnumDebug as _;
 use crate::errors::AstError;
 pub use crate::errors::LocationError as Error;
 
-
 /***** TESTS *****/
 #[cfg(test)]
 mod tests {
@@ -36,7 +35,6 @@ mod tests {
     use super::super::print::dsl;
     use super::*;
     use crate::{compile_program_to, CompileResult, CompileStage};
-
 
     /// Tests the traversal by generating symbol tables for every file.
     #[test]
@@ -84,10 +82,6 @@ mod tests {
     }
 }
 
-
-
-
-
 /***** HELPER FUNCTIONS *****/
 /// Searches the given attributes for `loc`/`location`-attributes and use that to scope the given [`AllowedLocations`].
 ///
@@ -134,10 +128,6 @@ fn process_attrs_loc_location(attrs: &[Attribute], locations: &mut AllowedLocati
         }
     }
 }
-
-
-
-
 
 /***** TRAVERSAL FUNCTIONS *****/
 /// Attempts to resolve the location restrictions of all function calls in this Stmt.
@@ -335,10 +325,6 @@ fn pass_expr(expr: &mut Expr, on_locations: AllowedLocations, on_reasons: Vec<Te
         _ => {},
     }
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// Resolves typing in the given `brane-dsl` AST.

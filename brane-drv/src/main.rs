@@ -28,7 +28,6 @@ use specifications::driving::DriverServiceServer;
 use tokio::signal::unix::{signal, Signal, SignalKind};
 use tonic::transport::Server;
 
-
 /***** ARGUMENTS *****/
 /// Defines the arguments that may be given to the service.
 #[derive(Parser)]
@@ -52,10 +51,6 @@ struct Opts {
     )]
     node_config_path: PathBuf,
 }
-
-
-
-
 
 /***** ENTRY POINT *****/
 #[tokio::main]

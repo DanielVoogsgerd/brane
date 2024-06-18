@@ -20,7 +20,6 @@ use crate::data_type::DataType;
 pub use crate::errors::AstError as Error;
 use crate::func_id::FunctionId;
 
-
 /***** MACROS ******/
 /// Generates the correct number of spaces for an indent.
 macro_rules! indent {
@@ -36,19 +35,11 @@ macro_rules! line_number {
     };
 }
 
-
-
-
-
 /***** CONSTANTS *****/
 /// Determines the number of decimals the line numbers will always have
 const LINE_SIZE: usize = 4;
 /// Determines the increase in indentation for every nested level.
 const INDENT_SIZE: usize = 4;
-
-
-
-
 
 /***** TRAVERSAL FUNCTIONS *****/
 /// Prints the global table of the Workflow.
@@ -511,10 +502,6 @@ fn pass_edge_instr(writer: &mut impl Write, instr: &EdgeInstr, table: &SymTable)
     // Done
     Ok(())
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// Starts printing the root of the AST (i.e., a Workflow).

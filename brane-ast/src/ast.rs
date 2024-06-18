@@ -38,7 +38,6 @@ use crate::data_type::DataType;
 use crate::func_id::FunctionId;
 use crate::locations::{Location, Locations};
 
-
 /***** CONSTANTS *****/
 lazy_static!(
     /// A static FunctionDef for main.
@@ -46,10 +45,6 @@ lazy_static!(
     /// A static FunctionDef for the Transfer.
     pub static ref TRANSFER_FUNC: FunctionDef = FunctionDef{ name: "transfer".into(), args: vec![ DataType::Data, DataType::Data ], ret: DataType::Void };
 );
-
-
-
-
 
 /***** HELPER FUNCTIONS *****/
 /// Generates a random workflow ID.
@@ -60,10 +55,6 @@ lazy_static!(
 fn generate_random_workflow_id() -> String {
     format!("workflow-{}", rand::thread_rng().sample_iter(Alphanumeric).take(8).map(char::from).collect::<String>())
 }
-
-
-
-
 
 /***** TOPLEVEL *****/
 /// Defines a Workflow, which is meant to be an 'executable but reasonable' graph.
@@ -173,8 +164,6 @@ impl Default for Workflow {
     }
 }
 
-
-
 /// Defines a piece of metadata.
 #[derive(Clone, Debug, Eq)]
 pub struct Metadata {
@@ -264,8 +253,6 @@ impl Serialize for Metadata {
     }
 }
 
-
-
 /// Defines the SymTable, which is like a symbol table (very much so, even) but now specific to Workflowland.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct SymTable {
@@ -288,16 +275,7 @@ impl SymTable {
     /// # Returns
     /// A new SymTable instance.
     #[inline]
-    pub fn new() -> Self {
-        Self {
-            funcs:   Vec::new(),
-            tasks:   Vec::new(),
-            classes: Vec::new(),
-            vars:    Vec::new(),
-
-            results: HashMap::new(),
-        }
-    }
+    pub fn new() -> Self { Self { funcs: Vec::new(), tasks: Vec::new(), classes: Vec::new(), vars: Vec::new(), results: HashMap::new() } }
 
     /// Constructor for the SymTable that takes the given vectors instead.
     ///
@@ -399,8 +377,6 @@ impl Default for SymTable {
     fn default() -> Self { Self::new() }
 }
 
-
-
 /// Defines a function that is referenced in the edges.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct FunctionDef {
@@ -415,8 +391,6 @@ pub struct FunctionDef {
     #[serde(rename = "r")]
     pub ret:  DataType,
 }
-
-
 
 /// Defines a Task (i.e., a Node) in the Workflow graph.
 #[derive(Clone, Debug, Deserialize, EnumDebug, Serialize)]
@@ -474,8 +448,6 @@ pub struct ComputeTaskDef {
     pub requirements: HashSet<Capability>,
 }
 
-
-
 /// Defines a class that is referenced in the edges.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ClassDef {
@@ -497,8 +469,6 @@ pub struct ClassDef {
     pub methods: Vec<usize>,
 }
 
-
-
 /// Defines a variable that is referenced in the edges.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct VarDef {
@@ -509,10 +479,6 @@ pub struct VarDef {
     #[serde(rename = "t")]
     pub data_type: DataType,
 }
-
-
-
-
 
 /***** EDGES *****/
 /// Defines an Edge (i.e., an intelligent control-flow operation) in the Workflow graph.
@@ -652,8 +618,6 @@ pub enum Edge {
         result: HashSet<DataName>,
     },
 }
-
-
 
 /// Defines an instruction for use within edges, which performs some computation in BraneScriptland (i.e., the edges).
 #[derive(Clone, Debug, Deserialize, EnumDebug, Serialize)]

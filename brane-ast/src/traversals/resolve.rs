@@ -33,7 +33,6 @@ pub use crate::errors::ResolveError as Error;
 use crate::spec::{BuiltinClasses, BuiltinFunctions};
 use crate::state::CompileState;
 
-
 /***** TESTS *****/
 #[cfg(test)]
 pub mod tests {
@@ -44,7 +43,6 @@ pub mod tests {
     use super::super::print::symbol_tables;
     use super::*;
     use crate::{compile_program_to, CompileResult, CompileStage};
-
 
     /// Tests the traversal by generating symbol tables for every file.
     #[test]
@@ -92,10 +90,6 @@ pub mod tests {
     }
 }
 
-
-
-
-
 /***** HELPER FUNCTIONS ******/
 /// Defines the arguments of the given FuncDef in the given symbol table.
 ///
@@ -134,10 +128,6 @@ fn define_func(entry: &mut FunctionEntry, params: &mut [Identifier], symbol_tabl
 
     // Done
 }
-
-
-
-
 
 /***** TRAVERSAL FUNCTIONS *****/
 /// Attempts to resolve the symbol table for a given block.
@@ -829,10 +819,6 @@ fn pass_expr(state: &CompileState, data_index: &DataIndex, expr: &mut Expr, symb
 
     // We're done here
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// Builds symbol tables for the given `brane-dsl` AST.

@@ -17,7 +17,6 @@ use std::fmt::{Display, Formatter, Result as FResult};
 use std::net::SocketAddr;
 use std::path::PathBuf;
 
-
 /***** LIBRARY *****/
 /// Defines Store-related errors.
 #[derive(Debug)]
@@ -70,8 +69,6 @@ impl Error for StoreError {
     }
 }
 
-
-
 /// Errors that relate to the customized serving process of warp.
 #[derive(Debug)]
 pub enum ServerError {
@@ -108,8 +105,6 @@ impl Error for ServerError {
         }
     }
 }
-
-
 
 /// Errors that relate to the `/data` path (and nested).
 #[derive(Debug)]
@@ -180,8 +175,6 @@ impl Error for DataError {
 }
 
 impl warp::reject::Reject for DataError {}
-
-
 
 /// Errors that relate to checker authorization.
 #[derive(Debug)]

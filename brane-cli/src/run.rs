@@ -42,7 +42,6 @@ use crate::instance::InstanceInfo;
 use crate::utils::{ensure_datasets_dir, ensure_packages_dir, get_datasets_dir, get_packages_dir};
 use crate::vm::OfflineVm;
 
-
 /***** HELPER FUNCTIONS *****/
 /// Compiles the given worfklow string to a Workflow.
 ///
@@ -126,10 +125,6 @@ fn compile(
     // Return
     Ok(workflow)
 }
-
-
-
-
 
 /***** AUXILLARY FUNCTIONS *****/
 /// Initializes the state for an instance VM.
@@ -417,10 +412,6 @@ pub async fn process_instance(
     Ok(())
 }
 
-
-
-
-
 /***** AUXILLARY *****/
 /// A helper struct that contains what we need to know about a compiler + VM state for the dummy use-case.
 pub struct DummyVmState {
@@ -486,8 +477,6 @@ pub struct InstanceVmState<O, E> {
     /// The client which we use to communicate to the VM.
     pub client:  DriverServiceClient,
 }
-
-
 
 /// Function that prepares a local, offline virtual machine that never runs any jobs.
 ///
@@ -680,8 +669,6 @@ pub async fn initialize_instance_vm(
     initialize_instance(std::io::stdout(), std::io::stderr(), drv_endpoint, pindex, dindex, user, attach, options).await
 }
 
-
-
 /// Function that executes the given workflow snippet to completion on the dummy machine, returning the result it returns.
 ///
 /// # Arguments
@@ -785,8 +772,6 @@ pub async fn run_instance_vm(
     // Run the thing using the other function
     run_instance(drv_endpoint, state, &workflow, profile).await
 }
-
-
 
 /// Processes the given result of a dummy workflow execution.
 ///
@@ -928,10 +913,6 @@ pub async fn process_instance_result(api_endpoint: impl AsRef<str>, proxy_addr: 
     process_instance(api_endpoint, proxy_addr, certs_dir, datasets_dir, result).await
 }
 
-
-
-
-
 /***** LIBRARY *****/
 /// Runs the given file with the given, optional data folder to resolve data declarations in.
 ///
@@ -998,8 +979,6 @@ pub async fn handle(
         dummy_run(options, what, source_code).await
     }
 }
-
-
 
 /// Runs the given file in a dummy VM, that is to say, ignore jobs with some default values.
 ///

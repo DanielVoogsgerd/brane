@@ -28,7 +28,6 @@ use warp::{Rejection, Reply};
 
 use crate::spec::Context;
 
-
 /***** LIBRARY *****/
 /// Handles a GET on the `/infra/capabilities` path, returning what kind of capabilities this infrastructure supports.
 ///

@@ -28,7 +28,6 @@ use crate::errors::AstError;
 use crate::spec::{BuiltinClasses, BuiltinFunctions};
 use crate::state::{CompileState, DataState};
 
-
 /***** TESTS *****/
 #[cfg(test)]
 mod tests {
@@ -41,7 +40,6 @@ mod tests {
     use super::*;
     use crate::state::CompileState;
     use crate::{compile_snippet_to, CompileResult, CompileStage};
-
 
     /// Tests the traversal by generating symbol tables for every file.
     #[test]
@@ -92,10 +90,6 @@ mod tests {
         });
     }
 }
-
-
-
-
 
 /***** TRAVERSAL FUNCTIONS *****/
 /// Attempts to analyse the data dependencies for this block.
@@ -493,10 +487,6 @@ fn pass_expr(expr: &mut Expr, table: &DataState) -> HashSet<Data> {
         _ => HashSet::new(),
     }
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// Analyses data dependencies in the given `brane-dsl` AST.

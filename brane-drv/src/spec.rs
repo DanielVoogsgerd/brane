@@ -23,7 +23,6 @@ use specifications::driving::ExecuteReply;
 use tokio::sync::mpsc::Sender;
 use tonic::Status;
 
-
 /***** LIBRARY *****/
 /// The global state for the RemoteVm.
 #[derive(Clone, Debug)]

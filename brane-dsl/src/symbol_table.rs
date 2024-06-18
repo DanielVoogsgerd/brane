@@ -26,7 +26,6 @@ use crate::data_type::{ClassSignature, DataType, FunctionSignature};
 pub use crate::errors::SymbolTableError as Error;
 use crate::spec::TextRange;
 
-
 /// Defines a symbol table entry within the SymbolTable.
 #[derive(Clone, Debug)]
 pub enum SymbolTableEntry {
@@ -87,8 +86,6 @@ impl From<Rc<RefCell<VarEntry>>> for SymbolTableEntry {
     #[inline]
     fn from(value: Rc<RefCell<VarEntry>>) -> Self { SymbolTableEntry::VarEntry(value) }
 }
-
-
 
 /// Defines a function entry within the SymbolTable.
 #[derive(Clone, Debug)]
@@ -264,8 +261,6 @@ impl FunctionEntry {
     }
 }
 
-
-
 /// Defines a class entry (i.e., custom type) within the SymbolTable.
 #[derive(Clone, Debug)]
 pub struct ClassEntry {
@@ -342,8 +337,6 @@ impl ClassEntry {
         Self { signature, symbol_table, package_name: Some(package.into()), package_version: Some(package_version), index: usize::MAX, range }
     }
 }
-
-
 
 /// Defines a regular variable entry within the SymbolTable.
 #[derive(Clone, Debug)]
@@ -422,8 +415,6 @@ impl VarEntry {
         Self { name: name.into(), data_type: data_type.into(), function_name: None, class_name: Some(class.into()), index: usize::MAX, range }
     }
 }
-
-
 
 /// Defines a SymbolTable that contains all definitions of a single scope.
 #[derive(Clone, Debug)]

@@ -28,7 +28,6 @@ use crate::scanner::{Token, Tokens};
 use crate::spec::{TextPos, TextRange};
 use crate::tag_token;
 
-
 /***** HELPER ENUMS *****/
 /// Defines an abstraction over a class method and a class property.
 #[derive(Clone, Debug)]
@@ -49,10 +48,6 @@ impl Node for ClassStmt {
         }
     }
 }
-
-
-
-
 
 /***** HELPER FUNCTIONS *****/
 /// Parses a Block node from the given token stream.
@@ -128,10 +123,6 @@ fn class_stmt<'a, E: ParseError<Tokens<'a>> + ContextError<Tokens<'a>>>(input: T
     branch::alt((comb::map(property, ClassStmt::Property), comb::map(declare_func_stmt, |m| ClassStmt::Method(Box::new(m))))).parse(input)
 }
 
-
-
-
-
 /***** GENERAL PARSING FUNCTIONS *****/
 /// Parses a stream of tokens into a full BraneScript AST.
 ///
@@ -154,10 +145,6 @@ pub fn parse_ast(input: Tokens) -> IResult<Tokens, Program, VerboseError<Tokens>
     let end_pos: TextPos = stmts.iter().last().map(|s| s.end().clone()).unwrap_or(TextPos::none());
     Ok((r, Program { block: Block::new(stmts, TextRange::new(start_pos, end_pos)), metadata: HashSet::new() }))
 }
-
-
-
-
 
 /***** STATEMENT PARSING FUNCTIONS *****/
 /// Parses a statement in the head of the given token stream.
@@ -197,8 +184,6 @@ pub fn parse_stmt<'a, E: ParseError<Tokens<'a>> + ContextError<Tokens<'a>>>(inpu
     ))
     .parse(input)
 }
-
-
 
 /// Parses the contents of an attribute.
 ///
@@ -312,8 +297,6 @@ pub fn attribute_inner_stmt<'a, E: ParseError<Tokens<'a>> + ContextError<Tokens<
     // Return the parsed attribute
     Ok((r, Stmt::AttributeInner(attr)))
 }
-
-
 
 /// Parses a let assign statement.
 ///

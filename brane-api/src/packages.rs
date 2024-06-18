@@ -45,7 +45,6 @@ use warp::{Rejection, Reply};
 pub use crate::errors::PackageError as Error;
 use crate::spec::Context;
 
-
 /***** HELPER MACROS *****/
 /// Macro that early quits from a warp function by printing the error and then returning a 500.
 macro_rules! fail {
@@ -80,10 +79,6 @@ macro_rules! fail {
         fail!($err)
     }};
 }
-
-
-
-
 
 /***** AUXILLARY STRUCTS *****/
 /// Defines the contents of a single Scylla database row that describes a package.
@@ -145,10 +140,6 @@ impl TryFrom<PackageInfo> for PackageUdt {
     }
 }
 
-
-
-
-
 /***** AUXILLARY FUNCTIONS *****/
 /// Ensures that the packages table is present in the given Scylla database.
 ///
@@ -205,8 +196,6 @@ pub async fn ensure_db_table(scylla: &Session) -> Result<(), Error> {
     Ok(())
 }
 
-
-
 /// Inserts the given package into the given Scylla database.
 ///
 /// # Arguments
@@ -245,10 +234,6 @@ async fn insert_package_into_db(scylla: &Arc<Session>, package: &PackageInfo, pa
     // Done
     Ok(())
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// Downloads a file from the `brane-api` "registry" to the client.
@@ -410,8 +395,6 @@ where
     info!("Handling POST on '/packages' (i.e., upload new package)");
     let mut package_archive = package_archive;
 
-
-
     /* Step 0: Load config files */
     // Load the node config file
     let node_config: NodeConfig = match NodeConfig::from_path(&context.node_config_path) {
@@ -430,8 +413,6 @@ where
             });
         },
     };
-
-
 
     /* Step 1: Write the _uploadable_ archive */
     // Open a temporary directory
@@ -477,8 +458,6 @@ where
     if let Err(err) = handle.shutdown().await {
         fail!(Error::TarFlushError { path: tar_path, err });
     }
-
-
 
     /* Step 2: Extract the archive into a package info and container image. */
     // Re-open the file
@@ -553,8 +532,6 @@ where
         }
     }
 
-
-
     /* Step 3: Insert the package into the DB */
     debug!("Reading package info '{}'...", info_path.display());
     // Read the extracted package info
@@ -583,8 +560,6 @@ where
     if let Err(err) = insert_package_into_db(&context.scylla, &info, &result_path).await {
         fail!(result_path, err);
     }
-
-
 
     /* Step 4: Done */
     // The package has now been added

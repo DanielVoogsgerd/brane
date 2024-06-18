@@ -23,7 +23,6 @@ use brane_dsl::SymbolTable;
 
 pub use crate::errors::AstError as Error;
 
-
 /***** MACROS ******/
 /// Generates the correct number of spaces for an indent.
 macro_rules! indent {
@@ -32,17 +31,9 @@ macro_rules! indent {
     };
 }
 
-
-
-
-
 /***** CONSTANTS *****/
 /// Determines the increase in indentation for every nested level.
 const INDENT_SIZE: usize = 4;
-
-
-
-
 
 /***** TRAVERSAL FUNCTIONS *****/
 /// Prints a Stmt node.
@@ -206,10 +197,6 @@ fn pass_symbol_table(writer: &mut impl Write, symbol_table: &Rc<RefCell<SymbolTa
     // Done
     Ok(())
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// Starts printing the root of the AST (i.e., a series of statements).

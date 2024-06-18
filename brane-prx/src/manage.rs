@@ -31,7 +31,6 @@ use crate::ports::PortAllocator;
 use crate::redirect::path_server_factory;
 use crate::spec::{Context, NewPathRequest, NewPathRequestTlsOptions};
 
-
 /***** HELPER MACROS *****/
 /// "Casts" the given StatusCode to an empty response.
 macro_rules! response {
@@ -55,10 +54,6 @@ macro_rules! reject {
         warp::reject::custom(InternalError)
     }};
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// Creates a new path outgoing from the proxy service.
@@ -137,8 +132,6 @@ pub async fn new_outgoing_path(body: Bytes, context: Arc<Context>) -> Result<imp
     debug!("OK, returning port {} to client", port);
     Ok(Response::new(Body::from(port.to_string())))
 }
-
-
 
 /// Creates a new path incoming to the proxy service.
 ///

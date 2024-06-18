@@ -12,7 +12,6 @@
 //!   Implements a planner for the instance use-case.
 //
 
-
 /***** LIBRARY *****/
 use brane_ast::Workflow;
 use brane_tsk::errors::PlanError;
@@ -23,7 +22,6 @@ use serde_json::Value;
 use specifications::address::Address;
 use specifications::planning::{PlanningDeniedReply, PlanningReply, PlanningRequest};
 use specifications::profiling::ProfileScopeHandle;
-
 
 /***** LIBRARY *****/
 /// The planner is in charge of assigning locations to tasks in a workflow. This one defers planning to the `brane-plr` service.

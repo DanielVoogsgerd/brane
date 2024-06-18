@@ -20,7 +20,6 @@
 
 // use cbindgen::{generate_with_config, Bindings, Config};
 
-
 /***** ENTRYPOINT *****/
 fn main() {
     // // Emit we only need to run this if the source changed

@@ -29,7 +29,6 @@ use specifications::data::DataIndex;
 use specifications::package::PackageInfo;
 use specifications::version::Version;
 
-
 /***** ERRORS *****/
 /// Defines errors that can occur when prompting for input.
 #[derive(Debug)]
@@ -72,10 +71,6 @@ impl error::Error for Error {
         }
     }
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// Prompts the user for input before testing the package.

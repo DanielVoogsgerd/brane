@@ -33,7 +33,6 @@ use specifications::address::Address;
 
 use crate::spec::InclusiveRange;
 
-
 /***** HELPER MACROS *****/
 /// Generates a FileHistory that points to some branectl-specific directory in the [`config_dir()`].
 macro_rules! hist {
@@ -63,10 +62,6 @@ macro_rules! generate_dir {
         generate_dir!($name);
     };
 }
-
-
-
-
 
 /***** ERRORS *****/
 /// Defines errors that relate to the wizard.
@@ -128,10 +123,6 @@ impl error::Error for Error {
         }
     }
 }
-
-
-
-
 
 /***** HELPER FUNCTIONS *****/
 /// Writes a given [`Config`] to disk.
@@ -235,10 +226,6 @@ where
     }
     Ok(())
 }
-
-
-
-
 
 /***** QUERY FUNCTIONS *****/
 /// Queries the user for the proxy services configuration.
@@ -348,10 +335,6 @@ pub fn query_proxy_node_config() -> Result<NodeConfig, Error> {
         }),
     })
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// Main handler for the `branectl wizard setup` (or `branectl wizard node`) subcommand.

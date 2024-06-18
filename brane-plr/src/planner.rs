@@ -12,7 +12,6 @@
 //!   Implements a planner for the instance use-case.
 //
 
-
 /***** LIBRARY *****/
 use std::collections::{HashMap, HashSet};
 use std::mem;
@@ -46,14 +45,9 @@ use warp::reply::Response;
 
 use crate::context::Context;
 
-
 /***** CONSTANTS *****/
 /// Time that a session has to be inactive before we deleted it (in seconds)
 const SESSION_TIMEOUT_S: u64 = 12 * 3600;
-
-
-
-
 
 /***** HELPER MACROS *****/
 /// Sends back an error as a Response.
@@ -79,10 +73,6 @@ macro_rules! err_response {
         Ok(res)
     }};
 }
-
-
-
-
 
 /***** HELPER FUNCTIONS *****/
 /// Helper function that plans the given list of edges.
@@ -519,8 +509,6 @@ fn plan_deferred(
     Ok(())
 }
 
-
-
 /// Contacts a checker of a domain to see if it's OK with the current workflow.
 ///
 /// # Arguments
@@ -572,10 +560,6 @@ async fn validate_workflow_with(proxy: &ProxyClient, splan: &str, location: &str
     debug!("Checker of '{location}' ALLOWS plan");
     Ok(())
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// This function hosts the actual planner, which uses an event monitor to receive plans which are then planned.
@@ -640,8 +624,6 @@ pub async fn handle(context: Arc<Context>, body: PlanningRequest) -> Result<Resp
         },
     };
     oh.stop();
-
-
 
     // Now we do the planning
     {

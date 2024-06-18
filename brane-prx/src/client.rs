@@ -28,7 +28,6 @@ use url::Url;
 pub use crate::errors::ClientError as Error;
 use crate::spec::{NewPathRequest, NewPathRequestTlsOptions};
 
-
 /***** HELPER FUNCTIONS *****/
 /// Declares a new path in the proxy services.
 ///
@@ -86,10 +85,6 @@ async fn create_path(endpoint: &Url, remote: impl Into<String>, tls: &Option<New
     // Done
     Ok(port)
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// Defines a ProxyClient, which remembers the paths stored and seamlessly translates between them.

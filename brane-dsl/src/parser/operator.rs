@@ -23,7 +23,6 @@ use crate::scanner::{Token, Tokens};
 use crate::spec::TextRange;
 use crate::tag_token;
 
-
 /// Parses either a binary or a unary operator and its starting position.
 ///
 /// # Returns
@@ -31,10 +30,6 @@ use crate::tag_token;
 pub fn parse<'a, E: ParseError<Tokens<'a>> + ContextError<Tokens<'a>>>(input: Tokens<'a>) -> IResult<Tokens, Operator, E> {
     branch::alt((comb::map(binary_operator, Operator::Binary), comb::map(unary_operator, Operator::Unary))).parse(input)
 }
-
-
-
-
 
 /// Parses a binary operator to a BinOp.
 ///

@@ -33,7 +33,6 @@ use log::{debug, error, info, warn};
 use specifications::data::DataIndex;
 use specifications::package::PackageIndex;
 
-
 /***** ARGUMENTS *****/
 /// The arguments for the `branec` binary.
 #[derive(Parser)]
@@ -109,10 +108,6 @@ struct Arguments {
     pretty:   bool,
 }
 
-
-
-
-
 /***** HELPER FUNCTIONS *****/
 /// Reads a "file" from the input.
 ///
@@ -154,8 +149,6 @@ fn read_input(name: impl Into<String>, input: &mut impl BufRead) -> Result<Strin
     // Done
     Ok(raw)
 }
-
-
 
 /// Compiles a snippet of BraneScript statefully.
 ///
@@ -346,10 +339,6 @@ pub async fn compile_iter(
     Ok(())
 }
 
-
-
-
-
 /***** ENTRYPOINT *****/
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
@@ -379,8 +368,6 @@ async fn main() {
     if args.files.is_empty() {
         args.files = vec!["-".into()];
     }
-
-
 
     // Match on whether we're streaming or not
     if !args.stream {

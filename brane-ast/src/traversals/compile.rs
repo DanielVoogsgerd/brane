@@ -34,7 +34,6 @@ use crate::state::{CompileState, TableState};
 use crate::warnings::AstWarning;
 pub use crate::warnings::CompileWarning as Warning;
 
-
 /***** TESTS *****/
 #[cfg(test)]
 mod tests {
@@ -46,7 +45,6 @@ mod tests {
     use super::super::print::ast_unresolved;
     use super::*;
     use crate::{compile_snippet_to, CompileResult, CompileStage};
-
 
     /// Tests the traversal by generating symbol tables for every file.
     #[test]
@@ -96,10 +94,6 @@ mod tests {
     }
 }
 
-
-
-
-
 /***** COMPILATION FUNCTIONS *****/
 /// Compiles a function's body to the given edge buffer.
 ///
@@ -141,10 +135,6 @@ fn compile_func_def(
 
     // Done
 }
-
-
-
-
 
 /***** TRAVERSAL FUNCTIONS *****/
 // /// Writes all of the definitions in the current block to the given unresolved workflow, and then also that of all nested blocks.
@@ -733,10 +723,6 @@ fn pass_expr(expr: dsl::Expr, edges: &mut EdgeBuffer, _table: &TableState) {
         _ => {},
     }
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// Compiles the given `brane-dsl` AST into a `brane-ast` AST.

@@ -19,7 +19,6 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 
-
 /***** ERRORS *****/
 /// Defines the error that may occur when parsing architectures
 #[derive(Debug)]
@@ -36,10 +35,6 @@ impl Display for ArchError {
     }
 }
 impl Error for ArchError {}
-
-
-
-
 
 /***** AUXILLARY *****/
 /// A formatter for architectures that writes it in a way that Brane understands.
@@ -121,10 +116,6 @@ impl<'a> Display for ArchCfsslFormatter<'a> {
         }
     }
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// The Arch enum defines possible architectures that we know of and love

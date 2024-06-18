@@ -51,16 +51,11 @@ pub use crate::errors::GenerateError as Error;
 use crate::spec::{GenerateBackendSubcommand, GenerateCertsSubcommand, GenerateNodeSubcommand, Pair};
 use crate::utils::resolve_config_path;
 
-
 /***** STATICS *****/
 /// The embedded `cfssl` binary, compiled and/or downloaded by `build.rs`.
 const CFSSL_BIN: &[u8] = include_bytes!(env!("CFSSL_PATH"));
 /// The embedded `cfssljson` binary, compiled and/or downloaded by `build.rs`.
 const CFSSLJSON_BIN: &[u8] = include_bytes!(env!("CFSSLJSON_PATH"));
-
-
-
-
 
 /***** HELPER FUNCTIONS ******/
 /// Ensures that the directory where the given file lives exists.
@@ -306,8 +301,6 @@ fn write_proxy_header(writer: &mut impl Write) -> Result<(), std::io::Error> {
     Ok(())
 }
 
-
-
 /// Writes the given config file to the given location.
 ///
 /// # Arguments
@@ -494,10 +487,6 @@ fn generate_client_server_cert(
     Ok(())
 }
 
-
-
-
-
 /***** HELPER STRUCTS *****/
 /// Combines information about the cfssl executables.
 #[derive(Clone, Debug)]
@@ -507,7 +496,6 @@ struct CfsslExecutables<P1, P2> {
     /// The executable that takes the JSON output of the first and generates a .pem certificate out of it
     cfssljson: P2,
 }
-
 
 /// Defines the JSON format for the `ca-config.json` file we use to configure `cfssl` in general.
 #[derive(Clone, Debug, Serialize)]
@@ -545,7 +533,6 @@ struct CfsslCaConfigProfile {
     expiry: String,
 }
 
-
 /// Defines the JSON format for the `ca-csr.json` file we use to let `cfssl` generate a CA certificate for us.
 #[derive(Clone, Debug, Serialize)]
 struct CfsslCaCsr {
@@ -580,10 +567,6 @@ struct CfsslCsrKey {
     /// The size of the key, in bits.
     size: usize,
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// Handles generating a new `node.yml` config file for a central _or_ worker node.
@@ -915,8 +898,6 @@ pub fn node(
     Ok(())
 }
 
-
-
 /// Handles generating root & server certificates for the current domain.
 ///
 /// # Arguments
@@ -933,7 +914,6 @@ pub fn node(
 pub async fn certs(fix_dirs: bool, path: impl Into<PathBuf>, temp_dir: impl Into<PathBuf>, mut kind: GenerateCertsSubcommand) -> Result<(), Error> {
     let path: PathBuf = path.into();
     let temp_dir: PathBuf = temp_dir.into();
-
 
     /* GENERAL */
     // Don't forget to resolve the hostname
@@ -1009,8 +989,6 @@ pub async fn certs(fix_dirs: bool, path: impl Into<PathBuf>, temp_dir: impl Into
 
     // Generate a random ID to avoid* conflicting* repeated files
     let id: String = rand::thread_rng().sample_iter(Alphanumeric).map(char::from).take(3).collect::<String>();
-
-
 
     /* KIND-SPECIFIC */
     match &kind {
@@ -1150,8 +1128,6 @@ pub async fn certs(fix_dirs: bool, path: impl Into<PathBuf>, temp_dir: impl Into
     Ok(())
 }
 
-
-
 /// Handles generating a new `infra.yml` config file.
 ///
 /// # Arguments
@@ -1243,8 +1219,6 @@ pub fn infra(
     println!("Successfully generated {}", style(path.display().to_string()).bold().green());
     Ok(())
 }
-
-
 
 /// Handles generating a new `creds.yml` config file.
 ///

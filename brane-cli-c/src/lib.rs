@@ -44,14 +44,9 @@ use specifications::data::{AccessKind, DataIndex};
 use specifications::package::PackageIndex;
 use tokio::runtime::{Builder, Runtime};
 
-
 /***** CONSTANTS *****/
 /// The version string of this package, null-terminated for C-compatibility.
 static C_VERSION: &str = concat!(env!("CARGO_PKG_VERSION"), "\0");
-
-
-
-
 
 /***** GLOBALS *****/
 /// Ensures that the initialization function is run only once.
@@ -60,10 +55,6 @@ static LOG_INIT: Once = Once::new();
 /// Handle to the shared tokio runtime that is ref-counted among all compilers and virtual machines
 /// We do it this wacky way to ensure deallocation of the runtime when the last compiler/vm gets free'd, while still re-using the same one on every new().
 static RUNTIME: Mutex<Option<Arc<Runtime>>> = Mutex::new(None);
-
-
-
-
 
 /***** HELPER FUNCTIONS *****/
 /// Initializes the logging system if it hadn't already.
@@ -158,10 +149,6 @@ unsafe fn rust_to_cstr(string: String) -> *mut c_char {
     target
 }
 
-
-
-
-
 /***** HELPER STRUCTS *****/
 /// Defines a [`Write`]-capable, shared handle over a single bytes buffer.
 #[derive(Clone, Debug)]
@@ -230,10 +217,6 @@ impl Write for BytesHandle {
     fn by_ref(&mut self) -> &mut Self { self }
 }
 
-
-
-
-
 /***** LIBRARY FUNCTIONS *****/
 /// Returns the BRANE version for which this compiler is valid.
 ///
@@ -244,8 +227,6 @@ pub extern "C" fn version() -> *const c_char {
     // SAFETY: We can easily do this without a care in the world, since the string is static and won't need deallocation.
     C_VERSION.as_ptr() as *const c_char
 }
-
-
 
 /// Forces the serialization functions to either use colour or not.
 ///
@@ -260,10 +241,6 @@ pub extern "C" fn set_force_colour(force: bool) {
     console::set_colors_enabled_stderr(force);
 }
 
-
-
-
-
 /***** LIBRARY ERROR *****/
 /// Defines the error type returned by this library.
 #[derive(Debug)]
@@ -271,8 +248,6 @@ pub struct Error {
     /// The message to print.
     msg: String,
 }
-
-
 
 /// Destructor for the Error type.
 ///
@@ -342,10 +317,6 @@ pub unsafe extern "C" fn error_print_err(err: *const Error) {
     error!("{}", err.msg);
 }
 
-
-
-
-
 /***** LIBRARY SOURCE ERROR *****/
 /// Defines the error type returned by this library.
 #[derive(Debug)]
@@ -363,8 +334,6 @@ pub struct SourceError<'f> {
     msg:   Option<String>,
 }
 
-
-
 /// Destructor for the Error type.
 ///
 /// # Safety
@@ -381,8 +350,6 @@ pub unsafe extern "C" fn serror_free(serr: *mut SourceError) {
     drop(Box::from_raw(serr));
     cleanup_runtime();
 }
-
-
 
 /// Returns if a source warning has occurred.
 ///
@@ -458,8 +425,6 @@ pub unsafe extern "C" fn serror_has_err(serr: *const SourceError) -> bool {
     // Now return if there is a message
     serr.msg.is_some()
 }
-
-
 
 /// Serializes the source warnings in this error to the given buffer.
 ///
@@ -598,8 +563,6 @@ pub unsafe extern "C" fn serror_serialize_err(serr: *const SourceError, buffer: 
     }
 }
 
-
-
 /// Prints the source warnings in this error to stderr.
 ///
 /// Note that there may be zero or more warnings at once. To discover if there are any, check [`serror_has_swarns()`].
@@ -680,10 +643,6 @@ pub unsafe extern "C" fn serror_print_err(serr: *const SourceError) {
     }
 }
 
-
-
-
-
 /***** LIBRARY PACKAGEINDEX *****/
 /// Constructs a new [`PackageIndex`] that lists the available packages in a remote instance.
 ///
@@ -747,10 +706,6 @@ pub unsafe extern "C" fn pindex_free(pindex: *mut Arc<Mutex<PackageIndex>>) {
     drop(Box::from_raw(pindex));
     cleanup_runtime();
 }
-
-
-
-
 
 /***** LIBRARY DATAINDEX *****/
 /// Constructs a new [`DataIndex`] that lists the available datasets in a remote instance.
@@ -816,10 +771,6 @@ pub unsafe extern "C" fn dindex_free(dindex: *mut Arc<Mutex<DataIndex>>) {
     cleanup_runtime();
 }
 
-
-
-
-
 /***** LIBRARY WORKFLOW *****/
 /// Destructor for the Workflow.
 ///
@@ -837,8 +788,6 @@ pub unsafe extern "C" fn workflow_free(workflow: *mut Workflow) {
     drop(Box::from_raw(workflow));
     cleanup_runtime();
 }
-
-
 
 /// Given a workflow, injects an end user into it.
 ///
@@ -868,8 +817,6 @@ pub unsafe extern "C" fn workflow_set_user(workflow: *mut Workflow, user: *const
     workflow.user = Arc::new(Some(user.into()));
     debug!("End-user is now set to '{user}'");
 }
-
-
 
 /// Serializes the workflow by essentially disassembling it.
 ///
@@ -912,10 +859,6 @@ pub unsafe extern "C" fn workflow_disassemble(workflow: *const Workflow, assembl
     std::ptr::null()
 }
 
-
-
-
-
 /***** LIBRARY COMPILER *****/
 #[derive(Debug)]
 pub struct Compiler {
@@ -929,8 +872,6 @@ pub struct Compiler {
     /// The compile state to use in between snippets.
     state:  CompileState,
 }
-
-
 
 /// Constructor for the Compiler.
 ///
@@ -970,13 +911,8 @@ pub unsafe extern "C" fn compiler_new(
     };
 
     // Construct a new Compiler and return it as a pointer
-    *compiler = Box::into_raw(Box::new(Compiler {
-        pindex: pindex.clone(),
-        dindex: dindex.clone(),
-
-        source: String::new(),
-        state:  CompileState::new(),
-    }));
+    *compiler =
+        Box::into_raw(Box::new(Compiler { pindex: pindex.clone(), dindex: dindex.clone(), source: String::new(), state: CompileState::new() }));
     debug!("Compiler created");
     std::ptr::null()
 }
@@ -997,8 +933,6 @@ pub unsafe extern "C" fn compiler_free(compiler: *mut Compiler) {
     drop(Box::from_raw(compiler));
     cleanup_runtime();
 }
-
-
 
 /// Compiles the given BraneScript snippet to the BRANE Workflow Representation.
 ///
@@ -1032,8 +966,6 @@ pub unsafe extern "C" fn compiler_compile(
     *workflow = std::ptr::null_mut();
     info!("Compiling snippet...");
 
-
-
     /* INPUT */
     // Cast the Compiler pointer to a Compiler reference
     debug!("Reading compiler input...");
@@ -1050,8 +982,6 @@ pub unsafe extern "C" fn compiler_compile(
 
     // Create the error already
     let mut serr: Box<SourceError> = Box::new(SourceError { file: what, source: String::new(), warns: vec![], errs: vec![], msg: None });
-
-
 
     /* COMPILE */
     debug!("Compiling snippet...");
@@ -1100,10 +1030,6 @@ pub unsafe extern "C" fn compiler_compile(
     Box::into_raw(serr)
 }
 
-
-
-
-
 /***** FULL VALUE *****/
 /// Destructor for the FullValue.
 ///
@@ -1121,8 +1047,6 @@ pub unsafe extern "C" fn fvalue_free(fvalue: *mut FullValue) {
     drop(Box::from_raw(fvalue));
     cleanup_runtime();
 }
-
-
 
 /// Checks if this [`FullValue`] needs processing.
 ///
@@ -1202,10 +1126,6 @@ pub unsafe extern "C" fn fvalue_serialize(fvalue: *const FullValue, data_dir: *c
     // Done!
 }
 
-
-
-
-
 /***** VIRTUAL MACHINE *****/
 /// Defines a BRANE instance virtual machine.
 ///
@@ -1222,8 +1142,6 @@ pub struct VirtualMachine {
     /// The state of everything we need to know about the virtual machine
     state: InstanceVmState<BytesHandle, BytesHandle>,
 }
-
-
 
 /// Constructor for the VirtualMachine.
 ///
@@ -1333,8 +1251,6 @@ pub unsafe extern "C" fn vm_free(vm: *mut VirtualMachine) {
     drop(Box::from_raw(vm));
     cleanup_runtime();
 }
-
-
 
 /// Runs the given code snippet on the backend instance.
 ///

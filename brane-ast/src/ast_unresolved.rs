@@ -19,7 +19,6 @@ use std::sync::Arc;
 use crate::ast::Metadata;
 use crate::edgebuffer::EdgeBuffer;
 
-
 /***** LIBRARY *****/
 /// Defines a variant of a normal Workflow, which is meant to be an 'executable but reasonable' graph but with inter-edge links in an unserializable state. They have to be resolved to indices before they can be run.
 #[derive(Clone, Debug)]

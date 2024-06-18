@@ -30,8 +30,6 @@ pub mod verify;
 pub mod version;
 pub mod vm;
 
-
-
 /***** CONSTANTS *****/
 /// The minimum Docker version required by the Brane CLI command-line tool
 pub const MIN_DOCKER_VERSION: specifications::version::Version = specifications::version::Version::new(19, 0, 0);

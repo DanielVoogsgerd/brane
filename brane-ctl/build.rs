@@ -17,7 +17,6 @@
 use std::fs;
 use std::path::PathBuf;
 
-
 /***** ENTRYPOINT *****/
 fn main() {
     // Get the target directory to build to

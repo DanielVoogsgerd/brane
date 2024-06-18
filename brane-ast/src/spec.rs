@@ -18,7 +18,6 @@ use strum::{EnumIter, IntoEnumIterator as _};
 
 use crate::state::{ClassState, FunctionState, VarState};
 
-
 /***** LIBRARY *****/
 /// Defines the builtin functions that exist in BraneScript.
 #[derive(Clone, Copy, Debug, EnumIter)]
@@ -92,18 +91,9 @@ impl BuiltinFunctions {
 impl From<BuiltinFunctions> for FunctionState {
     #[inline]
     fn from(value: BuiltinFunctions) -> Self {
-        Self {
-            name:      value.name().into(),
-            signature: value.signature(),
-
-            class_name: None,
-
-            range: TextRange::none(),
-        }
+        Self { name: value.name().into(), signature: value.signature(), class_name: None, range: TextRange::none() }
     }
 }
-
-
 
 /// Defines the builtin classes that exist in BraneScript.
 #[derive(Clone, Copy, Debug)]

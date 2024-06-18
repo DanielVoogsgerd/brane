@@ -22,7 +22,6 @@ use crate::errors::AstError;
 use crate::warnings::AstWarning;
 pub use crate::warnings::MetadataWarning as Warning;
 
-
 /***** TESTS *****/
 #[cfg(test)]
 mod tests {
@@ -34,7 +33,6 @@ mod tests {
     use super::super::print::dsl;
     use super::*;
     use crate::{compile_program_to, CompileResult, CompileStage};
-
 
     /// Tests the traversal by generating symbol tables for every file.
     #[test]
@@ -80,10 +78,6 @@ mod tests {
         });
     }
 }
-
-
-
-
 
 /***** HELPER FUNCTIONS *****/
 /// Parses a [`Metadata`] from a given `str`.
@@ -178,10 +172,6 @@ fn warn_useless_attrs(attrs: &[Attribute], warns: &mut Vec<Warning>) {
         warns.push(Warning::UselessTag { range });
     }
 }
-
-
-
-
 
 /***** TRAVERSAL FUNCTIONS *****/
 /// Passes a [`Block`].
@@ -358,10 +348,6 @@ fn pass_expr(expr: &mut Expr, metadata: &HashMap<Metadata, TextRange>, _warns: &
         Pattern { .. } | VarRef { .. } | Identifier { .. } | Literal { .. } | Empty {} => {},
     }
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// Processes `#[tag(...)]`/`#[metadata(...)]`-annotations into annotations on various things in the AST.

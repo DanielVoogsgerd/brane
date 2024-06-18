@@ -42,7 +42,6 @@ use specifications::version::Version;
 pub use crate::errors::LifetimeError as Error;
 use crate::spec::{StartOpts, StartSubcommand};
 
-
 /***** HELPER STRUCTS *****/
 /// Defines a struct that writes to a valid compose file for overriding hostnames.
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -52,8 +51,6 @@ struct ComposeOverrideFile {
     /// The services themselves
     services: HashMap<&'static str, ComposeOverrideFileService>,
 }
-
-
 
 /// Defines a struct that defines how a service looks like in a valid compose file for overriding hostnames.
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -67,10 +64,6 @@ struct ComposeOverrideFileService {
     /// Whether to open any additional ports.
     ports: Vec<String>,
 }
-
-
-
-
 
 /***** HELPER FUNCTIONS *****/
 /// Makes the given path canonical, casting the error for convenience.
@@ -742,10 +735,6 @@ fn run_compose(
     Ok(())
 }
 
-
-
-
-
 /***** LIBRARY *****/
 /// Starts the local node by running the given docker-compose file.
 ///
@@ -907,8 +896,6 @@ pub async fn start(
     println!("\nSuccessfully launched node of type {}", style(node_config.node.kind()).bold().green());
     Ok(())
 }
-
-
 
 /// Stops the (currently running) local node.
 ///

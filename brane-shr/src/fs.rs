@@ -35,7 +35,6 @@ use tokio_tar::{Archive, Builder, Entries, Entry};
 
 use crate::formatters::Capitalizeable;
 
-
 /***** TESTS *****/
 #[cfg(test)]
 pub mod tests {
@@ -47,7 +46,6 @@ pub mod tests {
 
     use super::*;
     use crate::formatters::{BlockFormatter, HexFormatter};
-
 
     /// A test whether we can correct compress, then uncompress an archive as we expected.
     ///
@@ -511,8 +509,6 @@ pub mod tests {
             }
         }
 
-
-
         /***** ARCHIVING *****/
         // Archive the thing to the temporary folder
         let tar_path: PathBuf = tempdir.path().join("source.tar.gz");
@@ -525,8 +521,6 @@ pub mod tests {
         if let Err(err) = unarchive_async(&tar_path, &target).await {
             panic!("Failed to unarchive the tarball: {}", err);
         }
-
-
 
         /***** VERIFICATION *****/
         // Check if the paths are the same
@@ -615,8 +609,6 @@ pub mod tests {
         }
     }
 
-
-
     /// Test if archiving / unarchiving works, keeping the root folder intact.
     #[tokio::test]
     async fn test_tarball_with_root() { test_archive_unarchive(PathBuf::new(), false).await; }
@@ -633,10 +625,6 @@ pub mod tests {
     #[tokio::test]
     async fn test_tarball_without_root_extra_path() { test_archive_unarchive("some/extra/folders/lol".into(), true).await; }
 }
-
-
-
-
 
 /***** ERRORS *****/
 /// Defines the errors tha may occur when dealing with the filesystem operations.
@@ -787,10 +775,6 @@ impl Display for Error {
 }
 impl std::error::Error for Error {}
 
-
-
-
-
 /***** AUXILLARY *****/
 /// Defines permission flags we can set per group.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -844,8 +828,6 @@ impl PermissionSet {
     #[inline]
     fn octets(&self) -> u32 { ((self.user.0 as u32) << 6) | ((self.group.0 as u32) << 3) | (self.other.0 as u32) }
 }
-
-
 
 /// Defines things to do to assert a downloaded file is secure and what we expect.
 #[derive(Clone, Debug)]
@@ -919,10 +901,6 @@ impl<'c> Display for DownloadSecurity<'c> {
     }
 }
 
-
-
-
-
 /***** LIBRARY *****/
 /// Defines a wrapper around a file handle that can be used to implement file locks.
 #[derive(Debug)]
@@ -994,8 +972,6 @@ impl Drop for FileLock {
         debug!("Lock '{}' released", self.path.display());
     }
 }
-
-
 
 /// Changes the permissions of the given file to the given triplet.
 ///
@@ -1103,8 +1079,6 @@ pub fn set_executable(path: impl AsRef<Path>) -> Result<(), Error> {
     std::compile_error!("Non-Unix, non-Windows OS not supported.");
 }
 
-
-
 /// Unwraps a folder into its only child folder.
 ///
 /// # Arguments
@@ -1145,8 +1119,6 @@ pub async fn recurse_in_only_child_async(dir: impl AsRef<Path>) -> Result<PathBu
         Err(err) => Err(Error::DirReadError { what: "to-be-trivially-recursed", path: dir.into(), err }),
     }
 }
-
-
 
 /// Moves the given or directory from one location to another.
 ///
@@ -1275,8 +1247,6 @@ pub async fn copy_dir_recursively_async(source: impl AsRef<Path>, target: impl A
     // Done with recursion? Done with copying
     Ok(())
 }
-
-
 
 /// Downloads some file from the interwebs to the given location.
 ///
@@ -1458,8 +1428,6 @@ pub async fn download_file_async(
     // Done
     Ok(())
 }
-
-
 
 /// Archives the given file or directory as a `.tar.gz` file.
 ///

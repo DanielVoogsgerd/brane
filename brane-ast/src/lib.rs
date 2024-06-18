@@ -34,7 +34,6 @@ pub mod state;
 pub mod traversals;
 pub mod warnings;
 
-
 // Re-export some stuff from brane-dsl
 pub use ast::{SymTable, Workflow};
 pub use ast_unresolved::UnresolvedWorkflow;

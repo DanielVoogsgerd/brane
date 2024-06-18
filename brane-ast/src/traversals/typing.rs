@@ -28,7 +28,6 @@ use crate::spec::BuiltinClasses;
 use crate::warnings::AstWarning;
 pub use crate::warnings::TypeWarning as Warning;
 
-
 /***** TESTS *****/
 #[cfg(test)]
 mod tests {
@@ -40,7 +39,6 @@ mod tests {
     use super::super::print::symbol_tables;
     use super::*;
     use crate::{compile_program_to, CompileResult, CompileStage};
-
 
     /// Tests the traversal by generating symbol tables for every file.
     #[test]
@@ -86,10 +84,6 @@ mod tests {
         });
     }
 }
-
-
-
-
 
 /***** HELPER FUNCTIONS *****/
 /// Inserts a 'forced cast', i.e., makes sure the source type is casteable and then insret a new Cast expresion to make it so (if necessary).
@@ -189,10 +183,6 @@ fn insert_casts_at_returns(s: &mut Stmt, target: &DataType) {
         Attribute(_) | AttributeInner(_) => panic!("Encountered {:?} in typing traversal's 'insert_casts_at_returns()'", s.variant()),
     }
 }
-
-
-
-
 
 /***** TRAVERSAL FUNCTIONS *****/
 /// Attempts to resolve the type of this block and verifies it is well-types.
@@ -896,10 +886,6 @@ fn pass_expr(expr: &mut Expr, symbol_table: &Rc<RefCell<SymbolTable>>, errors: &
         _ => DataType::Any,
     }
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// Resolves typing in the given `brane-dsl` AST.

@@ -16,7 +16,6 @@ use std::error::Error;
 use std::fmt::{Display, Formatter, Result as FResult};
 use std::path::PathBuf;
 
-
 /***** LIBRARY *****/
 /// Defines errors that relate to the ContainerHashes file.
 #[derive(Debug)]

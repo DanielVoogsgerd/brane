@@ -27,7 +27,6 @@ use log::{debug, error, info, LevelFilter};
 use rustls::Certificate;
 use warp::Filter;
 
-
 /***** ARGUMENTS *****/
 /// Defines the arguments for the `brane-reg` service.
 #[derive(Parser)]
@@ -46,10 +45,6 @@ struct Args {
     )]
     node_config_path: PathBuf,
 }
-
-
-
-
 
 /***** ENTYRPOINT *****/
 #[tokio::main]
@@ -82,13 +77,9 @@ async fn main() {
         std::process::exit(1);
     }
 
-
-
     // Put the path in a context
     let context: Arc<Context> = Arc::new(Context { node_config_path: args.node_config_path });
     let context = warp::any().map(move || context.clone());
-
-
 
     // Prepare the filters for the webserver
     let list_assets = warp::get().and(warp::path("data")).and(warp::path("info")).and(warp::path::end()).and(context.clone()).and_then(data::list);

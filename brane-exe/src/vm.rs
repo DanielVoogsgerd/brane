@@ -24,10 +24,6 @@ use crate::spec::{CustomGlobalState, CustomLocalState, RunState, VmPlugin};
 use crate::thread::Thread;
 use crate::value::FullValue;
 
-
-
-
-
 /***** LIBRARY *****/
 /// Defines a common interface (and some code) for virtual machines.
 #[async_trait]
@@ -36,8 +32,6 @@ pub trait Vm {
     type GlobalState: CustomGlobalState;
     /// The type of the thread-local extension to the runtime state.
     type LocalState: CustomLocalState;
-
-
 
     // Child-specific
     /// A function that stores the given runtime state information in the parent struct.
@@ -64,8 +58,6 @@ pub trait Vm {
     /// # Errors
     /// This function may error for its own reasons.
     fn load_state(this: &Arc<RwLock<Self>>) -> Result<RunState<Self::GlobalState>, VmError>;
-
-
 
     // Global
     /// Initializes a new global state based on the given custom part.
@@ -123,7 +115,6 @@ pub trait Vm {
     }
 }
 
-
 /***** TESTS *****/
 #[cfg(test)]
 pub mod tests {
@@ -137,7 +128,6 @@ pub mod tests {
 
     use super::*;
     use crate::dummy::DummyVm;
-
 
     /// Tests the traversal by generating symbol tables for every file.
     #[tokio::test]

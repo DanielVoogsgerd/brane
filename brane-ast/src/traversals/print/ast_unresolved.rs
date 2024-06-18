@@ -25,7 +25,6 @@ use crate::edgebuffer::{EdgeBuffer, EdgeBufferNode, EdgeBufferNodeLink, EdgeBuff
 pub use crate::errors::AstError as Error;
 use crate::state::{CompileState, FunctionState, TableState, TaskState};
 
-
 /***** MACROS ******/
 /// Generates the correct number of spaces for an indent.
 macro_rules! indent {
@@ -34,17 +33,9 @@ macro_rules! indent {
     };
 }
 
-
-
-
-
 /***** CONSTANTS *****/
 /// Determines the increase in indentation for every nested level.
 const INDENT_SIZE: usize = 4;
-
-
-
-
 
 /***** TRAVERSAL FUNCTIONS *****/
 /// Prints the global table of the Workflow.
@@ -451,10 +442,6 @@ pub fn pass_edge_instr(writer: &mut impl Write, instr: &EdgeInstr, table: &Table
     // Done
     Ok(())
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// Starts printing the root of the AST (i.e., an UnresolvedWorkflow).

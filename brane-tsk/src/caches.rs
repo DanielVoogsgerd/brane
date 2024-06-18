@@ -26,14 +26,9 @@ use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use reqwest::{Response, StatusCode};
 use specifications::address::Address;
 
-
 /***** CONSTANTS *****/
 /// The default timeout (in seconds) of entries in the [`DomainRegistryCache`].
 pub const DEFAULT_DOMAIN_REGISTRY_CACHE_TIMEOUT: u64 = 6 * 3600;
-
-
-
-
 
 /***** ERRORS *****/
 /// Defines errors originating in the [`DomainRegistryCache`].
@@ -83,10 +78,6 @@ impl Error for DomainRegistryCacheError {
         }
     }
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// A cache for storing the local registry address of a particular domain.

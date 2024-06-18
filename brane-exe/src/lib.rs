@@ -32,7 +32,6 @@ pub use thread::Thread;
 pub use value::{FullValue, Value};
 pub use vm::Vm;
 
-
 // A few useful macros
 /// Macro that conditionally logs nodes that are being run.
 #[cfg(feature = "print_exec_path")]

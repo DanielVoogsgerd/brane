@@ -16,7 +16,6 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-
 /***** NETWORKING *****/
 /// Defines a message that carries an _unplanned_ workflow. It is destined to be intercepted by the planner.
 #[derive(Clone, Debug, Deserialize, Serialize)]

@@ -1,16 +1,16 @@
 //  PROXY.rs
 //    by Lut99
-// 
+//
 //  Created:
 //    09 Mar 2023, 15:15:47
 //  Last edited:
 //    16 Mar 2023, 15:39:53
 //  Auto updated?
 //    Yes
-// 
+//
 //  Description:
 //!   Defines the configuration file for additional incoming proxy rules.
-// 
+//
 
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter, Result as FResult};
@@ -18,16 +18,14 @@ use std::ops::RangeInclusive;
 use std::str::FromStr;
 
 use enum_debug::EnumDebug;
-use serde::{Deserialize, Serialize};
 use serde::de::{self, Deserializer, Visitor};
 use serde::ser::Serializer;
-
+use serde::{Deserialize, Serialize};
 use specifications::address::Address;
 
-pub use crate::info::YamlError as Error;
 use crate::errors::ProxyProtocolParseError;
+pub use crate::info::YamlError as Error;
 use crate::info::YamlInfo;
-
 
 /***** AUXILLARY *****/
 /// Defines the supported proxy protocols (versions).
@@ -55,7 +53,7 @@ impl FromStr for ProxyProtocol {
         match s {
             "socks5" => Ok(Self::Socks5),
             "socks6" => Ok(Self::Socks6),
-            _        => Err(ProxyProtocolParseError::UnknownProtocol { raw: s.into() }),
+            _ => Err(ProxyProtocolParseError::UnknownProtocol { raw: s.into() }),
         }
     }
 }
@@ -78,9 +76,7 @@ impl<'de> Deserialize<'de> for ProxyProtocol {
         impl<'de> Visitor<'de> for ProxyProtocolVisitor {
             type Value = ProxyProtocol;
 
-            fn expecting(&self, f: &mut Formatter<'_>) -> FResult {
-                write!(f, "a proxy protocol identifier")
-            }
+            fn expecting(&self, f: &mut Formatter<'_>) -> FResult { write!(f, "a proxy protocol identifier") }
 
             fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
             where
@@ -98,44 +94,31 @@ impl<'de> Deserialize<'de> for ProxyProtocol {
     }
 }
 
-
-
-
-
 /***** LIBRARY *****/
 /// Defines the file that can be used to define additional proxy rules.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ProxyConfig {
     /// Defines the range of outgoing ports we may assign to services.
-    pub outgoing_range : RangeInclusive<u16>,
+    pub outgoing_range: RangeInclusive<u16>,
     /// Defines a list of forwarding ports for outside incoming connections. Maps incoming port to outgoing address.
-    /// 
+    ///
     /// Note: these will also have to be opened in Docker, obviously, but `branectl` can do this for you.
-    #[serde(default="HashMap::new")]
-    pub incoming       : HashMap<u16, Address>,
+    #[serde(default = "HashMap::new")]
+    pub incoming: HashMap<u16, Address>,
 
     /// Whether we have to forward our traffic through some external proxy.
-    pub forward  : Option<ForwardConfig>,
+    pub forward: Option<ForwardConfig>,
 }
 impl Default for ProxyConfig {
-    fn default() -> Self {
-        Self {
-            outgoing_range : 4200..=4299,
-            incoming       : HashMap::new(),
-
-            forward : None,
-        }
-    }
+    fn default() -> Self { Self { outgoing_range: 4200..=4299, incoming: HashMap::new(), forward: None } }
 }
 impl<'de> YamlInfo<'de> for ProxyConfig {}
-
-
 
 /// Defines how the forwarding looks like.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ForwardConfig {
     /// The address of the proxy to proxy itself.
-    pub address  : Address,
+    pub address:  Address,
     /// The protocol that we use to communicate to the proxy.
-    pub protocol : ProxyProtocol,
+    pub protocol: ProxyProtocol,
 }

@@ -37,7 +37,6 @@ use warp::{Filter, Reply};
 
 pub use crate::errors::ServerError as Error;
 
-
 /***** LIBRARY *****/
 /// Function that serves a warp server, but now by providing additional information about the authenticated client.
 ///
@@ -119,8 +118,6 @@ where
             }
         },
     };
-
-
 
     // Enter the game loop; we await new connections
     info!("Ready for connections...");

@@ -36,7 +36,6 @@ use url::Url;
 pub use crate::errors::RedirectError as Error;
 use crate::spec::{Context, NewPathRequestTlsOptions};
 
-
 /***** AUXILLARY STRUCTS *****/
 /// Wrapper around both a Socks6Client and a normal "client" to serve proxied or not.
 pub enum RemoteClient {
@@ -83,10 +82,6 @@ impl RemoteClient {
         }
     }
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// Initializes a path server with the given port and address.
@@ -180,8 +175,6 @@ pub async fn path_server_factory(
         Ok(path_server(context.node_config_path.clone(), listener, RemoteClient::Direct, socket_addr, remote_addr, tls))
     }
 }
-
-
 
 /// Serves the proxying service on the given path, to the given address.
 ///

@@ -24,7 +24,6 @@ use crate::scanner::{Token, Tokens};
 use crate::spec::{TextPos, TextRange};
 use crate::tag_token;
 
-
 /***** HELPER FUNCTIONS *****/
 /// Parses a `property: value` pair as such.
 ///
@@ -45,10 +44,6 @@ pub fn instance_property<'a, E: ParseError<Tokens<'a>> + ContextError<Tokens<'a>
     let range: TextRange = TextRange::new(name.start().clone(), c.map(|t| TextPos::end_of(t.tok[0].inner())).unwrap_or_else(|| value.end().clone()));
     Ok((r, PropertyExpr { name, value: Box::new(value), range }))
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// Parses an instance expression to an Expr (`Expr::Instance`).

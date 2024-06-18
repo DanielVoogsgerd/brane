@@ -40,7 +40,6 @@ use tokio::fs::{self as tfs, File as TFile};
 
 use crate::spec::PolicyInputLanguage;
 
-
 /***** ERRORS *****/
 /// Defines errors that may originate in `branectl policies ...` subcommands.
 #[derive(Debug)]
@@ -182,10 +181,6 @@ impl error::Error for Error {
         }
     }
 }
-
-
-
-
 
 /***** HELPER FUNCTIONS *****/
 /// Resolves the node.yml file so that it's only loaded when needed to resolve information not given.
@@ -508,10 +503,6 @@ fn prompt_user_version(
     }
 }
 
-
-
-
-
 /***** AUXILLARY *****/
 /// Defines supported reasoners in the checker.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -554,10 +545,6 @@ impl Display for EFlintJsonVersion {
         }
     }
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// Activates a remote policy in the checker.
@@ -645,8 +632,6 @@ pub async fn activate(node_config_path: PathBuf, version: Option<i64>, address: 
     println!("Successfully activated policy {} to checker {}.", style(version).bold().green(), style(address).bold().green(),);
     Ok(())
 }
-
-
 
 /// Adds the given policy to the checker defined in the given node config file.
 ///
@@ -800,8 +785,6 @@ pub async fn add(
     );
     Ok(())
 }
-
-
 
 /// Lists (and allows the inspection of) the policies on the node's checker.
 ///

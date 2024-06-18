@@ -24,7 +24,6 @@ use chrono::{DateTime, Utc};
 use enum_debug::EnumDebug;
 use serde::{Deserialize, Serialize};
 
-
 /***** ERRORS *****/
 /// Defines (parsing) errors that relate to the DataIndex struct.
 #[derive(Debug)]
@@ -56,8 +55,6 @@ impl Display for DataIndexError {
 
 impl Error for DataIndexError {}
 
-
-
 /// Defines errors that relate to the RuntimeDataIndex struct.
 #[derive(Debug)]
 pub enum RuntimeDataIndexError {
@@ -76,8 +73,6 @@ impl Display for RuntimeDataIndexError {
 }
 
 impl Error for RuntimeDataIndexError {}
-
-
 
 /// Defines (parsing) errors that relate to the DataInfo struct.
 #[derive(Debug)]
@@ -142,10 +137,6 @@ impl Display for AssetInfoError {
 
 impl Error for AssetInfoError {}
 
-
-
-
-
 // /***** HELPER STRUCTS *****/
 // /// Defines a more general DataInfo used in the DataIndex.
 // #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -173,8 +164,6 @@ impl Error for AssetInfoError {}
 //         }
 //     }
 
-
-
 //     /// 'Casts' the DataIndexInfo to a DataInfo. All that it requires is the identifier of the DataInfo.
 //     ///
 //     /// # Generic arguments
@@ -196,17 +185,9 @@ impl Error for AssetInfoError {}
 //     }
 // }
 
-
-
-
-
 /***** LIBRARY *****/
 /// Placeholder for the Location's type.
 pub type Location = String;
-
-
-
-
 
 /// Defines an enum that represents either a Data or an IntermediateResult.
 #[derive(Clone, Debug, Deserialize, EnumDebug, Eq, Hash, PartialEq, Serialize)]
@@ -252,8 +233,6 @@ impl Display for DataName {
         }
     }
 }
-
-
 
 /// Defines whether a dataset is accessible locally or remotely (and thus needs to be transferred first).
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -330,8 +309,6 @@ pub enum PreprocessKind {
         dataname: DataName,
     },
 }
-
-
 
 /// Defines an index of all datasets known to the instance.
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -470,8 +447,6 @@ impl<'a> IntoIterator for &'a mut DataIndex {
     fn into_iter(self) -> Self::IntoIter { self.index.values_mut() }
 }
 
-
-
 /// Defines a structure similar to the data index, except that it is used at runtime when locations have been resolved.
 #[derive(Clone, Debug)]
 pub struct RuntimeDataIndex {
@@ -569,8 +544,6 @@ impl Default for RuntimeDataIndex {
     #[inline]
     fn default() -> Self { Self::new() }
 }
-
-
 
 /// Defines a single DataInfo file that describes a dataset and how to access it.
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -687,8 +660,6 @@ impl DataInfo {
         }
     }
 }
-
-
 
 /// Defines a single AssetInfo file that describes a dataset but for a user-facing user.
 #[derive(Clone, Debug, Deserialize, Serialize)]

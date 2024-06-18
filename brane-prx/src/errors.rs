@@ -21,7 +21,6 @@ use reqwest::StatusCode;
 use specifications::address::Address;
 use url::Url;
 
-
 /***** LIBRARY *****/
 /// Defines errors that relate to redirection.
 #[derive(Debug)]
@@ -79,8 +78,6 @@ impl Display for RedirectError {
     }
 }
 impl Error for RedirectError {}
-
-
 
 /// Defines errors for clients of the proxy.
 #[derive(Debug)]

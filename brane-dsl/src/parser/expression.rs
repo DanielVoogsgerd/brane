@@ -25,7 +25,6 @@ use crate::scanner::{Token, Tokens};
 use crate::spec::{TextPos, TextRange};
 use crate::tag_token;
 
-
 /// Parses an expression.
 ///
 /// # Arguments

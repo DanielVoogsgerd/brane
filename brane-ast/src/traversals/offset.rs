@@ -19,7 +19,6 @@ use brane_dsl::ast::{BinOp, Block, Expr, Identifier, Literal, Program, Property,
 use crate::errors::AstError;
 use crate::state::CompileState;
 
-
 /***** HELPER MACROS *****/
 /// Applies an offset to the given TextRange if it is not none.
 macro_rules! offset_range {
@@ -30,10 +29,6 @@ macro_rules! offset_range {
         }
     };
 }
-
-
-
-
 
 /***** TRAVERSAL FUNCTIONS *****/
 /// Tarverses a [`Block`] to update its range offsets.
@@ -319,10 +314,6 @@ fn pass_literal(literal: &mut Literal, offset: usize) {
         | Void { range } => offset_range!(range, offset),
     }
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// Fixes offsets in the AST to be relative to the entire source instead of just this snippet.

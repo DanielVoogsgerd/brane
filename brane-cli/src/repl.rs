@@ -39,7 +39,6 @@ use crate::run::{
 };
 use crate::utils::{ensure_config_dir, get_history_file};
 
-
 /***** HELPER FUNCTIONS *****/
 /// Handles magicks in the REPL.
 ///
@@ -72,10 +71,6 @@ fn repl_magicks(line: impl AsRef<str>) -> Option<bool> {
         None
     }
 }
-
-
-
-
 
 /***** REPL HELPER *****/
 /// Implements the helper for the Repl (auto-completion and syntax highlighting and such)
@@ -126,10 +121,6 @@ impl Validator for ReplHelper {
 
     fn validate_while_typing(&self) -> bool { self.validator.validate_while_typing() }
 }
-
-
-
-
 
 /***** SUBCOMMANDS *****/
 /// Entrypoint to the REPL, which performs the required initialization.
@@ -226,8 +217,6 @@ pub async fn start(
     Ok(())
 }
 
-
-
 /// Runs the given file on the remote instance.
 ///
 /// # Arguments
@@ -321,8 +310,6 @@ async fn remote_repl(
     // Done
     Ok(())
 }
-
-
 
 /// Runs the given file on the local machine.
 ///

@@ -35,7 +35,6 @@ use specifications::version::Version;
 use specifications::working::{ExecuteReply as TaskReply, TaskStatus};
 use tonic::Status;
 
-
 /***** AUXILLARY *****/
 /// Turns a [`String`] into something that [`Error`]s.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -45,10 +44,6 @@ impl Display for StringError {
     fn fmt(&self, f: &mut Formatter<'_>) -> FResult { write!(f, "{}", self.0) }
 }
 impl Error for StringError {}
-
-
-
-
 
 /***** LIBRARY *****/
 /// Defines a kind of combination of all the possible errors that may occur in the process.
@@ -77,10 +72,6 @@ impl Error for TaskError {
         }
     }
 }
-
-
-
-
 
 /// Defines common errors that occur when trying to plan a workflow.
 #[derive(Debug)]
@@ -229,10 +220,13 @@ impl Display for PlanError {
                 f,
                 "Checker of domain '{domain}' denied plan{}",
                 if !reasons.is_empty() {
-                    format!("\n\nReasons:\n{}", reasons.iter().fold(String::new(), |mut output, r| {
-                        let _ = writeln!(output, "  - {r}");
-                        output
-                    }))
+                    format!(
+                        "\n\nReasons:\n{}",
+                        reasons.iter().fold(String::new(), |mut output, r| {
+                            let _ = writeln!(output, "  - {r}");
+                            output
+                        })
+                    )
                 } else {
                     String::new()
                 }
@@ -274,8 +268,6 @@ impl Error for PlanError {
         }
     }
 }
-
-
 
 /// Defines common errors that occur when trying to preprocess datasets.
 #[derive(Debug)]
@@ -442,8 +434,6 @@ impl Error for PreprocessError {
         }
     }
 }
-
-
 
 /// Defines common errors that occur when trying to execute tasks.
 ///
@@ -673,8 +663,6 @@ impl Error for ExecuteError {
     }
 }
 
-
-
 /// A special case of the execute error, this relates to authorization errors in the backend eFLINT reasoner (or other reasoners).
 #[derive(Debug)]
 pub enum AuthorizeError {
@@ -774,8 +762,6 @@ impl Error for AuthorizeError {
     }
 }
 
-
-
 /// Defines common errors that occur when trying to write to stdout.
 #[derive(Debug)]
 pub enum StdoutError {
@@ -798,8 +784,6 @@ impl Error for StdoutError {
         }
     }
 }
-
-
 
 /// Defines common errors that occur when trying to commit an intermediate result.
 #[derive(Debug)]
@@ -917,8 +901,6 @@ impl Error for CommitError {
     }
 }
 
-
-
 /// Collects errors that relate to the AppId or TaskId (actually only parser errors).
 #[derive(Debug)]
 pub enum IdError {
@@ -943,8 +925,6 @@ impl Error for IdError {
         }
     }
 }
-
-
 
 /// Collects errors that relate to Docker.
 ///
@@ -1139,8 +1119,6 @@ impl Error for DockerError {
     }
 }
 
-
-
 /// Collects errors that relate to local index interaction.
 #[derive(Debug)]
 pub enum LocalError {
@@ -1210,8 +1188,6 @@ impl Error for LocalError {
     }
 }
 
-
-
 /// Collects errors that relate to API interaction.
 #[derive(Debug)]
 pub enum ApiError {
@@ -1272,8 +1248,6 @@ impl Error for ApiError {
         }
     }
 }
-
-
 
 /// Errors that relate to parsing Docker client version numbers.
 #[derive(Debug)]

@@ -30,7 +30,6 @@ use tonic::transport::{Channel, Endpoint};
 use tonic::{Code, Request, Response, Status};
 pub use JobServiceError as Error;
 
-
 /***** ERRORS *****/
 /// Defines the errors occurring when juggling [`PreprocessKind`]s.
 #[derive(Debug)]
@@ -67,10 +66,6 @@ impl Display for JobServiceError {
     }
 }
 impl error::Error for JobServiceError {}
-
-
-
-
 
 /***** AUXILLARY MESSAGES *****/
 // /// Auxillary enum that defines the possible kinds of datasets.
@@ -124,8 +119,6 @@ impl From<DataName> for crate::data::DataName {
     }
 }
 
-
-
 /// Auxillary message that implements the fields for a TransferRegistryTar PreprocessKind.
 #[derive(Clone, Message)]
 pub struct TransferRegistryTar {
@@ -167,8 +160,6 @@ impl TryFrom<PreprocessKind> for crate::data::PreprocessKind {
         }
     }
 }
-
-
 
 /// Auxillary enum that defines the possible states a task can have.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Enumeration)]
@@ -227,10 +218,6 @@ pub enum TaskStatus {
     Failed = 18,
 }
 
-
-
-
-
 /***** MESSAGES *****/
 /// Request for checking workflow validity with the worker's checker.
 #[derive(Clone, Message)]
@@ -267,8 +254,6 @@ pub struct CheckReply {
     #[prost(tag = "2", repeated, string)]
     pub reasons: Vec<String>,
 }
-
-
 
 /// Request for preprocessing a given dataset.
 #[derive(Clone, Message)]
@@ -313,8 +298,6 @@ pub struct PreprocessReply {
     pub access: String,
 }
 
-
-
 /// Request for executing a task on some domain.
 #[derive(Clone, Message)]
 pub struct ExecuteRequest {
@@ -354,8 +337,6 @@ pub struct ExecuteReply {
     pub value:  Option<String>,
 }
 
-
-
 /// Request for committing a result to a full dataset.
 #[derive(Clone, Message)]
 pub struct CommitRequest {
@@ -370,10 +351,6 @@ pub struct CommitRequest {
 /// The reply sent by the worker when the comittation was successfull.
 #[derive(Clone, Message)]
 pub struct CommitReply {}
-
-
-
-
 
 /***** SERVICES *****/
 /// The JobServiceClient can connect to a remote server implementing the DriverService protocol.
@@ -525,8 +502,6 @@ impl JobServiceClient {
     }
 }
 
-
-
 /// The JobService is a trait for easily writing a service for the driver communication protocol.
 ///
 /// Implementation based on the auto-generated version from tonic.
@@ -534,8 +509,6 @@ impl JobServiceClient {
 pub trait JobService: 'static + Send + Sync {
     /// The response type for stream returned by `JobService::execute()`.
     type ExecuteStream: 'static + Send + Stream<Item = Result<ExecuteReply, Status>>;
-
-
 
     /// Handle for when a [`CheckWorkflowRequest`] comes in.
     ///

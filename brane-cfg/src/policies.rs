@@ -1,17 +1,17 @@
 //  POLICIES.rs
 //    by Lut99
-// 
+//
 //  Created:
 //    01 Dec 2022, 09:20:32
 //  Last edited:
 //    27 Mar 2023, 11:45:02
 //  Auto updated?
 //    Yes
-// 
+//
 //  Description:
 //!   Temporary config file that is used to read simple policies until we
 //!   have eFLINT
-// 
+//
 
 use enum_debug::EnumDebug;
 use serde::{Deserialize, Serialize};
@@ -19,19 +19,16 @@ use serde::{Deserialize, Serialize};
 pub use crate::info::YamlError as Error;
 use crate::info::YamlInfo;
 
-
 /***** LIBRARY *****/
 /// Defines the toplevel policy file.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct PolicyFile {
     /// The users to allow
-    pub users      : Vec<UserPolicy>,
+    pub users:      Vec<UserPolicy>,
     /// The containers to allow
-    pub containers : Vec<ContainerPolicy>,
+    pub containers: Vec<ContainerPolicy>,
 }
 impl<'de> YamlInfo<'de> for PolicyFile {}
-
-
 
 /// Defines the possible policies for users.
 #[derive(Clone, Debug, Deserialize, EnumDebug, Serialize)]
@@ -46,30 +43,30 @@ pub enum UserPolicy {
     AllowUserAll {
         /// The name/ID of the user as found in their certificate
         #[serde(alias = "user")]
-        name : String,
+        name: String,
     },
     /// Denies this user anything.
     DenyUserAll {
         /// The name/ID of the user as found in their certificate.
         #[serde(alias = "user")]
-        name : String,
+        name: String,
     },
 
     /// Allows this user to do anything on a limited set of datasets.
     Allow {
         /// The name/ID of the user as found in their certificate.
         #[serde(alias = "user")]
-        name : String,
+        name: String,
         /// The dataset to allow the operations for.
-        data : String,
+        data: String,
     },
     /// Deny this user to do thing on a limited set of datasets.
     Deny {
         /// The name/ID of the user as found on their certificate.
         #[serde(alias = "user")]
-        name : String,
+        name: String,
         /// The dataset for which to deny them.
-        data : String,
+        data: String,
     },
 }
 
@@ -85,15 +82,15 @@ pub enum ContainerPolicy {
     /// Allows a specific container.
     Allow {
         /// An optional name to identify the container in the logs
-        name : Option<String>,
+        name: Option<String>,
         /// The hash of the container to allow.
-        hash : String,
+        hash: String,
     },
     /// Deny a specific container.
     Deny {
         /// An optional name to identify the container in the logs
-        name : Option<String>,
+        name: Option<String>,
         /// The hash of the container to allow.
-        hash : String,
+        hash: String,
     },
 }

@@ -27,7 +27,6 @@ use crate::state::CompileState;
 use crate::traversals;
 pub use crate::warnings::AstWarning as Warning;
 
-
 /***** AUXILLARY *****/
 /// Helper enum that defines the compiler stages.
 #[derive(Copy, Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -68,8 +67,6 @@ pub enum CompileStage {
     /// The fourteenth and final stage where we resolve the 'next' fields in the UnresolvedWorkflow so it becomes a Workflow.
     WorkflowResolve = 14,
 }
-
-
 
 /// Defines the possible results returned by the `compile_program` function.
 #[derive(Debug)]
@@ -186,10 +183,6 @@ impl Display for CompileResult {
     }
 }
 
-
-
-
-
 /***** LIBRARY *****/
 /// Runs the compiler passes in-order, all of them.
 ///
@@ -239,8 +232,6 @@ pub fn compile_program_to<R: std::io::Read>(
 ) -> CompileResult {
     compile_snippet_to(&mut CompileState::new(), reader, package_index, data_index, options, stage)
 }
-
-
 
 /// Runs the compiler in a stateful manner so that it may compile multiple snippets of the given workflow in succession.
 ///

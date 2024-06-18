@@ -25,7 +25,6 @@ use serde::{Deserialize, Serialize};
 use tokio::fs::File as TFile;
 use tokio::io::AsyncReadExt as _;
 
-
 /***** ERRORS *****/
 /// Defines general errors for configs.
 #[derive(Debug)]
@@ -88,17 +87,12 @@ impl<E: 'static + Error> Error for InfoError<E> {
     }
 }
 
-
-
-
-
 /***** LIBRARY *****/
 /// Defines a serializable struct that we typically use for structs that are directly read and written to disk.
 #[async_trait]
 pub trait Info: Clone + Debug {
     /// The types of errors that may be thrown by the serialization function(s).
     type Error: Error;
-
 
     // Child-provided
     /// Serializes this Config to a string.
@@ -144,7 +138,6 @@ pub trait Info: Clone + Debug {
     /// # Errors
     /// This function may fail if we failed to read from the reader or if its contents were invalid for this object.
     fn from_reader(reader: impl Read) -> Result<Self, InfoError<Self::Error>>;
-
 
     // Globally deduced
     /// Serializes this Config to a file at the given path.
@@ -238,8 +231,6 @@ pub trait Info: Clone + Debug {
         }
     }
 }
-
-
 
 /// A marker trait that will let the compiler implement `Config` for this object using the `serde_yaml` backend.
 pub trait YamlInfo<'de>: Clone + Debug + Deserialize<'de> + Serialize {}

@@ -28,7 +28,6 @@ use tonic::transport::{Channel, Endpoint};
 use tonic::{Code, Request, Response, Status};
 pub use DriverServiceError as Error;
 
-
 /***** ERRORS *****/
 /// Defines the errors occuring in the DriverServiceClient or DriverServiceServer.
 #[derive(Debug)]
@@ -50,10 +49,6 @@ impl Display for DriverServiceError {
 }
 impl error::Error for DriverServiceError {}
 
-
-
-
-
 /***** MESSAGES *****/
 /// Request for creating a new session.
 #[derive(Clone, Message)]
@@ -66,8 +61,6 @@ pub struct CreateSessionReply {
     #[prost(tag = "1", required, string)]
     pub uuid: String,
 }
-
-
 
 /// Request for checking the given workflow only.
 #[derive(Clone, Message)]
@@ -94,8 +87,6 @@ pub struct CheckReply {
     #[prost(tag = "4", optional, string)]
     pub profile: Option<String>,
 }
-
-
 
 /// Request for executing the given workflow.
 #[derive(Clone, Message)]
@@ -128,10 +119,6 @@ pub struct ExecuteReply {
     #[prost(tag = "5", optional, string)]
     pub value:  Option<String>,
 }
-
-
-
-
 
 /***** SERVICES *****/
 /// The DriverServiceClient can connect to a remote server implementing the DriverService protocol.
@@ -239,8 +226,6 @@ impl DriverServiceClient {
     }
 }
 
-
-
 /// The DriverService, which is a trait for easily writing a service for the driver communication protocol.
 ///
 /// Implementation based on the auto-generated version from tonic.
@@ -248,8 +233,6 @@ impl DriverServiceClient {
 pub trait DriverService: 'static + Send + Sync {
     /// The response type for stream returned by `DriverService::execute()`.
     type ExecuteStream: 'static + Send + Stream<Item = Result<ExecuteReply, Status>>;
-
-
 
     /// Handle for when a CreateSessionRequest comes in.
     ///

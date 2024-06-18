@@ -26,7 +26,6 @@ use jsonwebtoken::{Algorithm, EncodingKey, Header};
 use log::{debug, info, warn};
 use serde::{Deserialize, Serialize};
 
-
 /***** ERRORS *****/
 /// Defines errors originating from this module.
 #[derive(Debug)]
@@ -80,10 +79,6 @@ impl error::Error for Error {
         }
     }
 }
-
-
-
-
 
 /***** LIBRARY FUNCTIONS *****/
 /// Generates a new access token for the checker.
@@ -194,10 +189,6 @@ pub fn generate_policy_token(
     // OK
     Ok(token)
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// Represents the response of a reasoner. This can be used to tell the client why it went wrong.

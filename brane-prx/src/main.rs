@@ -31,7 +31,6 @@ use log::{debug, error, info, warn, LevelFilter};
 use tokio::signal::unix::{signal, Signal, SignalKind};
 use warp::Filter;
 
-
 /***** ARGUMENTS *****/
 #[derive(Parser)]
 #[clap(name = "Brane proxy service", version = env!("CARGO_PKG_VERSION"), author, about = "A rudimentary, SOCKS-as-a-Service proxy service for outgoing connections from a domain.")]
@@ -51,10 +50,6 @@ struct Arguments {
     )]
     node_config_path: PathBuf,
 }
-
-
-
-
 
 /***** ENTRYPOINT *****/
 #[tokio::main]

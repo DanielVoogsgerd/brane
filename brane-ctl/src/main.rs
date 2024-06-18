@@ -34,7 +34,6 @@ use specifications::arch::Arch;
 use specifications::package::Capability;
 use specifications::version::Version;
 
-
 /***** ARGUMENTS *****/
 /// Defines the toplevel arguments for the `branectl` tool.
 #[derive(Debug, Parser)]
@@ -655,10 +654,6 @@ enum PolicySubcommand {
         token:   Option<String>,
     },
 }
-
-
-
-
 
 /***** ENTYRPOINT *****/
 #[tokio::main(flavor = "current_thread")]

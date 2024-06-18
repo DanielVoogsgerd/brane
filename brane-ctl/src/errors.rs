@@ -26,7 +26,6 @@ use jsonwebtoken::jwk::KeyAlgorithm;
 use specifications::container::Image;
 use specifications::version::Version;
 
-
 /***** LIBRARY *****/
 /// Errors that relate to downloading stuff (the subcommand, specifically).
 ///
@@ -82,8 +81,6 @@ impl Display for DownloadError {
     }
 }
 impl Error for DownloadError {}
-
-
 
 /// Errors that relate to generating files.
 ///
@@ -279,8 +276,6 @@ impl Error for GenerateError {
     }
 }
 
-
-
 /// Errors that relate to managing the lifetime of the node.
 ///
 /// Note: we've boxed `Image` and `ImageSource` to reduce the size of the error (and avoid running into `clippy::result_large_err`).
@@ -422,8 +417,6 @@ impl Error for LifetimeError {
     }
 }
 
-
-
 /// Errors that relate to package subcommands.
 #[derive(Debug)]
 pub enum PackagesError {
@@ -465,8 +458,6 @@ impl Display for PackagesError {
 }
 impl Error for PackagesError {}
 
-
-
 /// Errors that relate to unpacking files.
 #[derive(Debug)]
 pub enum UnpackError {
@@ -497,8 +488,6 @@ impl Display for UnpackError {
 }
 impl Error for UnpackError {}
 
-
-
 /// Errors that relate to parsing Docker client version numbers.
 #[derive(Debug)]
 pub enum DockerClientVersionParseError {
@@ -520,8 +509,6 @@ impl Display for DockerClientVersionParseError {
     }
 }
 impl Error for DockerClientVersionParseError {}
-
-
 
 /// Errors that relate to parsing InclusiveRanges.
 #[derive(Debug)]
@@ -545,8 +532,6 @@ impl Display for InclusiveRangeParseError {
 }
 impl Error for InclusiveRangeParseError {}
 
-
-
 /// Errors that relate to parsing pairs of things.
 #[derive(Debug)]
 pub enum PairParseError {
@@ -566,8 +551,6 @@ impl Display for PairParseError {
 }
 impl Error for PairParseError {}
 
-
-
 /// Errors that relate to parsing [`PolicyInputLanguage`](crate::spec::PolicyInputLanguage)s.
 #[derive(Debug)]
 pub enum PolicyInputLanguageParseError {
@@ -583,8 +566,6 @@ impl Display for PolicyInputLanguageParseError {
     }
 }
 impl Error for PolicyInputLanguageParseError {}
-
-
 
 /// Errors that relate to parsing architecture iDs.
 #[derive(Debug)]
@@ -610,8 +591,6 @@ impl Display for ArchParseError {
     }
 }
 impl Error for ArchParseError {}
-
-
 
 /// Errors that relate to parsing JWT signing algorithm IDs.
 #[derive(Debug)]

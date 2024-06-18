@@ -29,7 +29,6 @@ use crate::frame_stack::FrameStack;
 use crate::pc::ProgramCounter;
 use crate::value::FullValue;
 
-
 /***** LIBRARY *****/
 /// Defines whatever is needed for the custom global part of a RunState.
 pub trait CustomGlobalState: 'static + Send + Sync {}
@@ -51,8 +50,6 @@ impl CustomLocalState for () {
     fn new(_global: &Arc<RwLock<impl CustomGlobalState>>) -> Self {}
 }
 
-
-
 /// A trait that implements various missing pieces in task execution. See the `brane-tsk` crate for implementations.
 #[async_trait::async_trait]
 pub trait VmPlugin: 'static + Send + Sync {
@@ -69,7 +66,6 @@ pub trait VmPlugin: 'static + Send + Sync {
     type StdoutError: 'static + Send + Sync + Error;
     /// The error type of the publicize and commit functions.
     type CommitError: 'static + Send + Sync + Error;
-
 
     /// A function that preprocesses a given dataset in the given way. Typically, this involves "transferring data" as a preprocessing step.
     ///
@@ -102,8 +98,6 @@ pub trait VmPlugin: 'static + Send + Sync {
         prof: ProfileScopeHandle<'_>,
     ) -> Result<AccessKind, Self::PreprocessError>;
 
-
-
     /// A function that executes the given task.
     ///
     /// # Generic arguments
@@ -126,8 +120,6 @@ pub trait VmPlugin: 'static + Send + Sync {
         info: TaskInfo<'_>,
         prof: ProfileScopeHandle<'_>,
     ) -> Result<Option<FullValue>, Self::ExecuteError>;
-
-
 
     /// A function that prints a message to stdout - whatever that may be.
     ///
@@ -152,8 +144,6 @@ pub trait VmPlugin: 'static + Send + Sync {
         newline: bool,
         prof: ProfileScopeHandle<'_>,
     ) -> Result<(), Self::StdoutError>;
-
-
 
     /// A function that "publicizes" the given intermediate result.
     ///
@@ -210,8 +200,6 @@ pub trait VmPlugin: 'static + Send + Sync {
     ) -> Result<(), Self::CommitError>;
 }
 
-
-
 /// Defines whatever we need to remember w.r.t. runtime in between two submission of part of a workflow (i.e., repl-runs).
 ///
 /// # Generic types
@@ -237,8 +225,6 @@ impl<G: CustomGlobalState> RunState<G> {
     #[inline]
     pub fn new(table: Arc<SymTable>, global: Arc<RwLock<G>>) -> Self { Self { fstack: FrameStack::new(512, table), global } }
 }
-
-
 
 /// Defines that which the execute closure needs to know about a task.
 #[derive(Clone, Debug)]

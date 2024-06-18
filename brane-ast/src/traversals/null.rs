@@ -19,7 +19,6 @@ use enum_debug::EnumDebug as _;
 use crate::errors::AstError;
 pub use crate::errors::NullError as Error;
 
-
 /***** TESTS *****/
 #[cfg(test)]
 mod tests {
@@ -31,7 +30,6 @@ mod tests {
     use super::super::print::symbol_tables;
     use super::*;
     use crate::{compile_program_to, CompileResult, CompileStage};
-
 
     /// Tests the traversal by generating symbol tables for every file.
     #[test]
@@ -77,10 +75,6 @@ mod tests {
         });
     }
 }
-
-
-
-
 
 /***** TRAVERSAL FUNCTIONS *****/
 /// Traverses a Block to find any null-occurances.
@@ -266,10 +260,6 @@ fn pass_literal(lit: &Literal, errors: &mut Vec<Error>) {
         errors.push(Error::IllegalNull { range: range.clone() });
     }
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// Resolves null-typing in the given `brane-dsl` AST.

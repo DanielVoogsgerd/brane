@@ -31,14 +31,9 @@ use specifications::version::Version;
 use crate::old_configs::v1_0_0;
 use crate::spec::VersionFix;
 
-
 /***** CONSTANTS *****/
 /// The maximum length of files we consider.
 const MAX_FILE_LEN: u64 = 1024 * 1024;
-
-
-
-
 
 /***** TYPE ALIASES *****/
 /// Alias for the closure that parses according to a particular version number.
@@ -48,10 +43,6 @@ type VersionParser<'f1, 'f2, T> = Box<dyn 'f1 + Fn(&str) -> Option<VersionConver
 
 /// Alias for the closure that takes a parsed file and converts it to an up-to-date version of the file.
 type VersionConverter<'f, T> = Box<dyn 'f + FnOnce(&Path, bool) -> Result<T, Error>>;
-
-
-
-
 
 /***** ERRORS *****/
 /// Describes errors that may occur when upgrading config files.
@@ -116,10 +107,6 @@ impl error::Error for Error {
         }
     }
 }
-
-
-
-
 
 /***** HELPER FUNCTIONS *****/
 /// Does the heavy lifting in this module by implementing the iteration and trying to upgrade.
@@ -294,10 +281,6 @@ fn upgrade<T: Serialize>(
     Ok(())
 }
 
-
-
-
-
 /***** LIBRARY *****/
 /// Converts old-style `node.yml` files to new-style ones.
 ///
@@ -319,7 +302,6 @@ pub fn node(path: impl Into<PathBuf>, dry_run: bool, overwrite: bool, version: V
     use brane_cfg::proxy::{ForwardConfig, ProxyConfig, ProxyProtocol};
     use specifications::address::Address;
     use v1_0_0::node as v1_0_0;
-
 
     let path: PathBuf = path.into();
     info!("Upgrading node.yml files in '{}'...", path.display());

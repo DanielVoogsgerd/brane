@@ -27,7 +27,6 @@ pub use crate::errors::NodeConfigError as Error;
 use crate::errors::NodeKindParseError;
 use crate::info::YamlInfo;
 
-
 /***** AUXILLARY *****/
 /// Defines the possible node types.
 #[derive(Clone, Copy, Debug, EnumDebug, Eq, Hash, PartialEq)]
@@ -63,10 +62,6 @@ impl FromStr for NodeKind {
     }
 }
 
-
-
-
-
 /***** LIBRARY *****/
 /// Defines the toplevel `node.yml` layout.
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -81,8 +76,6 @@ pub struct NodeConfig {
     pub node: NodeSpecificConfig,
 }
 impl<'de> YamlInfo<'de> for NodeConfig {}
-
-
 
 /// Defines the services from the various nodes.
 #[derive(Clone, Debug, Deserialize, EnumDebug, Serialize)]
@@ -337,8 +330,6 @@ impl NodeSpecificConfig {
     pub fn try_into_proxy(self) -> Option<ProxyConfig> { if let Self::Proxy(config) = self { Some(config) } else { None } }
 }
 
-
-
 /// Defines the configuration for the central/control node.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct CentralConfig {
@@ -384,8 +375,6 @@ pub struct CentralServices {
     #[serde(alias = "scylla")]
     pub aux_scylla: PrivateService,
 }
-
-
 
 /// Defines the configuration for the worker node.
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -462,8 +451,6 @@ pub struct WorkerServices {
     pub prx: PrivateOrExternalService,
 }
 
-
-
 /// Defines the configuration for the proxy node.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ProxyConfig {
@@ -489,8 +476,6 @@ pub struct ProxyServices {
     #[serde(alias = "proxy")]
     pub prx: PublicService,
 }
-
-
 
 /// Defines an abstraction over _either_ a private service, _or_ an external service.
 #[derive(Clone, Debug, Deserialize, EnumDebug, Serialize)]
@@ -690,8 +675,6 @@ impl PrivateOrExternalService {
         }
     }
 }
-
-
 
 /// Defines what we need to know for a public service (i.e., a service that is reachable from outside the Docker network, i.e., the node).
 #[derive(Clone, Debug, Deserialize, Serialize)]

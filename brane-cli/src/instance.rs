@@ -33,7 +33,6 @@ pub use crate::errors::InstanceError as Error;
 use crate::spec::Hostname;
 use crate::utils::{ensure_instance_dir, ensure_instances_dir, get_active_instance_link, get_instance_dir};
 
-
 /***** HELPER FUNCTIONS *****/
 /// Reads the active instance from the special active_instance file.
 ///
@@ -65,10 +64,6 @@ fn read_active_instance_link() -> Result<String, Error> {
         Err(err) => Err(Error::ActiveInstanceReadError { path: link_path, err }),
     }
 }
-
-
-
-
 
 /***** FILE STRUCTS *****/
 /// Defines the layout of an InstanceInfo, which describes what we remember about each instance.
@@ -287,10 +282,6 @@ impl InstanceInfo {
     }
 }
 
-
-
-
-
 /***** SUBCOMMANDS *****/
 /// Registers a new instance to which we can hot-swap using switch.
 ///
@@ -491,8 +482,6 @@ pub fn remove(names: Vec<String>, force: bool) -> Result<(), Error> {
     Ok(())
 }
 
-
-
 /// Shows all the currently defined instances.
 ///
 /// # Arguments
@@ -674,8 +663,6 @@ pub fn select(name: String) -> Result<(), Error> {
     println!("Successfully switched to {}", style(name).bold().cyan());
     Ok(())
 }
-
-
 
 /// Edits an existing instance to change its properties.
 ///

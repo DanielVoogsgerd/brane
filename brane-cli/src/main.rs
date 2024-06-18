@@ -38,7 +38,6 @@ use specifications::package::PackageKind;
 use specifications::version::Version as SemVersion;
 use tempfile::TempDir;
 
-
 /***** ARGUMENTS *****/
 #[derive(Parser)]
 #[clap(name = "brane", about = "The Brane command-line interface.")]
@@ -738,10 +737,6 @@ enum VerifySubcommand {
         infra: PathBuf,
     },
 }
-
-
-
-
 
 /***** ENTRYPOINT *****/
 #[tokio::main]

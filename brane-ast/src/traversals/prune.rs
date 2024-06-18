@@ -27,7 +27,6 @@ use enum_debug::EnumDebug as _;
 use crate::errors::AstError;
 pub use crate::errors::PruneError as Error;
 
-
 /***** TESTS *****/
 #[cfg(test)]
 mod tests {
@@ -39,7 +38,6 @@ mod tests {
     use super::super::print::dsl;
     use super::*;
     use crate::{compile_program_to, CompileResult, CompileStage};
-
 
     /// Tests the traversal by generating symbol tables for every file.
     #[test]
@@ -86,10 +84,6 @@ mod tests {
         });
     }
 }
-
-
-
-
 
 /***** TRAVERSAL FUNCTIONS *****/
 /// Prunes the statements in the given block for compilation.
@@ -269,10 +263,6 @@ fn pass_stmt(stmt: Stmt, attr_stack: &mut Vec<Vec<Attribute>>, errors: &mut Vec<
         Attribute(_) | AttributeInner(_) => panic!("Encountered {:?} in prune traversal", stmt.variant()),
     }
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// Prunes the given `brane-dsl` AST for compilation.

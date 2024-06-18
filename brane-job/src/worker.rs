@@ -76,14 +76,9 @@ use tokio::sync::mpsc::{self, Sender};
 use tokio_stream::wrappers::ReceiverStream;
 use tonic::{Request, Response, Status};
 
-
 /***** CONSTANTS *****/
 /// Path to the temporary folder.
 pub const TEMPORARY_DIR: &str = "/tmp";
-
-
-
-
 
 /***** HELPER MACROS *****/
 /// Translates the given error into a log message, updates the client _and_ returns it.
@@ -101,10 +96,6 @@ macro_rules! err {
         Err(err)
     }};
 }
-
-
-
-
 
 /***** HELPER FUNCTIONS *****/
 /// Updates the client with a status update.
@@ -131,10 +122,6 @@ async fn update_client(tx: &Sender<Result<ExecuteReply, Status>>, status: JobSta
     // Done
     Ok(())
 }
-
-
-
-
 
 /***** ERRORS *****/
 // /// Defines errors that occur when preprocessing transfer tarballs through Kubernetes.
@@ -189,10 +176,6 @@ impl error::Error for Error {
     }
 }
 
-
-
-
-
 /***** HELPER STRUCTURES *****/
 /// Manual copy of the [policy-reasoner](https://github.com/epi-project/policy-reasoner)'s `ExecuteTaskRequest`-struct.
 ///
@@ -221,10 +204,6 @@ struct PolicyValidateRequest {
     /// Workflow definition
     pub workflow: Workflow,
 }
-
-
-
-
 
 /***** AUXILLARY STRUCTURES *****/
 /// Helper structure for grouping together task-dependent "constants", but that are not part of the task itself.
@@ -317,10 +296,6 @@ impl TaskInfo {
     }
 }
 
-
-
-
-
 /***** PLANNING FUNCTIONS *****/
 /// Function that preprocesses the given tar by downloading it to the local machine and extracting it.
 ///
@@ -355,16 +330,12 @@ async fn preprocess_transfer_tar_local(
     debug!("Preprocessing by executing a data transfer");
     debug!("Downloading '{location}' from '{dataname}' to local machine");
 
-
-
     // Resolve the address from the API, if not in the cache
     debug!("Resolving location ID '{location}' to registry...");
     let address: Address = match prof.time_fut("location resolution", location_cache.get(&location)).await {
         Ok(addr) => addr,
         Err(err) => return Err(PreprocessError::LocationResolve { id: location, err }),
     };
-
-
 
     // Prepare the folder where we will download the data to
     debug!("Preparing filesystem...");
@@ -431,8 +402,6 @@ async fn preprocess_transfer_tar_local(
     };
     pre.stop();
 
-
-
     // Send a reqwest
     debug!("Sending download request...");
     let download = prof.time("Downloading");
@@ -458,8 +427,6 @@ async fn preprocess_transfer_tar_local(
     if !res.status().is_success() {
         return Err(PreprocessError::DownloadRequestFailure { address: url, code: res.status(), message: res.text().await.ok() });
     }
-
-
 
     // With the request success, download it in parts
     debug!("Downloading file to '{}'...", tar_path.display());
@@ -488,15 +455,11 @@ async fn preprocess_transfer_tar_local(
     }
     download.stop();
 
-
-
     // It took a while, but we now have the tar file; extract it
     debug!("Unpacking '{}' to '{}'...", tar_path.display(), data_path.display());
     if let Err(err) = prof.time_fut("unarchiving", unarchive_async(tar_path, &data_path)).await {
         return Err(PreprocessError::DataExtractError { err });
     }
-
-
 
     // Done; send back the reply
     Ok(AccessKind::File { path: data_path })
@@ -519,8 +482,6 @@ async fn preprocess_transfer_tar_local(
 //     debug!("Preprocessing by executing a data transfer");
 //     let address: &str  = address.as_ref();
 //     debug!("Downloading from {} ({}) to Kubernetes cluster", location, address);
-
-
 
 //     // Done
 //     Ok(())
@@ -587,10 +548,6 @@ pub async fn preprocess_transfer_tar(
         Credentials::Slurm { .. } => Err(PreprocessError::UnsupportedBackend { what: "SSH" }),
     }
 }
-
-
-
-
 
 /***** EXECUTION FUNCTIONS *****/
 /// Runs the given (call to a) task in the given workflow by the checker to see if it's authorized.
@@ -848,8 +805,6 @@ async fn check_workflow_or_task(node_config_path: &Path, request: CheckRequest) 
     }
 }
 
-
-
 /// Returns the path of a cached container file if it is cached.
 ///
 /// # Arguments
@@ -1093,8 +1048,6 @@ async fn ensure_container(
     Ok((image_path, id, hash))
 }
 
-
-
 /// Runs the given task on a local backend.
 ///
 /// # Arguments
@@ -1258,8 +1211,6 @@ async fn execute_task_local(
 //         Err(err)   => { return Err(JobStatus::CreationFailed(format!("Failed to parse Kubernetes configuration file: {err}"))); },
 //     };
 
-
-
 //     // Let us preprocess the arguments
 //     let binds: Vec<VolumeBind> = match prof.time_fut("preprocessing", docker::preprocess_args(&mut tinfo.args, &tinfo.input, &tinfo.result, Some(&worker_cfg.paths.data), &worker_cfg.paths.results)).await {
 //         Ok(binds) => binds,
@@ -1342,8 +1293,6 @@ async fn execute_task_local(
 //     Ok(value)
 // }
 
-
-
 /// Runs the given task on the backend.
 ///
 /// # Arguments
@@ -1381,8 +1330,6 @@ async fn execute_task(
     if let Err(err) = update_client(&tx, JobStatus::Received).await {
         error!("{}", err.trace());
     }
-
-
 
     /* CALL PREPARATION */
     // Next, query the API for a package index.
@@ -1430,8 +1377,6 @@ async fn execute_task(
         .await?;
     tinfo.image.as_mut().unwrap().digest = Some(container_id);
 
-
-
     /* AUTHORIZATION */
     // We only do the container security thing if the user told us to; otherwise, the hash will be empty
     if let Some(_container_hash) = container_hash {
@@ -1461,8 +1406,6 @@ async fn execute_task(
             },
         }
     }
-
-
 
     /* SCHEDULE */
     // Match on the specific type to find the specific backend
@@ -1535,8 +1478,6 @@ async fn execute_task(
     };
     debug!("Job completed");
 
-
-
     /* RETURN */
     // Alright, we are done; the rest is up to the little branelet itself.
     if let Err(err) = update_client(&tx, JobStatus::Finished(value)).await {
@@ -1544,8 +1485,6 @@ async fn execute_task(
     }
     Ok(())
 }
-
-
 
 /// Commits the given intermediate result.
 ///
@@ -1567,8 +1506,6 @@ async fn commit_result(
     let name: &str = name.as_ref();
     let data_name: &str = data_name.as_ref();
     debug!("Commit intermediate result '{}' as '{}'...", name, data_name);
-
-
 
     // Step 1: Check if the dataset already exists (locally)
     let data_path: &Path = &worker_cfg.paths.data;
@@ -1644,8 +1581,6 @@ async fn commit_result(
         // Done, return the option
         found_info
     };
-
-
 
     // Step 2: Match on whether it already exists or not and copy the file
     let copy = prof.time("Data copying");
@@ -1727,15 +1662,9 @@ async fn commit_result(
     }
     copy.stop();
 
-
-
     // Step 3: Enjoy
     Ok(())
 }
-
-
-
-
 
 /***** HELPERS *****/
 /// Abstracts over either a workflow validation request ([`CheckWorkflowRequest`]) or task validation request ([`CheckTaskRequest`]).
@@ -1745,10 +1674,6 @@ enum CheckRequest {
     /// It's a task validation request
     Task(CheckTaskRequest),
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// Defines a server for incoming worker requests.

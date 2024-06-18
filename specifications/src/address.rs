@@ -28,7 +28,6 @@ use serde::de::{self, Deserializer, Visitor};
 use serde::ser::Serializer;
 use serde::{Deserialize, Serialize};
 
-
 /***** ERRORS *****/
 /// Errors that relate to parsing Addresses.
 #[derive(Debug)]
@@ -60,10 +59,6 @@ impl Error for AddressError {
         }
     }
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// Defines a more lenient alternative to a SocketAddr that also accepts hostnames.
@@ -349,8 +344,6 @@ impl TryFrom<AddressOpt> for Address {
         }
     }
 }
-
-
 
 /// Alternative to an [`Address`] that has an optional port part.
 #[derive(Clone, Debug, EnumDebug)]

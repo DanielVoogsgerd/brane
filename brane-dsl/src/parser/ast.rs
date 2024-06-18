@@ -26,14 +26,9 @@ use crate::location::AllowedLocations;
 use crate::spec::{TextPos, TextRange};
 use crate::symbol_table::{ClassEntry, FunctionEntry, SymbolTable, SymbolTableEntry, VarEntry};
 
-
 /***** STATICS *****/
 /// Defines a none-range.
 static NONE_RANGE: TextRange = TextRange::none();
-
-
-
-
 
 /***** LIBRARY TRAITS *****/
 /// Defines a general AST node.
@@ -50,10 +45,6 @@ pub trait Node: Clone + Debug {
     fn end(&self) -> &TextPos { &self.range().end }
 }
 
-
-
-
-
 /***** LIBRARY STRUCTS *****/
 /// Defines the toplevel Program element.
 #[derive(Clone, Debug)]
@@ -69,8 +60,6 @@ impl Node for Program {
     #[inline]
     fn range(&self) -> &TextRange { self.block.range() }
 }
-
-
 
 /// Defines a pair of metadata.
 ///
@@ -118,12 +107,7 @@ impl Attribute {
     /// A new Attribute.
     #[inline]
     pub fn keypair(key: impl Into<Identifier>, value: impl Into<Literal>, range: impl Into<TextRange>) -> Self {
-        Self::KeyPair {
-            key:   key.into(),
-            value: value.into(),
-
-            range: range.into(),
-        }
+        Self::KeyPair { key: key.into(), value: value.into(), range: range.into() }
     }
 
     /// Constructor for the attribute that initializes it as a list of values.
@@ -149,8 +133,6 @@ impl Node for Attribute {
         }
     }
 }
-
-
 
 /// Defines a code block (i.e., a series of statements).
 #[derive(Clone, Debug)]
@@ -184,17 +166,7 @@ impl Block {
 
 impl Default for Block {
     #[inline]
-    fn default() -> Self {
-        Self {
-            stmts: vec![],
-
-            table:    SymbolTable::new(),
-            ret_type: None,
-
-            attrs: vec![],
-            range: TextRange::none(),
-        }
-    }
+    fn default() -> Self { Self { stmts: vec![], table: SymbolTable::new(), ret_type: None, attrs: vec![], range: TextRange::none() } }
 }
 
 impl Node for Block {
@@ -202,8 +174,6 @@ impl Node for Block {
     #[inline]
     fn range(&self) -> &TextRange { &self.range }
 }
-
-
 
 /// Defines a single statement.
 #[derive(Clone, Debug, EnumDebug)]
@@ -542,8 +512,6 @@ impl Node for Stmt {
     }
 }
 
-
-
 /// Defines a (name, type) pair in a class definition.
 #[derive(Clone, Debug)]
 pub struct Property {
@@ -578,8 +546,6 @@ impl Node for Property {
     #[inline]
     fn range(&self) -> &TextRange { &self.range }
 }
-
-
 
 /// Defines an expression.
 #[derive(Clone, Debug, EnumDebug)]
@@ -871,8 +837,6 @@ impl Node for Expr {
     }
 }
 
-
-
 /// Defines a simple enum that is either a Data or an IntermediateResult.
 #[derive(Clone, Debug, EnumDebug, Eq, Hash, PartialEq)]
 pub enum Data {
@@ -890,8 +854,6 @@ impl From<Data> for specifications::data::DataName {
         }
     }
 }
-
-
 
 /// Defines a common enum for both operator types.
 #[derive(Clone, Debug, EnumDebug)]
@@ -938,8 +900,6 @@ impl Display for Operator {
         }
     }
 }
-
-
 
 /// Defines unary operators for this crate.
 #[derive(Clone, Debug, EnumDebug)]
@@ -996,8 +956,6 @@ impl Display for UnaOp {
         }
     }
 }
-
-
 
 /// Defines binary operators for this crate.
 #[derive(Clone, Debug, EnumDebug)]
@@ -1103,8 +1061,6 @@ impl Display for BinOp {
     }
 }
 
-
-
 /// Defines an (identifier, expr) pair.
 #[derive(Clone, Debug)]
 pub struct PropertyExpr {
@@ -1122,8 +1078,6 @@ impl Node for PropertyExpr {
     #[inline]
     fn range(&self) -> &TextRange { &self.range }
 }
-
-
 
 /// Defines an identifier.
 #[derive(Clone, Debug)]
@@ -1224,8 +1178,6 @@ impl Node for Identifier {
 //         }
 //     }
 
-
-
 //     /// Sets the st_entry of this Identifier as if this is an `Identifier::Name`.
 //     ///
 //     /// # Arguments
@@ -1301,8 +1253,6 @@ impl Node for Identifier {
 //         }
 //     }
 // }
-
-
 
 /// Defines a literal constant.
 #[derive(Clone, Debug, EnumDebug)]

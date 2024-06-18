@@ -19,7 +19,6 @@ use std::time::Instant;
 use brane_prx::client::ProxyClient;
 use parking_lot::Mutex;
 
-
 /***** LIBRARY *****/
 /// The shared context for all paths in the planner server.
 #[derive(Debug)]

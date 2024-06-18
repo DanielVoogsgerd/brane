@@ -23,7 +23,6 @@ use crate::scanner::{Token, Tokens};
 use crate::spec::TextRange;
 use crate::tag_token;
 
-
 /***** HELPER FUNCTIONS *****/
 /// Resolves escape strings in a string by, well, resolving them.
 ///
@@ -64,10 +63,6 @@ fn resolve_escape(raw: String) -> String {
     res
 }
 
-
-
-
-
 /***** LIBRARY *****/
 /// Parses a literal Token to a Literal node in the AST.
 ///
@@ -80,21 +75,9 @@ pub fn parse<'a, E: ParseError<Tokens<'a>> + ContextError<Tokens<'a>>>(input: To
     trace!("Attempting to parse literal expression");
     branch::alt((
         comb::map(tag_token!(Token::Null), |t| Literal::Null { range: TextRange::from(t.tok[0].inner()) }),
-        comb::map(tag_token!(Token::Boolean), |t| Literal::Boolean {
-            value: t.tok[0].as_bool(),
-
-            range: TextRange::from(t.tok[0].inner()),
-        }),
-        comb::map(tag_token!(Token::Integer), |t| Literal::Integer {
-            value: t.tok[0].as_i64(),
-
-            range: TextRange::from(t.tok[0].inner()),
-        }),
-        comb::map(tag_token!(Token::Real), |t| Literal::Real {
-            value: t.tok[0].as_f64(),
-
-            range: TextRange::from(t.tok[0].inner()),
-        }),
+        comb::map(tag_token!(Token::Boolean), |t| Literal::Boolean { value: t.tok[0].as_bool(), range: TextRange::from(t.tok[0].inner()) }),
+        comb::map(tag_token!(Token::Integer), |t| Literal::Integer { value: t.tok[0].as_i64(), range: TextRange::from(t.tok[0].inner()) }),
+        comb::map(tag_token!(Token::Real), |t| Literal::Real { value: t.tok[0].as_f64(), range: TextRange::from(t.tok[0].inner()) }),
         comb::map(tag_token!(Token::String), |t| Literal::String {
             value: resolve_escape(t.tok[0].as_string()),
 

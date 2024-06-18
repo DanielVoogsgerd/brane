@@ -24,12 +24,10 @@ use brane_dsl::spec::MergeStrategy;
 
 use crate::ast::Edge;
 
-
 /***** TESTS *****/
 #[cfg(test)]
 mod tests {
     use super::*;
-
 
     /// Tests whether the EdgeBuffer creates linked lists as expected.
     #[test]
@@ -117,10 +115,6 @@ mod tests {
     }
 }
 
-
-
-
-
 /***** AUXILLARY *****/
 /// Defines how one node links to the next and should thus be traversed.
 #[derive(Clone, Debug)]
@@ -166,10 +160,6 @@ impl EdgeBufferNodeLink {
     pub fn is_none(&self) -> bool { matches!(self, Self::None) }
 }
 
-
-
-
-
 /// Defines a shortcut for an EdgeBufferNode 'pointer'.
 #[derive(Clone, Debug)]
 pub struct EdgeBufferNodePtr(Rc<RefCell<EdgeBufferNode>>);
@@ -199,8 +189,6 @@ impl Hash for EdgeBufferNodePtr {
 impl PartialEq for EdgeBufferNodePtr {
     fn eq(&self, other: &Self) -> bool { Rc::ptr_eq(&self.0, &other.0) }
 }
-
-
 
 /// Defines a node in the EdgeBuffer linked list.
 #[derive(Clone, Debug)]
@@ -542,10 +530,6 @@ impl EdgeBufferNode {
     #[inline]
     pub fn is_end(&self) -> bool { matches!(self.next, EdgeBufferNodeLink::Stop) }
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// Defines an EdgeBuffer, which is a muteable buffer to which we can compile edges.

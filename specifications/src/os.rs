@@ -20,7 +20,6 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 
-
 /***** ERRORS *****/
 /// Defines the error that may occur when parsing operating systems
 #[derive(Debug)]
@@ -43,10 +42,6 @@ impl Display for ParseError {
 }
 impl Error for ParseError {}
 
-
-
-
-
 /***** AUXILLARY *****/
 /// A formatter for operating systems that writes it in a way that is used to download cfssl binaries.
 #[derive(Debug)]
@@ -64,10 +59,6 @@ impl<'o> Display for OsCfsslFormatter<'o> {
         }
     }
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// The Os enum defines possible operating systems that we know of and love

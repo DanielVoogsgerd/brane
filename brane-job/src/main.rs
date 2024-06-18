@@ -28,7 +28,6 @@ use specifications::working::JobServiceServer;
 use tokio::signal::unix::{signal, Signal, SignalKind};
 use tonic::transport::Server;
 
-
 /***** ARGUMENTS *****/
 #[derive(Parser)]
 #[clap(version = env!("CARGO_PKG_VERSION"))]
@@ -51,10 +50,6 @@ struct Opts {
     )]
     node_config_path: PathBuf,
 }
-
-
-
-
 
 /***** ENTRYPOINT *****/
 #[tokio::main]

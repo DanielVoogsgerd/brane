@@ -53,7 +53,6 @@ pub use crate::errors::DataError as Error;
 use crate::spec::Context;
 use crate::store::Store;
 
-
 /***** HELPER FUNCTIONS *****/
 /// Runs the do-be-done data transfer by the checker to assess if we're allowed to do it.
 ///
@@ -221,10 +220,6 @@ pub async fn assert_asset_permission(
     }
 }
 
-
-
-
-
 /***** HELPER STRUCTURES *****/
 /// Manual copy of the [policy-reasoner](https://github.com/epi-project/policy-reasoner)'s `AccessDataRequest`-struct.
 ///
@@ -248,10 +243,6 @@ pub struct AccessDataRequest {
     /// result of the workflow
     pub task_id:  Option<ProgramCounter>,
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// Handles a GET on the main `/data` path, returning a JSON with the datasets known to this registry.
@@ -315,8 +306,6 @@ pub async fn list(context: Arc<Context>) -> Result<impl Reply, Rejection> {
     // Done
     Ok(response)
 }
-
-
 
 /// Handles a GET on a specific datasets in a child-path of the `/data`-path, returning a JSON with more information about this dataset.
 ///
@@ -392,8 +381,6 @@ pub async fn get(name: String, context: Arc<Context>) -> Result<impl Reply, Reje
     // Done
     Ok(response)
 }
-
-
 
 /// Handles a GET that downloads an entire dataset. This basically emulates a data transfer.
 ///

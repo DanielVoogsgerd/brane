@@ -24,7 +24,6 @@ use crate::edgebuffer::{EdgeBuffer, EdgeBufferNode, EdgeBufferNodeLink, EdgeBuff
 use crate::errors::AstError;
 use crate::state::CompileState;
 
-
 /***** TESTS *****/
 #[cfg(test)]
 mod tests {
@@ -36,7 +35,6 @@ mod tests {
     use super::super::print::ast;
     use super::*;
     use crate::{compile_program_to, CompileResult, CompileStage};
-
 
     /// Tests the traversal by generating symbol tables for every file.
     #[test]
@@ -85,10 +83,6 @@ mod tests {
     }
 }
 
-
-
-
-
 /***** HELPER MACROS *****/
 /// Efficiently writes an edge to the given buffer. Also returns the index written.
 macro_rules! write_edge {
@@ -104,10 +98,6 @@ macro_rules! write_edge {
         idx
     }};
 }
-
-
-
-
 
 /***** HELPER FUNCTIONS *****/
 /// Updates the 'next' field in the given edge to the given value if it has any.
@@ -145,10 +135,6 @@ fn update_link(edge: &mut Edge, index: usize) {
         },
     }
 }
-
-
-
-
 
 /***** TRAVERSAL FUNCTIONS *****/
 /// Traverses a list of edges, which will resolve all of the compiled edges in it to executable ones.
@@ -514,10 +500,6 @@ fn pass_edges(edges: EdgeBuffer, target: &mut Vec<Edge>, map: &mut HashMap<EdgeB
         edges_start = next;
     }
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// Compiles the given UnresolvedWorkflow to a ResolvedWorkflow.

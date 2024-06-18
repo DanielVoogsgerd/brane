@@ -41,7 +41,6 @@ use crate::spec::{CustomGlobalState, CustomLocalState, RunState, TaskInfo, VmPlu
 use crate::stack::Stack;
 use crate::value::{FullValue, Value};
 
-
 /***** TESTS *****/
 #[cfg(test)]
 mod tests {
@@ -55,7 +54,6 @@ mod tests {
 
     use super::*;
     use crate::dummy::{DummyPlanner, DummyPlugin, DummyState};
-
 
     /// Tests the traversal by generating symbol tables for every file.
     #[tokio::test]
@@ -139,10 +137,6 @@ mod tests {
     }
 }
 
-
-
-
-
 /***** HELPER ENUMS *****/
 /// Defines the result of an Edge execution.
 #[derive(Debug)]
@@ -154,10 +148,6 @@ enum EdgeResult {
     /// The Edge execution was a disaster and something went wrong.
     Err(Error),
 }
-
-
-
-
 
 /***** HELPER FUNCTIONS *****/
 /// Preprocesses any datasets / intermediate results in the given value.
@@ -1036,10 +1026,6 @@ fn exec_instr(pc: ProgramCounter, idx: usize, instr: &EdgeInstr, stack: &mut Sta
     Ok(next)
 }
 
-
-
-
-
 /***** LIBRARY *****/
 /// Represents a single thread that may be executed.
 pub struct Thread<G: CustomGlobalState, L: CustomLocalState> {
@@ -1145,13 +1131,7 @@ impl<G: CustomGlobalState, L: CustomLocalState> Thread<G, L> {
 
     /// Saves the important bits of this Thread for a next execution round.
     #[inline]
-    fn into_state(self) -> RunState<G> {
-        RunState {
-            fstack: self.fstack,
-
-            global: self.global,
-        }
-    }
+    fn into_state(self) -> RunState<G> { RunState { fstack: self.fstack, global: self.global } }
 
     /// Retrieves the current edge based on the given program counter.
     ///

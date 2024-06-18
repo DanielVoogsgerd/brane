@@ -47,7 +47,6 @@ pub use crate::errors::OfflineVmError as Error;
 use crate::planner::OfflinePlanner;
 use crate::spec::{GlobalState, LocalState};
 
-
 /***** AUXILLARY *****/
 /// Defines the plugins used that implement offline task execution.
 pub struct OfflinePlugin;
@@ -314,10 +313,6 @@ impl VmPlugin for OfflinePlugin {
     }
 }
 
-
-
-
-
 /***** LIBRARY *****/
 /// Defines a VM that has no online interaction and does everything locally.
 pub struct OfflineVm {
@@ -394,8 +389,6 @@ impl OfflineVm {
             Err(err) => return (self, Err(err)),
         };
 
-
-
         // Step 2: Execution
         // Now wrap ourselves in a lock so that we can run the internal vm
         let this: Arc<RwLock<Self>> = Arc::new(RwLock::new(self));
@@ -408,8 +401,6 @@ impl OfflineVm {
                 panic!("Could not get self back");
             },
         };
-
-
 
         // Step 3: Result
         // Match the result to potentially error

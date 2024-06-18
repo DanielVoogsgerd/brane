@@ -20,7 +20,6 @@ use crate::errors::AstError;
 use crate::warnings::AstWarning;
 pub use crate::warnings::AttributesWarning as Warning;
 
-
 /***** TESTS *****/
 #[cfg(test)]
 mod tests {
@@ -32,7 +31,6 @@ mod tests {
     use super::super::print::dsl;
     use super::*;
     use crate::{compile_program_to, CompileResult, CompileStage};
-
 
     /// Tests the traversal by generating symbol tables for every file.
     #[test]
@@ -78,10 +76,6 @@ mod tests {
         });
     }
 }
-
-
-
-
 
 /***** TRAVERSAL FUNCTIONS *****/
 /// Traverses a block to process annotation statements.
@@ -220,10 +214,6 @@ fn pass_stmt(stmt: &mut Stmt, parent_attrs: &mut Vec<Attribute>, mut prev_attrs:
         Empty {} => vec![],
     }
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// Processes annotation statements into annotations on the other statements in the AST.

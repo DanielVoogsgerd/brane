@@ -20,14 +20,9 @@ use nom::{branch, combinator as comb, multi, sequence as seq, IResult, Parser};
 use super::tokens::Token;
 use super::{comments, literal, Span};
 
-
 /***** CONSTANTS *****/
 /// Define characters that separate tokens
 const SEPARATORS: &str = " \n\t\r{}[]()-=+;:'\"\\|/?>.<,`~*&^%$#@!";
-
-
-
-
 
 /***** HELPER FUNCTIONS *****/
 /// Wraps the given parser such that it may be prefixed or postfixed with whitespace, which will be ignored.
@@ -40,10 +35,6 @@ const SEPARATORS: &str = " \n\t\r{}[]()-=+;:'\"\\|/?>.<,`~*&^%$#@!";
 fn ws0<'a, O, E: ParseError<Span<'a>>, F: Parser<Span<'a>, O, E>>(f: F) -> impl Parser<Span<'a>, O, E> {
     seq::delimited(cc::multispace0, f, cc::multispace0)
 }
-
-
-
-
 
 /***** SCANNING FUNCTIONS *****/
 /// Scans a single token from the start of the given text.
@@ -183,10 +174,6 @@ fn identifier<'a, E: ParseError<Span<'a>> + ContextError<Span<'a>>>(input: Span<
 fn separator<'a, E: ParseError<Span<'a>> + ContextError<Span<'a>>>(input: Span<'a>) -> IResult<Span<'a>, char, E> {
     branch::alt((cc::one_of(SEPARATORS), comb::map(comb::eof, |_| '\0')))(input)
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// Parses the given text to a list of tokens, abstracting away over the most nitpicky syntax.

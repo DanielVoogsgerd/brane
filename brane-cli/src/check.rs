@@ -30,7 +30,6 @@ use specifications::profiling::{self};
 pub use crate::errors::CheckError as Error;
 use crate::instance::InstanceInfo;
 
-
 /***** HELPER FUNCTIONS *****/
 /// Compiles the given source text for the given remote instance.
 ///
@@ -100,10 +99,6 @@ async fn compile(instance: &InstanceInfo, input: &str, source: String, language:
     }
 }
 
-
-
-
-
 /***** LIBRARY *****/
 /// Handles the `brane check`-subcommand, which attempts to validate a workflow against remote policy.
 ///
@@ -117,7 +112,6 @@ async fn compile(instance: &InstanceInfo, input: &str, source: String, language:
 /// This function errors if we failed to perform the check.
 pub async fn handle(file: String, language: Language, user: Option<String>, profile: bool) -> Result<(), Error> {
     info!("Handling 'brane check {}'", if file == "-" { "<stdin>" } else { file.as_str() });
-
 
     /***** PREPARATION *****/
     let prof: profiling::ProfileScope = profiling::ProfileScope::new("Local preparation");

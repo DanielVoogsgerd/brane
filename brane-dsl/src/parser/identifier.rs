@@ -22,7 +22,6 @@ use super::ast::Identifier;
 use crate::scanner::{Token, Tokens};
 use crate::tag_token;
 
-
 /***** LIBRARY *****/
 /// Parses an iodentifier Token to an Identifier node in the AST.
 ///

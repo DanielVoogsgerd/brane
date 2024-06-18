@@ -42,7 +42,6 @@ use crate::planner::InstancePlanner;
 use crate::vm::InstanceVm;
 use crate::{check, gc};
 
-
 /***** HELPER MACROS *****/
 /// Sends an error back to the client, also logging it here. Is like `err!` but returning the stream.
 macro_rules! fatal_err {
@@ -89,10 +88,6 @@ macro_rules! fatal_err {
         return Ok(Response::new(ReceiverStream::new($rx)));
     }};
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// The DriverHandler handles incoming gRPC requests. This is effectively what 'drives' the driver.

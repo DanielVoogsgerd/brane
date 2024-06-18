@@ -23,7 +23,6 @@ use num_traits::AsPrimitive;
 use serde::de::{self, Deserialize, Deserializer, Visitor};
 use serde::ser::{Serialize, SerializeSeq, Serializer};
 
-
 /***** ERRORS *****/
 /// Defines errors when parsing `ProgramCounter` from a string.
 #[derive(Debug)]
@@ -55,10 +54,6 @@ impl Error for ProgramCounterParseError {
         }
     }
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// Used to keep track of the current executing edge in a workflow.
@@ -254,7 +249,6 @@ impl<'de> Deserialize<'de> for ProgramCounter {
             }
         }
 
-
         // Use the visitor to either parse a string value or a direct number
         deserializer.deserialize_seq(ProgramCounterVisitor)
     }
@@ -312,8 +306,6 @@ impl From<&mut ProgramCounter> for ProgramCounter {
     #[inline]
     fn from(value: &mut Self) -> Self { *value }
 }
-
-
 
 /// A less usable counterpart to the [`ProgramCounter`] that can be used in errors as pretty serializations of one.
 #[derive(Clone)]

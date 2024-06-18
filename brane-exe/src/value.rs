@@ -25,12 +25,10 @@ use serde_json::Value as JValue;
 
 pub use crate::errors::ValueError as Error;
 
-
 /***** TESTS *****/
 #[cfg(test)]
 mod tests {
     use super::*;
-
 
     /// Helper function that checks if the given serialized map is one of the permutations of the given fields.
     ///
@@ -74,7 +72,6 @@ mod tests {
         }
         panic!("Map serialization was not as expected:\nleft  : `{}`\nright : `[\"{}\",{{{},{},{}}}]`\n", ser, name, fields[0], fields[1], fields[2]);
     }
-
 
     #[test]
     fn test_fullvalue_serialize() {
@@ -314,10 +311,6 @@ mod tests {
     }
 }
 
-
-
-
-
 /***** HELPER STRUCTS *****/
 /// Custom visitor for the DataId struct.
 struct DataIdVisitor;
@@ -350,10 +343,6 @@ impl<'de> Visitor<'de> for ResultIdVisitor {
         Ok(ResultId(value[19..value.len() - 1].into()))
     }
 }
-
-
-
-
 
 /***** AUXILLARY *****/
 /// Allows a Value to be displayed properly with resolved definitions and such.
@@ -409,8 +398,6 @@ impl<'a, 'b> Display for ValueDisplay<'a, 'b> {
     }
 }
 
-
-
 /// A wrapper around the name of a data struct so that it gets parsed differently.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct DataId(String);
@@ -459,8 +446,6 @@ impl From<&mut DataId> for String {
     #[inline]
     fn from(value: &mut DataId) -> Self { value.0.clone() }
 }
-
-
 
 /// A wrapper around the name of an intermediate result struct so that it gets parsed differently.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -512,10 +497,6 @@ impl From<&mut ResultId> for String {
     #[inline]
     fn from(value: &mut ResultId) -> Self { value.0.clone() }
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// Defines a single Value while executing a Workflow. That's basically an instantiated DataType.
@@ -865,8 +846,6 @@ impl Value {
         }
     }
 }
-
-
 
 /// Defines a so-called 'FullValue', which is like a normal value but with direct definitions instead of references to them (which makes them ideal to share over the wire).
 ///

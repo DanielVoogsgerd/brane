@@ -26,12 +26,9 @@ use specifications::package::{PackageIndex, PackageInfo};
 use tokio::runtime::{Builder, Runtime};
 use url::{Host, Url};
 
-
 /***** TEST HELPERS *****/
 /// Defines the path of the tests folder.
 pub const TESTS_DIR: &str = "../tests";
-
-
 
 /// Collects all .yml files in the 'tests' folder as a single PackageIndex.
 ///
@@ -418,10 +415,6 @@ where
     }
 }
 
-
-
-
-
 /***** ADDRESS CHECKING *****/
 pub fn ensure_http_schema<S>(url: S, secure: bool) -> Result<String, url::ParseError>
 where
@@ -437,8 +430,6 @@ where
 
     Ok(url)
 }
-
-
 
 /// Returns whether the given address is an IP address or not.
 ///
@@ -473,10 +464,6 @@ pub fn is_ip_addr(address: impl AsRef<str>) -> bool {
         false
     }
 }
-
-
-
-
 
 /***** TESTS *****/
 #[cfg(test)]

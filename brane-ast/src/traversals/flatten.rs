@@ -26,7 +26,6 @@ use crate::errors::AstError;
 pub use crate::errors::FlattenError as Error;
 use crate::state::{ClassState, CompileState, FunctionState, TableState, TaskState, VarState};
 
-
 /***** TESTS *****/
 #[cfg(test)]
 mod tests {
@@ -39,7 +38,6 @@ mod tests {
     use super::*;
     use crate::state::CompileState;
     use crate::{compile_snippet_to, CompileResult, CompileStage};
-
 
     /// Tests the traversal by generating symbol tables for every file.
     #[test]
@@ -91,10 +89,6 @@ mod tests {
     }
 }
 
-
-
-
-
 /***** MACROS ******/
 /// Generates the correct number of spaces for an indent.
 macro_rules! indent {
@@ -103,17 +97,9 @@ macro_rules! indent {
     };
 }
 
-
-
-
-
 /***** CONSTANTS *****/
 /// Determines the increase in indentation for every nested level.
 const INDENT_SIZE: usize = 4;
-
-
-
-
 
 /***** HELPER FUNCTIONS *****/
 /// Recursive print function that makes it just that easier to inspect the TableState.
@@ -177,8 +163,6 @@ fn print_state(state: &TableState, indent: usize) {
         );
     }
 }
-
-
 
 /// Doesn't just move the given (function) entry to the given CompileState, it also resolves the entry's index.
 ///
@@ -367,10 +351,6 @@ fn move_var(var: &Rc<RefCell<VarEntry>>, table: &mut TableState) {
         entry.index = index;
     }
 }
-
-
-
-
 
 /***** TRAVERSAL FUNCTIONS *****/
 /// Passes a block, collecting all of its definitions (i.e., symbol table entries) into the given CompileState.
@@ -580,10 +560,6 @@ fn pass_expr(expr: &mut Expr, _table: &mut TableState) {
         _ => {},
     }
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// Flattens the symbol tables in the given AST to only have a global and function-wide scope.

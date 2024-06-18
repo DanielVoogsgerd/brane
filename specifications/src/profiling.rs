@@ -35,7 +35,6 @@ use log::warn;
 use parking_lot::{Mutex, MutexGuard};
 use serde::{Deserialize, Serialize};
 
-
 /***** HELPER MACROS *****/
 /// Formats a given number of spaces.
 macro_rules! spaces {
@@ -43,10 +42,6 @@ macro_rules! spaces {
         " ".repeat($n)
     };
 }
-
-
-
-
 
 /***** HELPER ENUMS *****/
 /// Defines an enum that abstracts of the specific kind of timing (i.e., branch or leaf).
@@ -89,10 +84,6 @@ impl ProfileTiming {
     }
 }
 
-
-
-
-
 /***** FORMATTERS *****/
 /// Formats the giving Timing to show a (hopefully) sensible scale to the given formatter.
 #[derive(Debug)]
@@ -111,8 +102,6 @@ impl<'t> Display for TimingFormatter<'t> {
     }
 }
 
-
-
 /// Formats the given ProfileReport to show a new list of results (but with a clear toplevel).
 #[derive(Debug)]
 pub struct ProfileReportFormatter<'r> {
@@ -125,8 +114,6 @@ impl<'r> Display for ProfileReportFormatter<'r> {
         write!(f, "{}", self.scope.display())
     }
 }
-
-
 
 /// Formats the given ProfileScope to show a neat list of results.
 #[derive(Debug)]
@@ -168,10 +155,6 @@ impl<'s> Display for ProfileScopeFormatter<'s> {
         Ok(())
     }
 }
-
-
-
-
 
 /***** AUXILLARY *****/
 /// Defines a taken Timing, which represents an amount of time that has passed.
@@ -253,8 +236,6 @@ impl From<&mut Duration> for Timing {
     fn from(value: &mut Duration) -> Self { Timing { nanos: value.as_nanos() } }
 }
 
-
-
 /// Defines the TimerGuard, which takes a Timing as long as it is in scope.
 #[derive(Debug)]
 pub struct TimerGuard<'s> {
@@ -277,8 +258,6 @@ impl<'s> Drop for TimerGuard<'s> {
         *lock = self.start.elapsed().into();
     }
 }
-
-
 
 /// Provides a convenience wrapper around a reference to a ProfileScope.
 #[derive(Clone, Debug)]
@@ -334,10 +313,6 @@ impl<'s> From<ProfileScopeHandle<'s>> for ProfileScopeHandleOwned {
     #[inline]
     fn from(value: ProfileScopeHandle<'s>) -> Self { Self { scope: value.scope } }
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// Defines the toplevel ProfileReport that writes to stdout or disk or whatever when it goes out-of-scope.
@@ -427,8 +402,6 @@ impl<W: Write> Deref for ProfileReport<W> {
     #[inline]
     fn deref(&self) -> &Self::Target { self.scope.as_ref().unwrap() }
 }
-
-
 
 /// Defines a scope within a ProfileReport.
 #[derive(Debug, Deserialize, Serialize)]

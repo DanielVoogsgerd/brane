@@ -15,7 +15,6 @@
 
 use reqwest::Method;
 
-
 /***** CONSTANTS *****/
 /// Defines the API path to fetch the checker's current list of policies.
 pub const POLICY_API_LIST_POLICIES: (Method, &str) = (Method::GET, "v1/management/policies");

@@ -1,17 +1,17 @@
 //  MOD.rs
 //    by Lut99
-// 
+//
 //  Created:
 //    18 Aug 2022, 09:48:12
 //  Last edited:
 //    20 Mar 2023, 11:02:55
 //  Auto updated?
 //    Yes
-// 
+//
 //  Description:
 //!   Defines nom-functions that parse token streams to a temporary AST
 //!   that is suited for analysing in `brane-ast`.
-// 
+//
 
 // Declare private modules
 mod expression;
@@ -25,7 +25,6 @@ mod operator;
 pub mod ast;
 pub mod bakery;
 pub mod bscript;
-
 
 // Declare macros
 /// Defines a macro that parses the given token from the given stream of tokens.

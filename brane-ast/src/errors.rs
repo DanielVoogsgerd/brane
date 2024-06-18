@@ -24,7 +24,6 @@ use specifications::version::Version;
 
 use crate::spec::BuiltinClasses;
 
-
 /***** HELPER MACROS *****/
 /// Print either the given number or '?' if it is `usize::MAX`.
 macro_rules! n {
@@ -33,10 +32,6 @@ macro_rules! n {
     };
 }
 pub(crate) use n;
-
-
-
-
 
 /***** HELPER FUNCTIONS *****/
 /// Computes the length of the number as if it was a string.
@@ -91,8 +86,6 @@ fn prettyprint_list<T: Display, S: AsRef<str>>(list: &[T], word: S) -> String {
     }
     res
 }
-
-
 
 /// Given the source text, extracts the given line and prints it with the range highlighted.
 ///
@@ -383,10 +376,6 @@ fn prettywrite_err_reasons(
     Ok(())
 }
 
-
-
-
-
 /***** ERRORS *****/
 /// Defines toplevel errors that occur in this crate.
 #[derive(Debug)]
@@ -510,8 +499,6 @@ impl Display for AstError {
 
 impl Error for AstError {}
 
-
-
 /// Defines errors that relate to wrong usage of variants.
 #[derive(Debug)]
 pub enum SanityError {
@@ -557,8 +544,6 @@ impl Display for SanityError {
 }
 
 impl Error for SanityError {}
-
-
 
 /// Defines errors that occur while building symbol tables.
 #[derive(Debug)]
@@ -712,8 +697,6 @@ impl Display for ResolveError {
 }
 
 impl Error for ResolveError {}
-
-
 
 /// Defines errors that occur during type checking.
 #[derive(Debug)]
@@ -876,8 +859,6 @@ impl Display for TypeError {
 
 impl Error for TypeError {}
 
-
-
 /// Defines errors that occur while resolving null-usage.
 #[derive(Debug)]
 pub enum NullError {
@@ -921,8 +902,6 @@ impl Display for NullError {
 }
 
 impl Error for NullError {}
-
-
 
 /// Defines errors that occur during location resolving.
 #[derive(Debug)]
@@ -980,8 +959,6 @@ impl Display for LocationError {
 
 impl Error for LocationError {}
 
-
-
 /// Defines errors that occur during type checking.
 #[derive(Debug)]
 pub enum PruneError {
@@ -1026,8 +1003,6 @@ impl Display for PruneError {
 }
 
 impl Error for PruneError {}
-
-
 
 /// Defines errors that occur during the flatten traversal.
 #[derive(Debug)]

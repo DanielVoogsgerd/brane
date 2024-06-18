@@ -26,16 +26,11 @@ use specifications::version::Version;
 
 use crate::errors::{InclusiveRangeParseError, PairParseError, PolicyInputLanguageParseError};
 
-
 /***** STATICS *****/
 lazy_static::lazy_static! {
     /// The default Docker API version that we're using.
     pub static ref API_DEFAULT_VERSION: String = format!("{}", brane_tsk::docker::API_DEFAULT_VERSION);
 }
-
-
-
-
 
 // /***** HELPERS *****/
 // /// Visitor that simply uses a `FromStr`-implementation to deserialize.
@@ -62,10 +57,6 @@ lazy_static::lazy_static! {
 //         }
 //     }
 // }
-
-
-
-
 
 /***** AUXILLARY *****/
 /// Defines a wrapper around a `NodeKind` that also allows it to be resolved later from the contents of the `node.yml` file.
@@ -111,8 +102,6 @@ impl FromStr for VersionFix {
         Ok(Self(Some(Version::from_str(s)?)))
     }
 }
-
-
 
 /// Defines an _inclusive_ range of numbers.
 #[derive(Clone, Debug)]
@@ -189,8 +178,6 @@ where
     }
 }
 
-
-
 /// Defines a `<something><char><something>` pair that is conveniently parseable, e.g., `<hostname>:<ip>` or `<domain>=<property>`.
 ///
 /// # Generics
@@ -239,10 +226,6 @@ where
     }
 }
 
-
-
-
-
 /***** LIBRARY *****/
 /// Defines recognized input language identifiers for policy files.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -273,8 +256,6 @@ impl FromStr for PolicyInputLanguage {
     }
 }
 
-
-
 /// Defines a collection of options to pass to the `start`-subcommand handler.
 #[derive(Clone, Debug)]
 pub struct StartOpts {
@@ -292,8 +273,6 @@ pub struct StartOpts {
     /// If given, mounts the given profile directory to examine profiling results conveniently.
     pub profile_dir: Option<PathBuf>,
 }
-
-
 
 /// A bit awkward here, but defines the subcommand for downloading service images from the repo.
 #[derive(Debug, EnumDebug, Subcommand)]
@@ -661,8 +640,6 @@ pub enum GenerateBackendSubcommand {
         client_version: Option<ClientVersion>,
     },
 }
-
-
 
 /// Defines the start subcommand, which basically defines the possible kinds of nodes to start.
 #[derive(Debug, Subcommand)]

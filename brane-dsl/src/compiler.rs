@@ -25,14 +25,12 @@ use crate::parser::{bakery, bscript};
 use crate::scanner::{self, Span, Token, Tokens};
 use crate::spec::Language;
 
-
 /***** TESTS *****/
 #[cfg(test)]
 pub mod tests {
     use brane_shr::utilities::{create_package_index, test_on_dsl_files};
 
     use super::*;
-
 
     /// Tests BraneScript files.
     #[test]
@@ -87,10 +85,6 @@ pub mod tests {
     }
 }
 
-
-
-
-
 /***** AUXILLARY STRUCTS *****/
 /// Defines options that configure the compiler before we use it.
 #[derive(Clone, Debug)]
@@ -124,10 +118,6 @@ impl ParserOptions {
     #[inline]
     pub fn bakery() -> Self { Self { lang: Language::Bakery } }
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// Parses the given reader to a BraneScript / Bakery Program.

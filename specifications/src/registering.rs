@@ -16,7 +16,6 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-
 /***** LIBRARY *****/
 /// Defines the input in the body of a request to download an asset.
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -31,8 +30,6 @@ pub struct DownloadAssetRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub task:     Option<(Option<u64>, u64)>,
 }
-
-
 
 /// Defines the input for a request to check if a data transfer is allowed to happen.
 #[derive(Clone, Debug, Deserialize, Serialize)]

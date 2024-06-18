@@ -27,16 +27,11 @@ use specifications::version::Version;
 use crate::ast::{ClassDef, ComputeTaskDef, Edge, FunctionDef, SymTable, TaskDef, VarDef};
 use crate::spec::{BuiltinClasses, BuiltinFunctions};
 
-
 /***** STATICS *****/
 lazy_static! {
     /// The empty list referenced when a function or variable in the DataTable does not exist.
     static ref EMPTY_IDS: HashSet<Data> = HashSet::new();
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// Defines a 'TableState', which is the CompileState's notion of a symbol table.
@@ -78,16 +73,7 @@ impl TableState {
     /// # Returns
     /// A new, completely empty instance of the TableState.
     #[inline]
-    pub fn empty() -> Self {
-        Self {
-            funcs:   Vec::new(),
-            tasks:   Vec::new(),
-            classes: Vec::new(),
-            vars:    Vec::new(),
-
-            results: HashMap::new(),
-        }
-    }
+    pub fn empty() -> Self { Self { funcs: Vec::new(), tasks: Vec::new(), classes: Vec::new(), vars: Vec::new(), results: HashMap::new() } }
 
     /// Constructor for the TableState that initializes it to not really a valid state (but kinda).
     ///
@@ -96,16 +82,7 @@ impl TableState {
     /// # Returns
     /// A new TableState instance that will keep the compiler happy but will probably result into runtime crashes once used (pay attention to overflows).
     #[inline]
-    pub fn none() -> Self {
-        Self {
-            funcs:   Vec::new(),
-            tasks:   Vec::new(),
-            classes: Vec::new(),
-            vars:    Vec::new(),
-
-            results: HashMap::new(),
-        }
-    }
+    pub fn none() -> Self { Self { funcs: Vec::new(), tasks: Vec::new(), classes: Vec::new(), vars: Vec::new(), results: HashMap::new() } }
 
     /// Injects the TableState into the given SymbolTable. The entries will already have indices properly resolved.
     ///
@@ -298,8 +275,6 @@ impl From<&TableState> for SymTable {
     fn from(value: &TableState) -> Self { Self::from(value.clone()) }
 }
 
-
-
 /// Defines whatever we need to know of a function in between workflow snippet calls.
 #[derive(Clone, Debug)]
 pub struct FunctionState {
@@ -343,8 +318,6 @@ impl From<FunctionState> for FunctionDef {
         FunctionDef { name: value.name, args: value.signature.args.into_iter().map(|d| d.into()).collect(), ret: value.signature.ret.into() }
     }
 }
-
-
 
 #[derive(Clone, Debug)]
 pub struct TaskState {
@@ -405,8 +378,6 @@ impl From<TaskState> for TaskDef {
         })
     }
 }
-
-
 
 /// Defines whatever we need to know of a class in between workflow snippet calls.
 #[derive(Clone, Debug)]
@@ -484,10 +455,6 @@ impl From<ClassState> for ClassDef {
     }
 }
 
-
-
-
-
 /// Defines whatever we need to know of a variable in between workflow snippet calls.
 #[derive(Clone, Debug)]
 pub struct VarState {
@@ -526,8 +493,6 @@ impl From<VarState> for VarDef {
     #[inline]
     fn from(value: VarState) -> Self { Self { name: value.name, data_type: value.data_type.into() } }
 }
-
-
 
 /// Defines a DataState, which is a bit like a symbol table for data identifiers - except that it's temporal (i.e., has a notion of values being overwritten).
 #[derive(Clone, Debug)]
@@ -656,8 +621,6 @@ impl Default for DataState {
     fn default() -> Self { Self::new() }
 }
 
-
-
 /// Defines whatever we need to remember w.r.t. compile-time in between two submissions of part of a workflow (i.e., repl-runs).
 #[derive(Clone, Debug)]
 pub struct CompileState {
@@ -679,16 +642,7 @@ impl CompileState {
     /// # Returns
     /// A new CompileState instance.
     #[inline]
-    pub fn new() -> Self {
-        Self {
-            offset: 0,
-
-            table:  TableState::new(),
-            bodies: HashMap::new(),
-
-            data: DataState::new(),
-        }
-    }
+    pub fn new() -> Self { Self { offset: 0, table: TableState::new(), bodies: HashMap::new(), data: DataState::new() } }
 }
 
 impl Default for CompileState {

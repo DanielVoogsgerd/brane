@@ -22,7 +22,6 @@ use console::{style, Style};
 use crate::errors::{ewrite_range, n};
 use crate::spec::BuiltinClasses;
 
-
 /***** HELPER FUNCTIONS *****/
 /// Prettyprints a warning with only one 'reason' to the given [`Write`]r.
 ///
@@ -100,17 +99,9 @@ fn prettywrite_warn_exist_new(
     Ok(())
 }
 
-
-
-
-
 /***** AUXILLARY *****/
 /// A warning trait much like the Error trait.
 pub trait Warning: Debug + Display {}
-
-
-
-
 
 /***** LIBRARY *****/
 // Defines toplevel warnings that occur in this crate.
@@ -191,8 +182,6 @@ impl Display for AstWarning {
 
 impl Warning for AstWarning {}
 
-
-
 /// Defines warnings that may occur during attribute processing.
 #[derive(Debug)]
 pub enum AttributesWarning {
@@ -237,8 +226,6 @@ impl Display for AttributesWarning {
     }
 }
 impl Warning for AttributesWarning {}
-
-
 
 /// Defines warnings that may occur during compilation.
 #[derive(Debug)]
@@ -302,8 +289,6 @@ impl Display for TypeWarning {
 
 impl Warning for TypeWarning {}
 
-
-
 /// Defines warnings that may occur when processing metadata.
 #[derive(Debug)]
 pub enum MetadataWarning {
@@ -360,8 +345,6 @@ impl Display for MetadataWarning {
     }
 }
 impl Warning for MetadataWarning {}
-
-
 
 /// Defines warnings that may occur during compilation.
 #[derive(Debug)]

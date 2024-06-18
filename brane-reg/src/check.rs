@@ -34,7 +34,6 @@ use warp::reply::{self, Reply, Response};
 use crate::data::assert_asset_permission;
 use crate::spec::Context;
 
-
 /***** HELPER FUNCTION *****/
 /// Abstracts over validating data or results.
 ///
@@ -204,10 +203,6 @@ async fn check_data_or_result(name: DataName, body: CheckTransferRequest, contex
         },
     }
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// Handles a GET that checks if a dataset is allowed to be downloaded.

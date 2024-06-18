@@ -32,7 +32,6 @@ use crate::spec::{CustomGlobalState, RunState, TaskInfo, VmPlugin};
 use crate::value::FullValue;
 use crate::vm::Vm;
 
-
 /***** HELPER FUNCTIONS *****/
 /// Returns a default value for the given DataType.
 ///
@@ -102,10 +101,6 @@ fn default_return_value(
     }
 }
 
-
-
-
-
 /***** LIBRARY *****/
 /// Defines the global, shared state for the DummyVm.
 #[derive(Clone, Debug)]
@@ -121,8 +116,6 @@ pub struct DummyState {
     pub text: Arc<Mutex<String>>,
 }
 impl CustomGlobalState for DummyState {}
-
-
 
 /// The DummyPlugin implements the missing functions for the Dummy VM. As the name implies, these don't do any actual work.
 pub struct DummyPlugin;
@@ -221,8 +214,6 @@ impl VmPlugin for DummyPlugin {
         Ok(())
     }
 }
-
-
 
 /// Defines a Dummy planner that simply assigns 'localhost' to every task it can find.
 pub struct DummyPlanner;
@@ -326,8 +317,6 @@ impl DummyPlanner {
     }
 }
 
-
-
 /// Defines a Dummy VM that may be used to test.
 pub struct DummyVm {
     /// The internal state of the VM in between runs.
@@ -383,8 +372,6 @@ impl DummyVm {
                 panic!("Could not get self back");
             },
         };
-
-
 
         // Step 3: Result
         // Match the result to potentially error

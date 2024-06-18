@@ -31,14 +31,9 @@ use specifications::registering::{CheckTransferReply, CheckTransferRequest};
 use specifications::working::{self, JobServiceClient};
 use tokio::task::JoinHandle;
 
-
 /***** TYPE ALIASES *****/
 /// The output for one of the request features.
 pub type RequestOutput = Result<Option<(String, Vec<String>)>, Error>;
-
-
-
-
 
 /***** ERRORS *****/
 /// Defines errors originating from the check function & check futures.
@@ -132,10 +127,6 @@ impl error::Error for Error {
         }
     }
 }
-
-
-
-
 
 /***** REQUEST FUNCTIONS *****/
 /// The future that sends a request to assert workflow permission as a whole.
@@ -274,10 +265,6 @@ async fn request_execute(checker: String, address: Address, id: String, sworkflo
     debug!("[task '{id}' -> '{checker}'] Worker '{address}' replied with {}", if res.verdict { "ALLOW" } else { "DENY" });
     if res.verdict { Ok(None) } else { Ok(Some((checker, res.reasons))) }
 }
-
-
-
-
 
 /***** HELPER FUNCTIONS *****/
 /// Traverses the given workflow and launches data-transfer- and task-execute-requests as it goes.
@@ -457,10 +444,6 @@ fn traverse_and_request(
         }
     }
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// Given a workflow, traverses it and launches requests to check the necessary parts of it with local checkers.

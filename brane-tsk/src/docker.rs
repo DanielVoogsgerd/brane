@@ -45,7 +45,6 @@ use tokio_util::codec::{BytesCodec, FramedRead};
 pub use crate::errors::DockerError as Error;
 use crate::errors::{ClientVersionParseError, ExecuteError};
 
-
 /***** CONSTANTS *****/
 /// Defines the prefix to the Docker image tar's manifest config blob (which contains the image digest)
 pub(crate) const MANIFEST_CONFIG_PREFIX: &str = "blobs/sha256/";
@@ -55,10 +54,6 @@ pub(crate) const MANIFEST_CONFIG_PREFIX: &str = "blobs/sha256/";
 /// This one is actually used in saved images.
 pub(crate) const MANIFEST_CONFIG_POSTFIX: &str = ".json";
 
-
-
-
-
 /***** HELPER STRUCTS *****/
 /// The layout of a Docker manifest file.
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -67,10 +62,6 @@ struct DockerImageManifest {
     #[serde(rename = "Config")]
     config: String,
 }
-
-
-
-
 
 /***** AUXILLARY STRUCTS *****/
 /// Defines a wrapper around ClientVersion that allows it to be parsed.
@@ -110,8 +101,6 @@ impl FromStr for ClientVersion {
         Ok(ClientVersion(bollard::ClientVersion { major_version: major, minor_version: minor }))
     }
 }
-
-
 
 /// Defines a serializer for the ImageSource.
 #[derive(Debug)]
@@ -332,8 +321,6 @@ impl From<&mut ImageSource> for ImageSource {
     fn from(value: &mut ImageSource) -> Self { value.clone() }
 }
 
-
-
 /// Defines the (type of) network ot which a container should connect.
 #[derive(Clone, Debug)]
 pub enum Network {
@@ -373,8 +360,6 @@ impl From<&Network> for String {
     #[inline]
     fn from(value: &Network) -> Self { format!("{value}") }
 }
-
-
 
 /// Collects information we need to know to connect to the (local) Docker daemon.
 #[derive(Clone, Debug)]
@@ -447,10 +432,6 @@ impl ExecuteInfo {
         ExecuteInfo { name: name.into(), image: image.into(), image_source: image_source.into(), command, binds, capabilities, network }
     }
 }
-
-
-
-
 
 /***** HELPER FUNCTIONS *****/
 /// Preprocesses a single argument from either an IntermediateResult or a Data to whatever is needed for their access kind and any mounts.
@@ -546,8 +527,6 @@ fn preprocess_arg(
     // OK
     Ok(())
 }
-
-
 
 /// Creates a container with the given image and starts it (non-blocking after that).
 ///
@@ -807,10 +786,6 @@ async fn pull_image(docker: &Docker, image: impl Into<Image>, source: impl Into<
         Err(err) => Err(Error::ImageTagError { image: Box::new(image), source, err }),
     }
 }
-
-
-
-
 
 /***** AUXILLARY FUNCTIONS *****/
 /// Creates a new connection to the local Docker daemon.
@@ -1150,10 +1125,6 @@ pub async fn save_image(docker: &Docker, image: impl Into<Image>, target: impl A
     // Done
     Ok(())
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// Launches the given job and returns its name so it can be tracked.

@@ -46,7 +46,6 @@ pub use crate::errors::RemoteVmError as Error;
 use crate::planner::InstancePlanner;
 use crate::spec::{GlobalState, LocalState};
 
-
 /***** HELPER MACROS *****/
 /// Does a status update on a JobStatus received from the `brane-job` node, but one that does not return yet.
 macro_rules! mundane_status_update {
@@ -56,10 +55,6 @@ macro_rules! mundane_status_update {
         }
     };
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// The InstancePlugin provides `brane-exe` functions for task execution.
@@ -506,8 +501,6 @@ impl VmPlugin for InstancePlugin {
     }
 }
 
-
-
 /// The instantiated Vm for the Instance use-case.
 #[derive(Clone)]
 pub struct InstanceVm {
@@ -591,8 +584,6 @@ impl InstanceVm {
             central_cfg.services.plr.address
         };
 
-
-
         // Step 1: Plan
         debug!("Planning workflow on Kafka planner...");
         let plan: Workflow = match prof.nest_fut("planning (brane-drv)", |scope| InstancePlanner::plan(&plr_addr, id, workflow, scope)).await {
@@ -609,8 +600,6 @@ impl InstanceVm {
             state.tx = Some(Arc::new(tx));
         }
 
-
-
         // Step 2: Execution
         // Now wrap ourselves in a lock so that we can run the internal vm
         let this: Arc<RwLock<Self>> = Arc::new(RwLock::new(self));
@@ -623,8 +612,6 @@ impl InstanceVm {
                 panic!("Could not get self back");
             },
         };
-
-
 
         // Step 3: Result
         // Match the result to potentially error

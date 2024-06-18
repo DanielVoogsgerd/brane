@@ -25,7 +25,6 @@ use specifications::version::Version;
 
 use crate::pc::ProgramCounter;
 
-
 /***** HELPER FUNCTIONS *****/
 /// Prints the given error (of an instruction) to stderr.
 ///
@@ -63,16 +62,11 @@ fn prettyprint_err(pc: ProgramCounter, err: &dyn Error) {
     // Done
 }
 
-
-
-
-
 /***** AUXILLARY *****/
 /// Trait that makes printing shit a bit easier.
 pub trait ReturnEdge {
     /// The return type
     type Ret;
-
 
     /// Maps this result to a VmError that has only an edge.
     ///
@@ -116,10 +110,6 @@ impl<T> ReturnEdge for Result<T, StackError> {
     }
 }
 
-
-
-
-
 /***** LIBRARY *****/
 /// Defines errors that relate to the values.
 #[derive(Debug)]
@@ -145,8 +135,6 @@ impl Display for ValueError {
 
 impl Error for ValueError {}
 
-
-
 /// Defines errors that relate to the stack.
 #[derive(Debug)]
 pub enum StackError {
@@ -165,8 +153,6 @@ impl Display for StackError {
 }
 
 impl Error for StackError {}
-
-
 
 /// Defines errors that relate to the frame stack.
 #[derive(Debug)]
@@ -210,8 +196,6 @@ impl Display for FrameStackError {
 
 impl Error for FrameStackError {}
 
-
-
 /// Defines errors that relate to the variable register.
 #[derive(Debug)]
 pub enum VarRegError {
@@ -238,8 +222,6 @@ impl Display for VarRegError {
 }
 
 impl Error for VarRegError {}
-
-
 
 /// Defines errors that relate to a VM's execution.
 #[derive(Debug)]
@@ -448,8 +430,6 @@ impl Display for VmError {
 
 impl Error for VmError {}
 
-
-
 /// Defines errors that occur only in the LocalVm.
 #[derive(Debug)]
 pub enum LocalVmError {
@@ -490,8 +470,6 @@ impl Display for LocalVmError {
 }
 
 impl Error for LocalVmError {}
-
-
 
 /// Defines errors for the DummyVm.
 #[derive(Debug)]

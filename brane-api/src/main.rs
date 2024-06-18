@@ -32,7 +32,6 @@ use scylla::{Session, SessionBuilder};
 use tokio::signal::unix::{signal, Signal, SignalKind};
 use warp::Filter;
 
-
 /***** ARGUMENTS *****/
 #[derive(Parser)]
 #[clap(version = env!("CARGO_PKG_VERSION"))]
@@ -52,10 +51,6 @@ struct Opts {
     )]
     node_config_path: PathBuf,
 }
-
-
-
-
 
 /***** ENTRYPOINT *****/
 #[tokio::main]

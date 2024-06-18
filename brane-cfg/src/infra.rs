@@ -20,7 +20,6 @@ use specifications::address::Address;
 pub use crate::info::YamlError as Error;
 use crate::info::YamlInfo;
 
-
 /***** AUXILLARY *****/
 /// Defines a single Location in the InfraFile.
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -32,10 +31,6 @@ pub struct InfraLocation {
     /// The address of the local registry to query for locally available packages, datasets and more.
     pub registry: Address,
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// Defines a "handle" to the document that contains the Brane instance layout.

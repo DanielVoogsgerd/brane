@@ -22,7 +22,6 @@ use num_traits::AsPrimitive;
 use serde::de::{self, Deserialize, Deserializer, Visitor};
 use serde::ser::{Serialize, Serializer};
 
-
 /***** ERRORS *****/
 /// Defines errors when parsing `FunctionId` from a string.
 #[derive(Debug)]
@@ -46,10 +45,6 @@ impl Error for FunctionIdParseError {
         }
     }
 }
-
-
-
-
 
 /***** LIBRARY *****/
 /// Enum that can be used for function identifiers, to specially handle `main`.
@@ -224,7 +219,6 @@ impl<'de> Deserialize<'de> for FunctionId {
                 Ok(FunctionId::Func(v as usize))
             }
         }
-
 
         // Use the visitor to either parse a string value or a direct number
         deserializer.deserialize_any(FunctionIdVisitor)
