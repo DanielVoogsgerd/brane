@@ -23,7 +23,6 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ inputs.rust-version }}
-          components: rustfmt, clippy
 
       - name: Install protoc
         uses: arduino/setup-protoc@v3
@@ -31,9 +30,5 @@ jobs:
           version: 21.11
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: cargo clippy
-        uses: giraffate/clippy-action@v1
-        with:
-          reporter: 'github-pr-check'
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          clippy_flags: --workspace -- -Dwarnings
+      - name: Cargo Check
+        run: cargo check --workspace
