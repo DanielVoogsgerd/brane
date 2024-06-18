@@ -26,4 +26,4 @@ jobs:
           components: rustfmt, clippy
 
       - name: Run unit tests
-        run: cargo fmt --workspace --check
+        run: cargo fmt --all --check
