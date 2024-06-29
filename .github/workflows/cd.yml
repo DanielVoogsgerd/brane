@@ -28,7 +28,7 @@ jobs:
   #
   #     - uses: actions/upload-artifact@v4
   #       with:
-  #         name: brane-instance
+  #         name: brane-central-instance
   #         path: |
   #           target/release/brane-*.tar.gz
   #         if-no-files-found: error
@@ -58,7 +58,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: brane-instance
+          name: brane-worker-instance
           path: |
             target/release/brane-*.tar.gz
           if-no-files-found: error
