@@ -34,143 +34,147 @@ jobs:
   #         if-no-files-found: error
   #         retention-days: 1
 
-  build-worker-instance-images:
-    # Note that we don't depend on check in stable or nightly
-    # as code need not compile for the formatter to work
-    name: "Build worker instance images"
-
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      # TODO: Build entire instance
-      - name: Build image
-        run: python ./make.py worker-instance
-
-      - name: Compress images
-        run: |
-          find target/release -name 'brane-*.tar' -exec gzip -9 '{}' \;
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: brane-worker-instance
-          path: |
-            target/release/brane-*.tar.gz
-          if-no-files-found: error
-          retention-days: 1
-
-  # build-platforms:
-  #   name: "Build for different platforms"
+  # build-worker-instance-images:
+  #   # Note that we don't depend on check in stable or nightly
+  #   # as code need not compile for the formatter to work
+  #   name: "Build worker instance images"
   #
-  #   strategy:
-  #     # TODO: Enable
-  #     fail-fast: false
-  #     matrix:
-  #       # Compile the various parts of Brane, can be set via the following options:
-  #       # cli, ctl, cc, let
-  #       include:
-  #         # - runner: windows-latest
-  #         #   os: windows
-  #         #   arch: x86_64
-  #         - runner: ubuntu-latest
-  #           os: linux
-  #           arch: x86_64
-  #
-  #           cli: true
-  #           ctl: true
-  #           cc: true
-  #           let: true
-  #         # - runner: macos-13
-  #         #   os: macos
-  #         #   arch: x86_64
-  #         # - runner: macos-latest
-  #         #   os: macos
-  #         #   arch: aarch64
-  #
-  #         # Emulated targets
-  #         # - runner: ubuntu-latest
-  #         #   os: macos
-  #         #   arch: aarch64
-  #         #   emulated: true
-  #         #   target: aarch64-unknown-linux-musl
-  #
-  #   runs-on: ${{matrix.runner}}
+  #   runs-on: ubuntu-latest
   #
   #   steps:
   #     - name: Checkout repository
   #       uses: actions/checkout@v4
   #
-  #     - name: Install rust toolchain
-  #       uses: dtolnay/rust-toolchain@master
-  #       with:
-  #         toolchain: stable
-  #         targets: ${{matrix.target}}
-  #
   #     - name: Set up Docker Buildx
   #       uses: docker/setup-buildx-action@v3
-  #       if: matrix.emulated == true
   #
-  #     - name: Setup
-  #       run: |
-  #         mkdir upload
+  #     # TODO: Build entire instance
+  #     - name: Build image
+  #       run: python ./make.py worker-instance
   #
-  #     # TODO: Create tar.gz from the dynlib
-  #     - name: Build brane (native)
+  #     - name: Compress images
   #       run: |
-  #         cargo build --release --package brane-cli --package brane-cli-c
-  #         mv target/release/brane upload/brane-${{matrix.os}}-${{matrix.arch}}
-  #       if: matrix.emulated == false && matrix.cli == true
-  #
-  #     - name: Build brane (emulated)
-  #       run: |
-  #         python ./make.py --con --arch ${{matrix.arch}} cli libbrane_cli
-  #         mv target/release/brane upload/brane-${{matrix.os}}-${{matrix.arch}}
-  #       if: matrix.emulated == true && matrix.cli == true
-  #
-  #     - name: Build branectl (native)
-  #       run: |
-  #         cargo build --release --package brane-ctl
-  #         mv target/release/branectl upload/branectl-${{matrix.os}}-${{matrix.arch}}
-  #       if: matrix.emulated == false && matrix.ctl == true
-  #
-  #     - name: Build branectl (emulated)
-  #       run: |
-  #         python ./make.py --con --arch ${{matrix.arch}} ctl
-  #         mv target/release/branectl upload/branectl-${{matrix.os}}-${{matrix.arch}}
-  #       if: matrix.emulated == true && matrix.ctl == true
-  #
-  #     - name: Build brane-cc (native)
-  #       run: |
-  #         cargo build --release --package brane-cc
-  #         mv target/release/branec upload/branec-${{matrix.os}}-${{matrix.arch}}
-  #       if: matrix.emulated == false && matrix.cc == true
-  #
-  #     - name: Build brane-cc (emulated)
-  #       run: |
-  #         python ./make.py --con --arch ${{matrix.arch}} cc
-  #         mv target/release/branec upload/branec-${{matrix.os}}-${{matrix.arch}}
-  #       if: matrix.emulated == true && matrix.cc == true
-  #
-  #     - name: Build branelet (native)
-  #       run: |
-  #         cargo build --release --package brane-let
-  #         mv target/release/branelet upload/branelet-${{matrix.os}}-${{matrix.arch}}
-  #       if: matrix.emulated == false && matrix.let == true
-  #
-  #     - name: Build branelet (emulated)
-  #       run: |
-  #         python ./make.py --con --arch ${{matrix.arch}} branelet
-  #         mv target/release/branelet upload/branelet-${{matrix.os}}-${{matrix.arch}}
-  #       if: matrix.emulated == true && matrix.let == true
+  #         find target/release -name 'brane-*.tar' -exec gzip -9 '{}' \;
   #
   #     - uses: actions/upload-artifact@v4
   #       with:
-  #         name: artifacts-${{matrix.os}}-${{matrix.arch}}
-  #         path: upload
+  #         name: brane-worker-instance
+  #         path: |
+  #           target/release/brane-*.tar.gz
   #         if-no-files-found: error
   #         retention-days: 1
+
+  build-platforms:
+    name: "Build for different platforms"
+
+    strategy:
+      # TODO: Enable
+      fail-fast: false
+      matrix:
+        # Compile the various parts of Brane, can be set via the following options:
+        # cli, ctl, cc, let
+        include:
+          # - runner: windows-latest
+          #   os: windows
+          #   arch: x86_64
+          - runner: ubuntu-latest
+            os: linux
+            arch: x86_64
+
+            cli: true
+            ctl: true
+            cc: true
+            let: true
+          # - runner: macos-13
+          #   os: macos
+          #   arch: x86_64
+          # - runner: macos-latest
+          #   os: macos
+          #   arch: aarch64
+
+          # Emulated targets
+          - runner: ubuntu-latest
+            os: macos
+            arch: aarch64
+            emulated: true
+            target: aarch64-unknown-linux-musl
+            cli: true
+            ctl: true
+            cc: true
+            let: true
+
+    runs-on: ${{matrix.runner}}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          targets: ${{matrix.target}}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        if: matrix.emulated == true
+
+      - name: Setup
+        run: |
+          mkdir upload
+
+      # TODO: Create tar.gz from the dynlib
+      - name: Build brane (native)
+        run: |
+          cargo build --release --package brane-cli --package brane-cli-c
+          mv target/release/brane upload/brane-${{matrix.os}}-${{matrix.arch}}
+        if: matrix.emulated == false && matrix.cli == true
+
+      - name: Build brane (emulated)
+        run: |
+          python ./make.py --con --arch ${{matrix.arch}} cli libbrane_cli
+          mv target/release/brane upload/brane-${{matrix.os}}-${{matrix.arch}}
+        if: matrix.emulated == true && matrix.cli == true
+
+      - name: Build branectl (native)
+        run: |
+          cargo build --release --package brane-ctl
+          mv target/release/branectl upload/branectl-${{matrix.os}}-${{matrix.arch}}
+        if: matrix.emulated == false && matrix.ctl == true
+
+      - name: Build branectl (emulated)
+        run: |
+          python ./make.py --con --arch ${{matrix.arch}} ctl
+          mv target/release/branectl upload/branectl-${{matrix.os}}-${{matrix.arch}}
+        if: matrix.emulated == true && matrix.ctl == true
+
+      - name: Build brane-cc (native)
+        run: |
+          cargo build --release --package brane-cc
+          mv target/release/branec upload/branec-${{matrix.os}}-${{matrix.arch}}
+        if: matrix.emulated == false && matrix.cc == true
+
+      - name: Build brane-cc (emulated)
+        run: |
+          python ./make.py --con --arch ${{matrix.arch}} cc
+          mv target/release/branec upload/branec-${{matrix.os}}-${{matrix.arch}}
+        if: matrix.emulated == true && matrix.cc == true
+
+      - name: Build branelet (native)
+        run: |
+          cargo build --release --package brane-let
+          mv target/release/branelet upload/branelet-${{matrix.os}}-${{matrix.arch}}
+        if: matrix.emulated == false && matrix.let == true
+
+      - name: Build branelet (emulated)
+        run: |
+          python ./make.py --con --arch ${{matrix.arch}} branelet
+          mv target/release/branelet upload/branelet-${{matrix.os}}-${{matrix.arch}}
+        if: matrix.emulated == true && matrix.let == true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: artifacts-${{matrix.os}}-${{matrix.arch}}
+          path: upload
+          if-no-files-found: error
+          retention-days: 1
