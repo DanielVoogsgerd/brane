@@ -79,13 +79,13 @@ jobs:
 
     strategy:
       # TODO: Enable
-      # fail-fast: true
+      fail-fast: false
       matrix:
         # Compile brane for Windows, macOS, and Linux (ideally all x86/64 and ARM (64-bit), although Windows & Linux ARM are optional)
         os:
           - windows-latest
           - ubuntu-latest
-          - macos-latest
+          # - macos-latest
         arch:
           - x86_64
           - aarch64
