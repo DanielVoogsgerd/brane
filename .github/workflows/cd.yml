@@ -115,6 +115,10 @@ jobs:
       #   uses: docker/setup-buildx-action@v3
       #   if: matrix.emulated == true
 
+      - name: Install deps (musl)
+        run: sudo apt update && sudo apt install -y musl-dev
+        if: matrix.runner == 'ubuntu-latest' && matrix.arch == 'aarch64'
+
       - name: Build brane (native)
         run: cargo build --release --package brane-cli
         if: matrix.emulated == false
