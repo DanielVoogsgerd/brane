@@ -77,14 +77,20 @@ jobs:
       # TODO: Enable
       fail-fast: false
       matrix:
-        # Compile brane for Windows, macOS, and Linux (ideally all x86/64 and ARM (64-bit), although Windows & Linux ARM are optional)
+        # Compile the various parts of Brane, can be set via the following options:
+        # cli, ctl, cc, let
         include:
           # - runner: windows-latest
           #   os: windows
           #   arch: x86_64
-          # - runner: ubuntu-latest
-          #   os: linux
-          #   arch: x86_64
+          - runner: ubuntu-latest
+            os: linux
+            arch: x86_64
+
+            cli: true
+            ctl: true
+            cc: true
+            let: true
           # - runner: macos-13
           #   os: macos
           #   arch: x86_64
@@ -93,11 +99,11 @@ jobs:
           #   arch: aarch64
 
           # Emulated targets
-          - runner: ubuntu-latest
-            os: macos
-            arch: aarch64
-            emulated: true
-            target: aarch64-unknown-linux-musl
+          # - runner: ubuntu-latest
+          #   os: macos
+          #   arch: aarch64
+          #   emulated: true
+          #   target: aarch64-unknown-linux-musl
 
     runs-on: ${{matrix.runner}}
 
@@ -115,17 +121,37 @@ jobs:
         uses: docker/setup-buildx-action@v3
         if: matrix.emulated == true
 
-      # - name: Install deps (musl)
-      #   run: sudo apt update && sudo apt install -y musl-dev
-      #   if: matrix.runner == 'ubuntu-latest' && matrix.arch == 'aarch64'
-
       - name: Build brane (native)
-        run: cargo build --release --package brane-cli
-        if: matrix.emulated == false
+        run: cargo build --release --package brane-cli --package brane-cli-c
+        if: matrix.emulated == false && matrix.cli == true
 
       - name: Build brane (emulated)
-        run: python ./make.py --con --arch ${{matrix.arch}} cli
-        if: matrix.emulated == true
+        run: python ./make.py --con --arch ${{matrix.arch}} cli libbrane_cli
+        if: matrix.emulated == true && matrix.cli == true
+
+      - name: Build branectl (native)
+        run: cargo build --release --package brane-ctl
+        if: matrix.emulated == false && matrix.ctl == true
+
+      - name: Build branectl (emulated)
+        run: python ./make.py --con --arch ${{matrix.arch}} ctl
+        if: matrix.emulated == true && matrix.ctl == true
+
+      - name: Build brane-cc (native)
+        run: cargo build --release --package brane-cc
+        if: matrix.emulated == false && matrix.cc == true
+
+      - name: Build brane-cc (emulated)
+        run: python ./make.py --con --arch ${{matrix.arch}} cc
+        if: matrix.emulated == true && matrix.cc == true
+
+      - name: Build branelet (native)
+        run: cargo build --release --package brane-let
+        if: matrix.emulated == false && matrix.let == true
+
+      - name: Build branelet (emulated)
+        run: python ./make.py --con --arch ${{matrix.arch}} branelet
+        if: matrix.emulated == true && matrix.let == true
 
       - name: Rename
         run: mv "target/release/brane" "target/release/brane-${{matrix.os}}-${{matrix.arch}}"
