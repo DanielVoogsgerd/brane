@@ -36,40 +36,50 @@ jobs:
   #         if-no-files-found: error
   #         retention-days: 1
 
-  build-ctl:
-    name: "Build branectl"
-
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Install rust toolchain
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: stable
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build branectl
-        run: python ./make.py ctl
-
-      - name: Rename
-        run: mv target/release/branectl target/release/branectl-linux-x86_64
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: branectl-linux-x86_64
-          path: target/release/branectl-linux-x86_64
-          if-no-files-found: error
-          retention-days: 1
+  # build-ctl:
+  #   name: "Build branectl"
+  #
+  #
+  #   strategy:
+  #     os:
+  #       - ubuntu-latest
+  #       - macos-latest
+  #     arch:
+  #       - x86_64
+  #       - aarch64
+  #
+  #   runs-on: ubuntu-latest
+  #
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
+  #     - name: Install rust toolchain
+  #       uses: dtolnay/rust-toolchain@master
+  #       with:
+  #         toolchain: stable
+  #
+  #     - name: Set up Docker Buildx
+  #       uses: docker/setup-buildx-action@v3
+  #
+  #     - name: Build branectl
+  #       run: python ./make.py ctl
+  #
+  #     - name: Rename
+  #       run: mv target/release/branectl target/release/branectl-linux-x86_64
+  #
+  #     - uses: actions/upload-artifact@v4
+  #       with:
+  #         name: branectl-linux-x86_64
+  #         path: target/release/branectl-linux-x86_64
+  #         if-no-files-found: error
+  #         retention-days: 1
 
   build-cli:
     name: "Build brane(-cli)"
 
     strategy:
-      fail-fast: true
+      # TODO: Enable
+      # fail-fast: true
       matrix:
         # Compile brane for Windows, macOS, and Linux (ideally all x86/64 and ARM (64-bit), although Windows & Linux ARM are optional)
         os:
@@ -80,7 +90,7 @@ jobs:
           - x86_64
           - aarch64
 
-    runs-on: ubuntu-latest
+    runs-on: ${{matrix.os}}
 
     env:
       # Horrible hack to map the runs_on variable to the more generic platform
@@ -103,14 +113,14 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build brane
-        run: python ./make.py cli
+        run: python ./make.py --arch ${{matrix.arch}} cli
 
       - name: Rename
-        run: mv "target/release/brane" "target/release/brane-$TARGET_OS-${arch}"
+        run: mv "target/release/brane" "target/release/brane-${{env.TARGET_OS}}-${{matrix.arch}}"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: brane-linux-x86_64
-          path: target/release/brane-linux-x86_64
+          name: brane-${env.TARGET_OS}-${matrix.arch}
+          path: target/release/brane-*-*
           if-no-files-found: error
           retention-days: 1
