@@ -4,10 +4,40 @@ on:
   push:
 
 jobs:
-  build-instance-images:
+  # build-instance-images:
+  #   # Note that we don't depend on check in stable or nightly
+  #   # as code need not compile for the formatter to work
+  #   name: "Build central instance images"
+  #
+  #   runs-on: ubuntu-latest
+  #
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
+  #
+  #     - name: Set up Docker Buildx
+  #       uses: docker/setup-buildx-action@v3
+  #
+  #     # TODO: Build entire instance
+  #     - name: Build image
+  #       run: python ./make.py instance
+  #
+  #     - name: Compress images
+  #       run: |
+  #         find target/release -name 'brane-*.tar' -exec gzip -9 '{}' \;
+  #
+  #     - uses: actions/upload-artifact@v4
+  #       with:
+  #         name: brane-instance
+  #         path: |
+  #           target/release/brane-*.tar.gz
+  #         if-no-files-found: error
+  #         retention-days: 1
+
+  build-worker-instance-images:
     # Note that we don't depend on check in stable or nightly
     # as code need not compile for the formatter to work
-    name: "Build brane instance images"
+    name: "Build worker instance images"
 
     runs-on: ubuntu-latest
 
@@ -20,7 +50,7 @@ jobs:
 
       # TODO: Build entire instance
       - name: Build image
-        run: python ./make.py instance
+        run: python ./make.py worker-instance
 
       - name: Compress images
         run: |
@@ -28,7 +58,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: brane-instance-images
+          name: brane-instance
           path: |
             target/release/brane-*.tar.gz
           if-no-files-found: error
