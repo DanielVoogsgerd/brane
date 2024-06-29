@@ -7,7 +7,7 @@ jobs:
   build-images:
     # Note that we don't depend on check in stable or nightly
     # as code need not compile for the formatter to work
-    name: "Documentation"
+    name: "Build brane instance images"
 
     runs-on: ubuntu-latest
 
@@ -18,12 +18,75 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
-      # Do we need qemu?
-      # - name: Set up QEMU
-      #   uses: docker/setup-qemu-action@v3
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build time
+      # TODO: Build entire instance
+      - name: Build image
         run: python ./make.py api-image
 
+      - name: Compress images
+        run: gzip -9 target/release/brane-api.tar
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: brane-images
+          path: target/release/brane-api.tar.gz
+          retention-days: 1
+
+  build-ctl:
+    name: "Build branectl"
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build branectl
+        run: python ./make.py ctl
+
+      - name: Rename
+        run: mv target/release/branectl target/release/branectl-linux-x86_64
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: branectl-linux-x86_64
+          path: target/release/target/release/branectl-linux-x86_64
+          retention-days: 1
+
+  build-cli:
+    name: "Build brane(-cli)"
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build brane
+        run: python ./make.py cli
+
+      - name: Rename
+        run: mv target/release/brane target/release/brane-linux-x86_64
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: brane-linux-x86_64
+          path: target/release/brane-linux-x86_64
+          retention-days: 1
