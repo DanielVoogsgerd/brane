@@ -121,44 +121,62 @@ jobs:
         uses: docker/setup-buildx-action@v3
         if: matrix.emulated == true
 
+      - name: Setup
+        run: |
+          mkdir upload
+
+      # TODO: Create tar.gz from the dynlib
       - name: Build brane (native)
-        run: cargo build --release --package brane-cli --package brane-cli-c
+        run: |
+          cargo build --release --package brane-cli --package brane-cli-c
+          mv target/release/brane upload/brane-${{matrix.os}}-${{matrix.arch}}
         if: matrix.emulated == false && matrix.cli == true
 
       - name: Build brane (emulated)
-        run: python ./make.py --con --arch ${{matrix.arch}} cli libbrane_cli
+        run: |
+          python ./make.py --con --arch ${{matrix.arch}} cli libbrane_cli
+          mv target/release/brane upload/brane-${{matrix.os}}-${{matrix.arch}}
         if: matrix.emulated == true && matrix.cli == true
 
       - name: Build branectl (native)
-        run: cargo build --release --package brane-ctl
+        run: |
+          cargo build --release --package brane-ctl
+          mv target/release/branectl upload/branectl-${{matrix.os}}-${{matrix.arch}}
         if: matrix.emulated == false && matrix.ctl == true
 
       - name: Build branectl (emulated)
-        run: python ./make.py --con --arch ${{matrix.arch}} ctl
+        run: |
+          python ./make.py --con --arch ${{matrix.arch}} ctl
+          mv target/release/branectl upload/branectl-${{matrix.os}}-${{matrix.arch}}
         if: matrix.emulated == true && matrix.ctl == true
 
       - name: Build brane-cc (native)
-        run: cargo build --release --package brane-cc
+        run: |
+          cargo build --release --package brane-cc
+          mv target/release/branec upload/branec-${{matrix.os}}-${{matrix.arch}}
         if: matrix.emulated == false && matrix.cc == true
 
       - name: Build brane-cc (emulated)
-        run: python ./make.py --con --arch ${{matrix.arch}} cc
+        run: |
+          python ./make.py --con --arch ${{matrix.arch}} cc
+          mv target/release/branec upload/branec-${{matrix.os}}-${{matrix.arch}}
         if: matrix.emulated == true && matrix.cc == true
 
       - name: Build branelet (native)
-        run: cargo build --release --package brane-let
+        run: |
+          cargo build --release --package brane-let
+          mv target/release/branelet upload/branelet-${{matrix.os}}-${{matrix.arch}}
         if: matrix.emulated == false && matrix.let == true
 
       - name: Build branelet (emulated)
-        run: python ./make.py --con --arch ${{matrix.arch}} branelet
+        run: |
+          python ./make.py --con --arch ${{matrix.arch}} branelet
+          mv target/release/branelet upload/branelet-${{matrix.os}}-${{matrix.arch}}
         if: matrix.emulated == true && matrix.let == true
-
-      - name: Rename
-        run: mv "target/release/brane" "target/release/brane-${{matrix.os}}-${{matrix.arch}}"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: brane-${{matrix.os}}-${{matrix.arch}}
-          path: target/release/brane-*-*
+          name: artifacts-${{matrix.os}}-${{matrix.arch}}
+          path: upload
           if-no-files-found: error
           retention-days: 1
