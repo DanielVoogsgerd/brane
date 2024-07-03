@@ -138,54 +138,93 @@ jobs:
       - name: Build brane (native)
         run: |
           cargo build --release --package brane-cli --package brane-cli-c
-          mv target/release/brane upload/brane-${{matrix.os}}-${{matrix.arch}}
         if: matrix.emulated == false && matrix.cli == true
 
       - name: Build brane (emulated)
         run: |
           python ./make.py --con --arch ${{matrix.arch}} cli libbrane_cli
-          mv target/release/brane upload/brane-${{matrix.os}}-${{matrix.arch}}
         if: matrix.emulated == true && matrix.cli == true
 
       - name: Build branectl (native)
         run: |
           cargo build --release --package brane-ctl
-          mv target/release/branectl upload/branectl-${{matrix.os}}-${{matrix.arch}}
         if: matrix.emulated == false && matrix.ctl == true
 
       - name: Build branectl (emulated)
         run: |
           python ./make.py --con --arch ${{matrix.arch}} ctl
-          mv target/release/branectl upload/branectl-${{matrix.os}}-${{matrix.arch}}
         if: matrix.emulated == true && matrix.ctl == true
 
       - name: Build brane-cc (native)
         run: |
           cargo build --release --package brane-cc
-          mv target/release/branec upload/branec-${{matrix.os}}-${{matrix.arch}}
         if: matrix.emulated == false && matrix.cc == true
 
       - name: Build brane-cc (emulated)
         run: |
           python ./make.py --con --arch ${{matrix.arch}} cc
-          mv target/release/branec upload/branec-${{matrix.os}}-${{matrix.arch}}
         if: matrix.emulated == true && matrix.cc == true
 
       - name: Build branelet (native)
         run: |
           cargo build --release --package brane-let
-          mv target/release/branelet upload/branelet-${{matrix.os}}-${{matrix.arch}}
         if: matrix.emulated == false && matrix.let == true
 
       - name: Build branelet (emulated)
         run: |
           python ./make.py --con --arch ${{matrix.arch}} branelet
-          mv target/release/branelet upload/branelet-${{matrix.os}}-${{matrix.arch}}
         if: matrix.emulated == true && matrix.let == true
 
       - uses: actions/upload-artifact@v4
         with:
           name: artifacts-${{matrix.os}}-${{matrix.arch}}
-          path: upload
+          path: |
+            ./target/release/brane*
           if-no-files-found: error
           retention-days: 1
+
+  collect_results:
+    name: Collect all results
+
+    needs:
+      - build-worker-instance-images
+      - build-instance-images
+      - build-platforms
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download central images
+        uses: actions/download-artifact@v4
+        with:
+          name: brane-central-instance
+          path: central-instance
+
+      - name: Download worker images
+        uses: actions/download-artifact@v4
+        with:
+          name: brane-worker-instance
+          path: worker-instance
+
+      # And now the OS-related binaries
+      - name: Download macOS (x86) artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: artifacts-macos-x86_64
+          path: macos-artifacts
+
+      - name: Download Windows (x86) artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: artifacts-windows-x86_64
+          path: windows-artifacts
+
+      - name: Download Linux (x86) artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: artifacts-linux-x86_64
+          path: linux-artifacts
+
+      - name: List all collected files
+        run: |
+          tree
