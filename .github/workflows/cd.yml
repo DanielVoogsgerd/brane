@@ -227,4 +227,4 @@ jobs:
 
       - name: List all collected files
         run: |
-          tree
+          find .
