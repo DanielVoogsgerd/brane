@@ -11,6 +11,11 @@ jobs:
 
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        # Note that we don't adapt the runner right now
+        arch: [ x86_64 ]
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -21,16 +26,16 @@ jobs:
       # TODO: Build entire instance
       - name: Build image
         run: python ./make.py instance
-
-      - name: Compress images
-        run: |
-          find target/release -name 'brane-*.tar' -exec gzip -9 '{}' \;
+      #
+      # - name: Compress images
+      #   run: |
+      #     find target/release -name 'brane-*.tar' -exec gzip -9 '{}' \;
 
       - uses: actions/upload-artifact@v4
         with:
-          name: brane-central-instance
+          name: central-instance-${{matrix.arch}}
           path: |
-            target/release/brane-*.tar.gz
+            target/release/brane-*.tar
           if-no-files-found: error
           retention-days: 1
 
@@ -40,6 +45,11 @@ jobs:
     name: "Build worker instance images"
 
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        # Note that we don't adapt the runner right now
+        arch: [ x86_64 ]
 
     steps:
       - name: Checkout repository
@@ -51,16 +61,16 @@ jobs:
       # TODO: Build entire instance
       - name: Build image
         run: python ./make.py worker-instance
-
-      - name: Compress images
-        run: |
-          find target/release -name 'brane-*.tar' -exec gzip -9 '{}' \;
+      #
+      # - name: Compress images
+      #   run: |
+      #     find target/release -name 'brane-*.tar' -exec gzip -9 '{}' \;
 
       - uses: actions/upload-artifact@v4
         with:
-          name: brane-worker-instance
+          name: worker-instance-${{matrix.arch}}
           path: |
-            target/release/brane-*.tar.gz
+            target/release/brane-*.tar
           if-no-files-found: error
           retention-days: 1
 
@@ -198,14 +208,14 @@ jobs:
       - name: Download central images
         uses: actions/download-artifact@v4
         with:
-          name: brane-central-instance
-          path: central-instance
+          name: central-instance-x86_64
+          path: instance-x86_64
 
       - name: Download worker images
         uses: actions/download-artifact@v4
         with:
-          name: brane-worker-instance
-          path: worker-instance
+          name: worker-instance-x86_64
+          path: worker-instance-x86_64
 
       # And now the OS-related binaries
       - name: Download macOS (x86) artifacts
