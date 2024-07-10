@@ -189,8 +189,14 @@ jobs:
         with:
           name: artifacts-${{matrix.os}}-${{matrix.arch}}
           path: |
-            ./target/release/brane*
-            ./target/release/libbrane*
+            # Binaries
+            ./target/release/brane[-a-z]
+            ./target/release/brane[-a-z].exe
+
+            # Dynamic libraries are formatted a bit differently
+            ./target/release/brane_cli.dll
+            ./target/release/libbrane_cli.dylib
+            ./target/release/libbrane_cli.so
           if-no-files-found: error
           retention-days: 1
 
