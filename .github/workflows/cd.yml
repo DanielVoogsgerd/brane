@@ -205,51 +205,61 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create source dir
+        run: mkdir sources
+
       - name: Download central images
         uses: actions/download-artifact@v4
         with:
           name: central-instance-x86_64
-          path: instance-x86_64
+          path: sources/instance-x86_64
 
       - name: Download worker images
         uses: actions/download-artifact@v4
         with:
           name: worker-instance-x86_64
-          path: worker-instance-x86_64
+          path: sources/worker-instance-x86_64
 
       # And now the OS-related binaries
       - name: Download macOS (x86) artifacts
         uses: actions/download-artifact@v4
         with:
           name: artifacts-macos-x86_64
-          path: darwin-x86_64-artifacts
+          path: sources/darwin-x86_64-artifacts
 
       - name: Download macOS (aarch64) artifacts
         uses: actions/download-artifact@v4
         with:
           name: artifacts-macos-aarch64
-          path: darwin-aarch64-artifacts
+          path: sources/darwin-aarch64-artifacts
 
       - name: Download Windows (x86) artifacts
         uses: actions/download-artifact@v4
         with:
           name: artifacts-windows-x86_64
-          path: windows-x86_64-artifacts
+          path: sources/windows-x86_64-artifacts
 
       - name: Download Linux (x86) artifacts
         uses: actions/download-artifact@v4
         with:
           name: artifacts-linux-x86_64
-          path: linux-x86_64-artifacts
+          path: sources/linux-x86_64-artifacts
 
-      - name: List all collected files
+      - name: List collected files
         run: |
-          find .
+          find sources
+
+      - name: Rename collected files
+        run: |
+          cd sources && python ../ci-cd/rename-artifacts.py
 
       - uses: actions/upload-artifact@v4
         with:
           name: result
           path: |
-            .
+            sources/result
           if-no-files-found: error
           retention-days: 1
