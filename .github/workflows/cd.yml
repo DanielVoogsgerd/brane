@@ -180,6 +180,7 @@ jobs:
           name: artifacts-${{matrix.os}}-${{matrix.arch}}
           path: |
             ./target/release/brane*
+            ./target/release/libbrane*
           if-no-files-found: error
           retention-days: 1
 
@@ -211,20 +212,34 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: artifacts-macos-x86_64
-          path: macos-artifacts
+          path: darwin-x86_64-artifacts
+
+      - name: Download macOS (aarch64) artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: artifacts-macos-aarch64
+          path: darwin-aarch64-artifacts
 
       - name: Download Windows (x86) artifacts
         uses: actions/download-artifact@v4
         with:
           name: artifacts-windows-x86_64
-          path: windows-artifacts
+          path: windows-x86_64-artifacts
 
       - name: Download Linux (x86) artifacts
         uses: actions/download-artifact@v4
         with:
           name: artifacts-linux-x86_64
-          path: linux-artifacts
+          path: linux-x86_64-artifacts
 
       - name: List all collected files
         run: |
           find .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: result
+          path: |
+            .
+          if-no-files-found: error
+          retention-days: 1
