@@ -50,14 +50,13 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: build-nightly
-          path: sources/darwin-x86_64-artifacts
+          path: release-files
 
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: nightly
           prerelease: true
+          fail_on_unmatched_files: true
           files: |
-            brane-linux-x86_64
-            brane-darwin-x86_64
-            branectl-linux-x86_64
+            release-files/*
