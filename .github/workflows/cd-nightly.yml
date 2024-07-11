@@ -12,11 +12,21 @@ jobs:
   #   with:
   #     build-name: nightly
   #
+
   build:
     runs-on: ubuntu-latest
     steps:
       - run: |
           touch brane-linux-x86_64 brane-darwin-x86_64 branectl-linux-x86_64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build-nightly
+          path: |
+            brane-linux-x86_64
+            brane-darwin-x86_64
+            branectl-linux-x86_64
+          if-no-files-found: error
+          retention-days: 1
 
   set-tag:
     name: Update nightly tag
