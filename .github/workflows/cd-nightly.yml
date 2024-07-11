@@ -54,6 +54,7 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: nightly
           files: |
             brane-linux-x86_64
             brane-darwin-x86_64
