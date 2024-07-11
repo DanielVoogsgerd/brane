@@ -6,11 +6,17 @@ on:
       - cd
 
 jobs:
+  # build:
+  #   name: Build
+  #   uses: ./.github/workflows/build.yml
+  #   with:
+  #     build-name: nightly
+  #
   build:
-    name: Build
-    uses: ./.github/workflows/build.yml
-    with:
-      build-name: nightly
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          touch brane-linux-x86_64 brane-darwin-x86_64 branectl-linux-x86_64
 
   set-tag:
     name: Update nightly tag
