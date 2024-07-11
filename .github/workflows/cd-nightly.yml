@@ -1,0 +1,44 @@
+on:
+  # Replace with cronlike structure
+  push:
+    branches:
+      - main
+      - cd
+
+jobs:
+  build:
+    name: Build
+    uses: ./.github/workflows/build.yml
+    with:
+      build-name: nightly
+
+  set-tag:
+    name: Update nightly tag
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Tag Repo
+        uses: richardsimko/update-tag@v1
+        with:
+          tag_name: nightly
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  release:
+    name: Create release
+    runs-on: ubuntu-latest
+    needs: set-tag
+    steps:
+      - name: Download macOS (x86) artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-nightly
+          path: sources/darwin-x86_64-artifacts
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            brane-linux-x86_64
+            brane-darwin-x86_64
+            branectl-linux-x86_64

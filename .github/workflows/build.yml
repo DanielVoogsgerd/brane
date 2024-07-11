@@ -1,7 +1,11 @@
-name: Continuous deployment
+name: Build
 on:
-  pull_request: 
-  push:
+  workflow_call:
+    inputs:
+      build-name:
+        description: 'A username passed from the caller workflow'
+        required: true
+        type: string
 
 jobs:
   build-instance-images:
@@ -264,7 +268,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: result
+          name: ${{ inputs.build-name }}
           path: |
             sources/result
           if-no-files-found: error
