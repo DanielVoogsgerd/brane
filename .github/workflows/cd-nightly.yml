@@ -14,6 +14,7 @@ jobs:
   #
 
   build:
+    name: Build
     runs-on: ubuntu-latest
     steps:
       - run: |
@@ -55,6 +56,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: nightly
+          prerelease: true
           files: |
             brane-linux-x86_64
             brane-darwin-x86_64
