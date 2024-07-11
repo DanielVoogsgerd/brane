@@ -1,3 +1,4 @@
+name: Nightly release
 on:
   # Replace with cronlike structure
   push:
