@@ -6,7 +6,7 @@ edition = "2021"
 rust-version = "1.67.1"
 
 [dependencies]
-async-compression = { version = "0.3.15", features = ["tokio","gzip"] }
+async-compression = { version = "0.4.12", features = ["tokio","gzip"] }
 console = "0.15.5"
 dialoguer = { version = "0.11.0", features = ["completion", "history"] }
 enum-debug = { git = "https://github.com/Lut99/enum-debug", tag = "v1.0.0", features = ["derive"] }
@@ -17,11 +17,11 @@ humanlog = { git = "https://github.com/Lut99/humanlog-rs", tag = "v0.1.0" }
 indicatif = "0.17.0"
 log = "0.4.22"
 num-traits = "0.2.18"
-regex = "1.5.0"
-reqwest = { version = "0.11.27", features = ["stream"] }
+regex = "1.11.0"
+reqwest = { version = "0.12.5", features = ["stream"] }
 sha2 = "0.10.6"
-tokio = { version = "1.38.0", features = ["rt","macros"] }
-tokio-stream = "0.1.6"
+tokio = { version = "1.40.0", features = ["rt","macros"] }
+tokio-stream = "0.1.16"
 tokio-tar = "0.3.0"
 url = "2.5.0"
 
@@ -29,4 +29,4 @@ specifications = { path = "../specifications" }
 
 [dev-dependencies]
 getrandom = "0.2.8"
-tempfile = "3.10.1"
+tempfile = "3.13.0"
