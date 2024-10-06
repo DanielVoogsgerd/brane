@@ -11,11 +11,11 @@ path = "src/main.rs"
 
 [dependencies]
 base64ct = "1.6.0"
-bollard = "0.14.0"
-clap = { version = "4.5.6", features = ["derive","env"] }
+bollard = "0.17.1"
+clap = { version = "4.5.13", features = ["derive","env"] }
 console = "0.15.5"
 dialoguer = "0.11.0"
-diesel = { version = "2.1.0", features = ["sqlite"] }
+diesel = { version = "2.2.4", features = ["sqlite"] }
 diesel_migrations = "2.1.0"
 dirs-2 = "3.0.0"
 dotenvy = "0.15.0"
@@ -34,19 +34,19 @@ names = { git = "https://github.com/Lut99/names-rs", tag = "v0.1.0", default-fea
 policy = { git = "https://github.com/epi-project/policy-reasoner" }
 srv = { git = "https://github.com/epi-project/policy-reasoner" }
 rand = "0.8.5"
-reqwest = { version = "0.11.27" }
-serde = { version = "1.0.204", features = ["derive"] }
-serde_json = "1.0.120"
+reqwest = { version = "0.12.5" }
+serde = { version = "1.0.210", features = ["derive"] }
+serde_json = "1.0.128"
 serde_yaml = { version = "0.0.10", package = "serde_yml" }
 shlex = "1.1.0"
-tempfile = "3.10.1"
-tokio = { version = "1.38.0", features = [] }
+tempfile = "3.13.0"
+tokio = { version = "1.40.0", features = [] }
 
 brane-cfg = { path = "../brane-cfg" }
 brane-shr = { path = "../brane-shr" }
 brane-tsk = { path = "../brane-tsk" }
 specifications = { path = "../specifications" }
-clap_complete = "4.5.8"
+clap_complete = "4.5.13"
 
 
 # Hacky indeed but necessary to dodge OpenSSL linking, which we need to make cross-compilation _so_ much easier
@@ -58,7 +58,7 @@ features = ["vendored"]
 [build-dependencies]
 download = { git = "https://github.com/Lut99/download-rs", tag = "v0.1.0", default-features = false, features = ["download"] }
 hex-literal = "0.4.0"
-clap = { version = "4.5.6", features = ["derive","env"] }
+clap = { version = "4.5.13", features = ["derive","env"] }
 
 [lints.clippy]
 result_large_err = { level = "allow", priority = 1 }
