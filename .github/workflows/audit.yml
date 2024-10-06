@@ -30,7 +30,7 @@ jobs:
         uses: microsoft/DevSkim-Action@v1
 
       - name: Upload result as build artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with: 
           name: devskim-results
           path: devskim-results.sarif   
