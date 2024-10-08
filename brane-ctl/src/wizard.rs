@@ -83,7 +83,7 @@ use brane_cfg::node::{self, NodeConfig, NodeKind, NodeSpecificConfig};
 use brane_cfg::proxy::{ForwardConfig, ProxyConfig, ProxyProtocol};
 use brane_shr::input::{FileHistory, confirm, input, input_map, input_option, input_path, select, select_enum};
 use console::style;
-use dirs::data_dir
+use dirs::data_dir;
 use enum_debug::EnumDebug as _;
 use error_trace::trace;
 use jsonwebtoken::jwk::KeyAlgorithm;

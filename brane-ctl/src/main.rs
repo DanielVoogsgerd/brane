@@ -150,7 +150,7 @@ async fn main() {
         },
         CtlSubcommand::Wizard(subcommand) => match *subcommand {
             WizardSubcommand::Setup {} => {
-                if let Err(err) = wizard::WizardChoice::run().await {
+                if let Err(err) = wizard::Wizard::run().await {
                     error!("{}", err.trace());
                     std::process::exit(1);
                 }
