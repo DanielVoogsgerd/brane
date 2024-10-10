@@ -67,6 +67,7 @@ documentation = "https://wiki.enablingpersonalizedinterventions.nl"
 [package]
 name = "brane-meta"
 version.workspace = true
+rust-version = "1.74.1"
 edition = "2021"
 
 [lints.clippy]
