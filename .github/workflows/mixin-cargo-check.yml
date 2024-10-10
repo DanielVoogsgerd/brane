@@ -39,6 +39,9 @@ jobs:
           version: 21.11
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Install dependencies
+        run: sudo apt update && sudo apt install -y libsqlite3-dev
+
       - name: Install Cargo Hack
         uses: taiki-e/install-action@cargo-hack
 
