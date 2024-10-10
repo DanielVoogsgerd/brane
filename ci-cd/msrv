@@ -4,7 +4,7 @@ shopt -s globstar
 
 ret=0
 for file in ./**/Cargo.toml; do
-    echo "::group::{${file}}"
+    echo "::group::${file}"
     if cargo msrv verify --output-format json --manifest-path "$file"; then
         ret=1
     fi
