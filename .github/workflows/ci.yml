@@ -16,4 +16,4 @@ jobs:
       - name: Install Cargo MSRV
         run: cargo binstall --no-confirm cargo-msrv --version ^0.16
       - name: "Run minimum supported rust version"
-        run: find . -name Cargo.toml -print0 | xargs -0 -I {} cargo msrv verify --all-features --output-format json --manifest-path "{}"
+        run: ./ci-cd/msrv
