@@ -6,17 +6,17 @@ edition = "2018"
 rust-version = "1.67.1"
 
 [dependencies]
-bytes = "1.2.0"
+bytes = "1.8.0"
 enum-debug = { git = "https://github.com/Lut99/enum-debug", tag = "v1.0.0", features = ["derive"] }
 log = "0.4.22"
 nom = "7.1.0"
 nom_locate = "4.1.0"
 rand = "0.8.5"
-regex = "1.5.0"
+regex = "1.11.1"
 semver = "1.0.0"
-serde = "1.0.204"
-serde_json = "1.0.120"
-thiserror = "1.0.40"
+serde = "1.0.214"
+serde_json = "1.0.132"
+thiserror = "1.0.66"
 
 brane-shr = { path = "../brane-shr" }
 specifications = { path = "../specifications" }
