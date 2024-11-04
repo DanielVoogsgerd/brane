@@ -4,7 +4,7 @@
 //  Created:
 //    20 Sep 2022, 13:53:43
 //  Last edited:
-//    02 Oct 2023, 17:13:16
+//    04 Nov 2024, 11:13:25
 //  Auto updated?
 //    Yes
 //
@@ -126,8 +126,6 @@ async fn run(
     sub_command: SubCommand,
     // callback: Option<Callback>,
 ) -> Result<i32, LetError> {
-    // // We've initialized!
-
     // Switch on the sub_command to do the actual work
     let output = match sub_command {
         SubCommand::Code { function, arguments, working_dir } => exec_ecu::handle(function, decode_b64(arguments)?, working_dir).await,
@@ -161,7 +159,7 @@ async fn run(
         Ok(PackageResult::Failed { code, stdout, stderr }) => {
             // Back it up to the user
             // Generate the line divider
-            let lines = (0..80).map(|_| '-').collect::<String>();
+            let lines = "-".repeat(80);
             // Print to stderr
             log::error!(
                 "Internal package call return non-zero exit code {}\n\nstdout:\n{}\n{}\n{}\n\nstderr:\n{}\n{}\n{}\n\n",
@@ -173,7 +171,6 @@ async fn run(
                 stderr,
                 &lines
             );
-            // }
 
             Ok(code)
         },

@@ -4,7 +4,7 @@
 //  Created:
 //    20 Sep 2022, 13:55:30
 //  Last edited:
-//    25 May 2023, 20:43:21
+//    04 Nov 2024, 11:19:13
 //  Auto updated?
 //    Yes
 //
@@ -16,17 +16,16 @@
 use std::collections::HashMap;
 use std::os::unix::process::ExitStatusExt;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::{Command, ExitStatus, Stdio};
 
 use brane_exe::FullValue;
 use log::{debug, info};
 use specifications::container::{Action, ActionCommand, LocalContainerInfo};
 use tokio::io::AsyncReadExt as _;
 use tokio::process::{Child as TokioChild, Command as TokioCommand};
-use tokio::time::{self, Duration};
 
 // use crate::callback::Callback;
-use crate::common::{HEARTBEAT_DELAY, Map, PackageResult, PackageReturnState, assert_input};
+use crate::common::{Map, PackageResult, PackageReturnState, assert_input};
 use crate::errors::LetError;
 
 
@@ -241,31 +240,7 @@ async fn complete(
     let mut process = process;
 
     // Handle waiting for the subprocess and doing heartbeats in a neat way, using select
-    // FIXME: We are not doing heartbeats anymore, so I think this can be cleaned up a bit
-    let status = loop {
-        // Prepare the timer
-        let sleep = time::sleep(Duration::from_millis(HEARTBEAT_DELAY));
-        tokio::pin!(sleep);
-
-        // Wait for either the timer or the process
-        let status = tokio::select! {
-            status = process.wait() => {
-                // Process is finished!
-                Some(status)
-            },
-            _ = &mut sleep => {
-                // Stop without result
-                None
-            },
-        };
-
-        // If we have a result, break from the main loop; otherwise, try again
-        if let Some(status) = status {
-            break status;
-        }
-    };
-
-    let status = status.map_err(|err| LetError::PackageRunError { err })?;
+    let status: ExitStatus = process.wait().await.map_err(|err| LetError::PackageRunError { err })?;
 
     // Try to get stdout and stderr readers
     let mut stdout = process.stdout.ok_or(LetError::ClosedStdout)?;
@@ -282,8 +257,8 @@ async fn complete(
     let stdout = String::from_utf8_lossy(&stdout_text).to_string();
     let stderr = String::from_utf8_lossy(&stderr_text).to_string();
 
-    let barrier = "-".repeat(80);
     // Always print stdout/stderr
+    let barrier = "-".repeat(80);
     debug!("Job stdout (unprocessed):\n{barrier}\n{stdout}\n{barrier}\n\n");
     debug!("Job stderr (unprocessed):\n{barrier}\n{stderr}\n{barrier}\n\n");
 
@@ -311,59 +286,20 @@ async fn complete(
 /// The preprocessed stdout.
 fn preprocess_stdout(stdout: String, mode: &Option<String>) -> String {
     let mode = mode.clone().unwrap_or_else(|| String::from("complete"));
-
-    let mut captured = Vec::new();
     match mode.as_str() {
-        "complete" => return stdout,
-        "marked" => {
-            let mut capture = false;
-
-            for line in stdout.lines() {
-                if line.trim_start().starts_with(MARK_START) {
-                    capture = true;
-                    continue;
-                }
-
-                // Stop capturing after observing MARK_END after MARK_START
-                if capture && line.trim_start().starts_with(MARK_END) {
-                    break;
-                }
-
-                if capture {
-                    debug!("captured: {}", line);
-                    captured.push(line);
-                }
-            }
-
-            // FIXME: The following is probably more consise & faster
-            // captured = stdout
-            //     .lines()
-            //     .skip_while(|line| !line.trim_start().starts_with(MARK_START))
-            //     .skip(1)
-            //     .take_while(|line| !line.trim_start().starts_with(MARK_END))
-            //     .inspect(|line| debug!("Captured: {line}"))
-            //     .collect::<Vec<_>>();
-        },
+        "complete" => stdout,
+        "marked" => stdout
+            .lines()
+            .skip_while(|line| !line.trim_start().starts_with(MARK_START))
+            .skip(1)
+            .take_while(|line| !line.trim_start().starts_with(MARK_END))
+            .collect::<Vec<_>>()
+            .join("\n"),
         "prefixed" => {
-            for line in stdout.lines() {
-                if line.starts_with(PREFIX) {
-                    let trimmed = line.trim_start_matches(PREFIX);
-                    debug!("captured: {}", trimmed);
-                    captured.push(trimmed);
-                }
-            }
-            // FIXME: The following is probably more consise & faster
-            // captured = stdout
-            //     .lines()
-            //     .filter(|line| line.starts_with(PREFIX))
-            //     .map(|line| line.trim_start_matches(PREFIX))
-            //     .inspect(|line| debug!("Captured: {line}"))
-            //     .collect::<Vec<_>>();
+            stdout.lines().filter(|line| line.starts_with(PREFIX)).map(|line| line.trim_start_matches(PREFIX)).collect::<Vec<_>>().join("\n")
         },
         _ => panic!("Encountered illegal capture mode '{}'; this should never happen!", mode),
     }
-
-    captured.join("\n")
 }
 
 
