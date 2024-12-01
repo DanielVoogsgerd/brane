@@ -12,10 +12,10 @@ log = "0.4.22"
 nom = "7.1.0"
 nom_locate = "4.1.0"
 rand = "0.8.5"
-regex = "1.5.0"
+regex = "1.11.1"
 semver = "1.0.0"
-serde = "1.0.204"
-serde_json = "1.0.120"
+serde = "1.0.215"
+serde_json = "1.0.133"
 thiserror = "1.0.40"
 
 brane-shr = { path = "../brane-shr" }
