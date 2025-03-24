@@ -44,7 +44,7 @@ endif
 
 # Universal targets
 .PHONY: all
-all: $(WORKSPACE_MEMBERS)
+all: $(WORKSPACE_MEMBERS) $(BINARY_TARGETS)
 
 .PHONY: binaries
 binaries: $(BINARY_TARGETS)
