@@ -92,19 +92,31 @@ async fn main() {
     };
 
     // Configure Scylla.
-    debug!("Connecting to scylla...");
-    let scylla = match SessionBuilder::new()
-        .known_node(central.services.aux_scylla.address.to_string())
-        .connection_timeout(Duration::from_secs(3))
-        .build()
-        .await
-    {
-        Ok(scylla) => scylla,
-        Err(reason) => {
-            error!("{}", ApiError::ScyllaConnectError { host: central.services.aux_scylla.address, source: reason });
-            std::process::exit(-1);
-        },
+    let mut retry_delay_millis = 3000.0;
+    let scylla = loop {
+        debug!("Connecting to scylla...");
+        let retry_delay = Duration::from_millis(retry_delay_millis as u64);
+
+        match SessionBuilder::new()
+            .known_node(central.services.aux_scylla.address.to_string())
+            .connection_timeout(Duration::from_secs(3))
+            .build()
+            .await
+        {
+            Ok(scylla) => break scylla,
+            Err(reason) => {
+                error!("{} (Retrying in {retry_delay:?})", ApiError::ScyllaConnectError {
+                    host:   central.services.aux_scylla.address.clone(),
+                    source: reason,
+                });
+            },
+        };
+
+        tokio::time::sleep(retry_delay).await;
+        // Back off exponentially
+        retry_delay_millis *= 1.5;
     };
+
     debug!("Connected successfully.");
 
     debug!("Ensuring keyspace & database...");
