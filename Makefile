@@ -22,6 +22,23 @@ WORKSPACE_MEMBERS := $(sort $(CENTRAL_SERVICES) $(WORKER_SERVICES) $(SHARED_SERV
 BUILDX_ARGS := build 
 CARGO_BUILD_ARGS := 
 
+ifndef RUST_ARCH
+	SARCH := $(shell uname -m)
+	ifeq ($(SARCH),amd64)
+		RUST_ARCH := x86_64
+	else ifeq ($(SARCH),x86_64)
+		RUST_ARCH := x86_64
+	else ifeq ($(SARCH),x86-64)
+		RUST_ARCH := x86_64
+	else ifeq ($(SARCH),aarch64)
+		RUST_ARCH := aarch64
+	else ifeq ($(SARCH),arm64)
+		RUST_ARCH := aarch64
+	else
+		RUST_ARCH := UNKNOWN
+	endif
+endif
+
 # The binaries we can build in either debug or release mode
 ifeq ($(PROFILE),debug)
 	IMAGE_DOCKER_FILE := ./Dockerfile.dev
@@ -78,6 +95,11 @@ $(WORKSPACE_MEMBERS): $(IMAGE_DIR)
 
 # Compilation of binaries
 .PHONY: $(BINARY_TARGETS)
+
+brane-let: $(BIN_DIR)
+	@echo "Building $@"
+	cargo build $(CARGO_BUILD_ARGS) --target $(RUST_ARCH)-unknown-linux-musl --package $@
+
 $(BINARY_TARGETS): $(BIN_DIR)
 	@echo "Building $@"
 	cargo build $(CARGO_BUILD_ARGS) --package $@
