@@ -1,0 +1,16 @@
+name: Create the nightly release
+on:
+  schedule:
+    # Take into account lut99's sleep schedule
+    cron: 0 4 * * *
+
+  # Manual mechanism to bump the nightly in case of a issue with the one from last night
+  workflow_dispatch:
+    inputs:
+      ref:
+        default: main
+        optional: true
+        type: string
+
+jobs:
+  # TODO: Tag the last commit on main as nightly, but only if this is not the case already
