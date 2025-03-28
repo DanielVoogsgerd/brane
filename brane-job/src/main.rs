@@ -12,7 +12,6 @@
 //!   Entrypoint to the `brane-job` service.
 //
 
-use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -28,39 +27,13 @@ use specifications::working::JobServiceServer;
 use tokio::signal::unix::{Signal, SignalKind, signal};
 use tonic::transport::Server;
 
-
-/***** ARGUMENTS *****/
-#[derive(Parser)]
-#[clap(version = env!("CARGO_PKG_VERSION"))]
-struct Opts {
-    /// Print debug info
-    #[clap(long, action, help = "If given, shows additional logging information.", env = "DEBUG")]
-    debug: bool,
-    /// Whether to keep containers after execution or not.
-    #[clap(long, action, help = "If given, will not remove job containers after removing them.", env = "KEEP_CONTAINERS")]
-    keep_containers: bool,
-
-    /// Node environment metadata store.
-    #[clap(
-        short,
-        long,
-        default_value = "/node.yml",
-        help = "The path to the node environment configuration. This defines things such as where local services may be found or where to store \
-                files, as wel as this service's service address.",
-        env = "NODE_CONFIG_PATH"
-    )]
-    node_config_path: PathBuf,
-}
-
-
-
-
+mod cli;
 
 /***** ENTRYPOINT *****/
 #[tokio::main]
 async fn main() {
     dotenv().ok();
-    let opts = Opts::parse();
+    let opts = cli::Cli::parse();
 
     // Configure logger.
     let mut logger = env_logger::builder();

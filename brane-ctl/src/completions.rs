@@ -9,7 +9,7 @@ mod cli;
 use cli::*;
 
 fn main() {
-    let mut command = Arguments::command();
+    let mut command = Cli::command();
 
     for (filename, shell) in [("branectl.bash", Bash), ("branectl.fish", Fish), ("branectl.zsh", Zsh)] {
         let mut file = File::create(filename).expect("Could not open/create completions file");

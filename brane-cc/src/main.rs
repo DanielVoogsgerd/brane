@@ -12,6 +12,8 @@
 //!   Entrypoint to the `branec` binary.
 //
 
+mod cli;
+
 use std::borrow::Cow;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Cursor, Stdin, Write};
@@ -34,83 +36,147 @@ use specifications::data::DataIndex;
 use specifications::package::PackageIndex;
 
 
-/***** ARGUMENTS *****/
-/// The arguments for the `branec` binary.
-#[derive(Parser)]
-#[clap(name = "branec", author, about = "An offline compiler for BraneScript/Bakery to Workflows.")]
-struct Arguments {
-    /// If given, shows debug prints.
-    #[clap(long, help = "If given, shows INFO- and DEBUG-level prints in the log.", env = "DEBUG")]
-    debug: bool,
-    /// If given, shows additional trace prints.
-    #[clap(long, help = "If given, shows TRACE-level prints in the log. Implies '--debug'", env = "TRACE")]
-    trace: bool,
 
-    /// The file(s) to compile. May be '-' to compile from stdin.
-    #[clap(name = "FILES", help = "The input files to compile. Use '-' to read from stdin.")]
-    files:    Vec<String>,
-    /// The output file to write to.
-    #[clap(short, long, default_value = "-", help = "The output file to compile to. Use '-' to write to stdout.")]
-    output:   String,
-    /// The path / address of the packages index.
-    #[clap(
-        short,
-        long,
-        default_value = "~/.local/share/brane/packages",
-        help = "The location to read the package index from. If it's a path, reads it from the local machine; if it's an address, attempts to read \
-                it from the Brane instance instead. You can wrap your input in 'Local<...>' or 'Remote<...>' to disambiguate between the two."
-    )]
-    packages: IndexLocation,
-    /// The path / address of the data index.
-    #[clap(
-        short,
-        long,
-        default_value = "~/.local/share/brane/data",
-        help = "The location to read the data index from. If it's a path, reads it from the local machine; if it's an address, attempts to read it \
-                from the Brane instance instead. You can wrap your input in 'Local<...>' or 'Remote<...>' to disambiguate between the two."
-    )]
-    data:     IndexLocation,
-    /// If given, reads the packages and data in test mode, which simplifies how to interpret them since we won't be executing them.
-    #[clap(
-        short,
-        long,
-        help = "If given, reads packages and data simplified as found in the `tests` folder in the Brane repository. This can be done because the \
-                packages won't be executed."
-    )]
-    raw:      bool,
+/***** ENTRYPOINT *****/
+#[tokio::main(flavor = "current_thread")]
+async fn main() {
+    // Parse any environment file
+    dotenv().ok();
 
-    /// If given, does the stream thing
-    #[clap(
-        short,
-        long,
-        help = "If given, enters so-called _streaming mode_. This effectively emulates a REPL, where files may be given on stdin indefinitely \
-                (separated by EOF, Ctrl+D). Each file is compiled as soon as it is completely received, and the workflow for that file is written \
-                to the output file. Workflows can use definitions made in pervious workflows, just like a REPL."
-    )]
-    stream:   bool,
-    /// Determines the input language of the source.
-    #[clap(short, long, default_value = "bscript", help = "Determines the language of the input files.")]
-    language: Language,
-    /// If given, writes the output JSON to use as little whitespace as possible.
-    #[clap(
-        short,
-        long,
-        help = "If given, writes the output JSON in minimized format (i.e., with as little whitespace as possible). Not really readable, but \
-                perfect for transmitting it to some other program."
-    )]
-    compact:  bool,
-    /// If given, does not output JSON but instead outputs an assembly-like variant of a workflow.
-    #[clap(
-        short = 'P',
-        long,
-        help = "If given, does not output JSON but instead outputs an assembly-like variant of a workflow. Not really readable by machines, but \
-                easier to understand by a human (giving this ignores --compact)."
-    )]
-    pretty:   bool,
+    // Parse the arguments
+    let mut args = cli::Cli::parse();
+
+    // Setup the logger
+    if let Err(err) = HumanLogger::terminal(DebugMode::from_flags(args.trace, args.debug)).init() {
+        eprintln!("WARNING: Failed to setup logger: {err} (logging disabled for this session)");
+    }
+    info!("Initializing branec v{}", env!("CARGO_PKG_VERSION"));
+
+    // Setup the panic mode
+    if !args.trace && !args.debug {
+        setup_panic!();
+    }
+
+    // Ensure there is always at least one file
+    if args.files.is_empty() {
+        args.files = vec!["-".into()];
+    }
+
+    // Match on whether we're streaming or not
+    if !args.stream {
+        // Parse all the input as one, big workflow file
+        let mut source: String = String::new();
+        for f in &args.files {
+            debug!("Reading from '{}'...", f);
+
+            // Attempt to open the file as a reader
+            let (iname, mut ihandle): (Cow<str>, Box<dyn BufRead>) = if f != "-" {
+                match File::open(f) {
+                    Ok(handle) => (f.into(), Box::new(BufReader::new(handle))),
+                    Err(err) => {
+                        error!("Failed to open file '{}': {}", f, err);
+                        std::process::exit(1);
+                    },
+                }
+            } else {
+                ("<stdin>".into(), Box::new(BufReader::new(std::io::stdin())))
+            };
+
+            // Simply append the contents to the source file
+            if let Err(err) = ihandle.read_to_string(&mut source) {
+                error!("Failed to read input '{}': {}", iname, err);
+            }
+            source.push('\n');
+        }
+
+        // Open the output already
+        debug!("Opening output file '{}'...", args.output);
+        let (oname, mut ohandle): (Cow<str>, Box<dyn Write>) = if args.output != "-" {
+            match File::create(&args.output) {
+                Ok(handle) => (args.output.into(), Box::new(handle)),
+                Err(err) => {
+                    error!("Failed to create output file '{}': {}", args.output, err);
+                    std::process::exit(1);
+                },
+            }
+        } else {
+            ("<stdout>".into(), Box::new(std::io::stdout()))
+        };
+
+        // Compile the entire source now
+        debug!("Compiling...");
+        if let Err(err) = compile_iter(
+            &mut CompileState::new(),
+            &mut String::new(),
+            args.language,
+            if args.files.len() == 1 { &args.files[0] } else { "<sources>" },
+            &mut Cursor::new(source),
+            &oname,
+            &mut ohandle,
+            args.pretty,
+            args.compact,
+            &args.packages,
+            &args.data,
+            args.raw,
+        )
+        .await
+        {
+            error!("{}", err);
+            std::process::exit(1);
+        }
+    } else {
+        // Open the input
+        let mut ihandle: BufReader<Stdin> = BufReader::new(std::io::stdin());
+
+        // Open the output
+        debug!("Opening output file '{}'...", args.output);
+        let (oname, mut ohandle): (Cow<str>, Box<dyn Write>) = if args.output != "-" {
+            match File::create(&args.output) {
+                Ok(handle) => (args.output.into(), Box::new(handle)),
+                Err(err) => {
+                    error!("Failed to create output file '{}': {}", args.output, err);
+                    std::process::exit(1);
+                },
+            }
+        } else {
+            ("<stdout>".into(), Box::new(std::io::stdout()))
+        };
+
+        // Iterate indefinitely
+        let mut state: CompileState = CompileState::new();
+        let mut source: String = String::new();
+        loop {
+            // Compile that immediately
+            if let Err(err) = compile_iter(
+                &mut state,
+                &mut source,
+                args.language,
+                "<stdin>",
+                &mut ihandle,
+                &oname,
+                &mut ohandle,
+                args.pretty,
+                args.compact,
+                &args.packages,
+                &args.data,
+                args.raw,
+            )
+            .await
+            {
+                error!("{}", err);
+                std::process::exit(1);
+            }
+
+            // Be sure stdout & stderr are flushed after each iter
+            if let Err(err) = std::io::stdout().flush() {
+                error!("Failed to flush stdout: {}", err);
+            }
+            if let Err(err) = std::io::stderr().flush() {
+                error!("Failed to flush stderr: {}", err);
+            }
+        }
+    }
 }
-
-
-
 
 
 /***** HELPER FUNCTIONS *****/
@@ -304,151 +370,4 @@ pub async fn compile_iter(
 
     // Done
     Ok(())
-}
-
-
-
-
-
-/***** ENTRYPOINT *****/
-#[tokio::main(flavor = "current_thread")]
-async fn main() {
-    // Parse any environment file
-    dotenv().ok();
-
-    // Parse the arguments
-    let mut args: Arguments = Arguments::parse();
-
-    // Setup the logger
-    if let Err(err) = HumanLogger::terminal(DebugMode::from_flags(args.trace, args.debug)).init() {
-        eprintln!("WARNING: Failed to setup logger: {err} (logging disabled for this session)");
-    }
-    info!("Initializing branec v{}", env!("CARGO_PKG_VERSION"));
-
-    // Setup the panic mode
-    if !args.trace && !args.debug {
-        setup_panic!();
-    }
-
-    // Ensure there is always at least one file
-    if args.files.is_empty() {
-        args.files = vec!["-".into()];
-    }
-
-
-
-    // Match on whether we're streaming or not
-    if !args.stream {
-        // Parse all the input as one, big workflow file
-        let mut source: String = String::new();
-        for f in &args.files {
-            debug!("Reading from '{}'...", f);
-
-            // Attempt to open the file as a reader
-            let (iname, mut ihandle): (Cow<str>, Box<dyn BufRead>) = if f != "-" {
-                match File::open(f) {
-                    Ok(handle) => (f.into(), Box::new(BufReader::new(handle))),
-                    Err(err) => {
-                        error!("Failed to open file '{}': {}", f, err);
-                        std::process::exit(1);
-                    },
-                }
-            } else {
-                ("<stdin>".into(), Box::new(BufReader::new(std::io::stdin())))
-            };
-
-            // Simply append the contents to the source file
-            if let Err(err) = ihandle.read_to_string(&mut source) {
-                error!("Failed to read input '{}': {}", iname, err);
-            }
-            source.push('\n');
-        }
-
-        // Open the output already
-        debug!("Opening output file '{}'...", args.output);
-        let (oname, mut ohandle): (Cow<str>, Box<dyn Write>) = if args.output != "-" {
-            match File::create(&args.output) {
-                Ok(handle) => (args.output.into(), Box::new(handle)),
-                Err(err) => {
-                    error!("Failed to create output file '{}': {}", args.output, err);
-                    std::process::exit(1);
-                },
-            }
-        } else {
-            ("<stdout>".into(), Box::new(std::io::stdout()))
-        };
-
-        // Compile the entire source now
-        debug!("Compiling...");
-        if let Err(err) = compile_iter(
-            &mut CompileState::new(),
-            &mut String::new(),
-            args.language,
-            if args.files.len() == 1 { &args.files[0] } else { "<sources>" },
-            &mut Cursor::new(source),
-            &oname,
-            &mut ohandle,
-            args.pretty,
-            args.compact,
-            &args.packages,
-            &args.data,
-            args.raw,
-        )
-        .await
-        {
-            error!("{}", err);
-            std::process::exit(1);
-        }
-    } else {
-        // Open the input
-        let mut ihandle: BufReader<Stdin> = BufReader::new(std::io::stdin());
-
-        // Open the output
-        debug!("Opening output file '{}'...", args.output);
-        let (oname, mut ohandle): (Cow<str>, Box<dyn Write>) = if args.output != "-" {
-            match File::create(&args.output) {
-                Ok(handle) => (args.output.into(), Box::new(handle)),
-                Err(err) => {
-                    error!("Failed to create output file '{}': {}", args.output, err);
-                    std::process::exit(1);
-                },
-            }
-        } else {
-            ("<stdout>".into(), Box::new(std::io::stdout()))
-        };
-
-        // Iterate indefinitely
-        let mut state: CompileState = CompileState::new();
-        let mut source: String = String::new();
-        loop {
-            // Compile that immediately
-            if let Err(err) = compile_iter(
-                &mut state,
-                &mut source,
-                args.language,
-                "<stdin>",
-                &mut ihandle,
-                &oname,
-                &mut ohandle,
-                args.pretty,
-                args.compact,
-                &args.packages,
-                &args.data,
-                args.raw,
-            )
-            .await
-            {
-                error!("{}", err);
-                std::process::exit(1);
-            }
-
-            // Be sure stdout & stderr are flushed after each iter
-            if let Err(err) = std::io::stdout().flush() {
-                error!("Failed to flush stdout: {}", err);
-            }
-            if let Err(err) = std::io::stderr().flush() {
-                error!("Failed to flush stderr: {}", err);
-            }
-        }
-    }
 }

@@ -12,18 +12,20 @@
 //!   Entrypoint to the `branectl` executable.
 //
 
+pub mod cli;
 
 use brane_cfg::proxy::ForwardConfig;
 use brane_ctl::spec::{LogsOpts, StartOpts};
 use brane_ctl::{download, generate, lifetime, packages, policies, unpack, upgrade, wizard};
 use brane_tsk::docker::DockerOptions;
+use clap::Parser;
+use cli::*;
 use dotenvy::dotenv;
 use error_trace::ErrorTrace as _;
 use humanlog::{DebugMode, HumanLogger};
 use log::error;
 
-pub mod cli;
-use cli::*;
+
 
 /***** ENTYRPOINT *****/
 #[tokio::main(flavor = "current_thread")]
@@ -32,7 +34,7 @@ async fn main() {
     dotenv().ok();
 
     // Parse the arguments
-    let args = cli::parse();
+    let args = cli::Cli::parse();
 
     // Initialize the logger
     if let Err(err) = HumanLogger::terminal(if args.trace {

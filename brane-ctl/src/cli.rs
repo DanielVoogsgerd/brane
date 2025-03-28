@@ -15,13 +15,11 @@ use specifications::arch::Arch;
 use specifications::package::Capability;
 use specifications::version::Version;
 
-pub(crate) fn parse() -> Arguments { Arguments::parse() }
-
 /***** ARGUMENTS *****/
 /// Defines the toplevel arguments for the `branectl` tool.
 #[derive(Debug, Parser)]
 #[clap(name = "branectl", about = "The server-side Brane command-line interface.")]
-pub(crate) struct Arguments {
+pub(crate) struct Cli {
     /// If given, prints `info` and `debug` prints.
     #[clap(long, global = true, help = "If given, prints additional information during execution.")]
     pub(crate) debug: bool,

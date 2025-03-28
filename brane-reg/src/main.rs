@@ -12,7 +12,8 @@
 //!   Entrypoint to the `brane-reg` service.
 //
 
-use std::path::PathBuf;
+mod cli;
+
 use std::sync::Arc;
 
 use brane_cfg::info::Info as _;
@@ -28,35 +29,13 @@ use rustls::Certificate;
 use warp::Filter;
 
 
-/***** ARGUMENTS *****/
-/// Defines the arguments for the `brane-reg` service.
-#[derive(Parser)]
-struct Args {
-    #[clap(long, action, help = "If given, provides additional debug prints on the logger.", env = "DEBUG")]
-    debug: bool,
-
-    /// Load everything from the node.yml file
-    #[clap(
-        short,
-        long,
-        default_value = "/node.yml",
-        help = "The path to the node environment configuration. This defines things such as where local services may be found or where to store \
-                files, as wel as this service's service address.",
-        env = "NODE_CONFIG_PATH"
-    )]
-    node_config_path: PathBuf,
-}
-
-
-
-
 
 /***** ENTYRPOINT *****/
 #[tokio::main]
 async fn main() {
     // Read the env & CLI args
     dotenv().ok();
-    let args = Args::parse();
+    let args = cli::Cli::parse();
 
     // Setup the logger according to the debug flag
     let mut logger = env_logger::builder();

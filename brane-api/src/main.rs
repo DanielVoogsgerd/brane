@@ -12,6 +12,8 @@
 //!   Entrypoint to the `brane-job` service.
 //
 
+mod cli;
+
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
@@ -33,35 +35,12 @@ use tokio::signal::unix::{Signal, SignalKind, signal};
 use warp::Filter;
 
 
-/***** ARGUMENTS *****/
-#[derive(Parser)]
-#[clap(version = env!("CARGO_PKG_VERSION"))]
-struct Opts {
-    /// Print debug info
-    #[clap(short, long, env = "DEBUG")]
-    debug: bool,
-
-    /// Load everything from the node.yml file
-    #[clap(
-        short,
-        long,
-        default_value = "/node.yml",
-        help = "The path to the node environment configuration. This defines things such as where local services may be found or where to store \
-                files, as wel as this service's service address.",
-        env = "NODE_CONFIG_PATH"
-    )]
-    node_config_path: PathBuf,
-}
-
-
-
-
 
 /***** ENTRYPOINT *****/
 #[tokio::main]
 async fn main() {
     dotenv().ok();
-    let opts = Opts::parse();
+    let opts = cli::Cli::parse();
 
     // Configure logger.
     let mut logger = env_logger::builder();

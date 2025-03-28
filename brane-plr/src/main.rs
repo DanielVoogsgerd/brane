@@ -12,22 +12,9 @@
 //!   Entrypoint to the `brane-plr` service.
 //
 
-//  MAIN.rs
-//    by Lut99
-//
-//  Created:
-//    30 Sep 2022, 16:10:59
-//  Last edited:
-//    17 Oct 2022, 17:27:08
-//  Auto updated?
-//    Yes
-//
-//  Description:
-//!   Entrypoint to the `brane-plr` service.
-//
+mod cli;
 
 use std::collections::HashMap;
-use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -46,36 +33,13 @@ use tokio::signal::unix::{Signal, SignalKind, signal};
 use warp::Filter as _;
 
 
-/***** ARGUMENTS *****/
-#[derive(Parser)]
-#[clap(version = env!("CARGO_PKG_VERSION"))]
-struct Opts {
-    /// Print debug info
-    #[clap(short, long, action, help = "If given, prints additional logging information.", env = "TRACE")]
-    trace: bool,
-
-    /// Node environment metadata store.
-    #[clap(
-        short,
-        long,
-        default_value = "/node.yml",
-        help = "The path to the node environment configuration. This defines things such as where local services may be found or where to store \
-                files, as wel as this service's service address.",
-        env = "NODE_CONFIG_PATH"
-    )]
-    node_config_path: PathBuf,
-}
-
-
-
-
 
 /***** ENTRYPOINT *****/
 #[tokio::main]
 async fn main() {
     // Load arguments & environment stuff
     dotenv().ok();
-    let opts = Opts::parse();
+    let opts = cli::Cli::parse();
 
     // Configure the logger.
     if let Err(err) = HumanLogger::terminal(if opts.trace { DebugMode::Full } else { DebugMode::Debug }).init() {

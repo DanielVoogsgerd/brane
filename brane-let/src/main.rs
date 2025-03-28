@@ -13,7 +13,8 @@
 //!   things around there.
 //
 
-use std::path::PathBuf;
+mod cli;
+
 use std::process;
 
 use base64::Engine;
@@ -22,9 +23,11 @@ use brane_let::common::PackageResult;
 use brane_let::errors::LetError;
 use brane_let::{exec_ecu, exec_nop};
 use clap::Parser;
+use cli::*;
 use dotenvy::dotenv;
 use log::{LevelFilter, debug, warn};
 use serde::de::DeserializeOwned;
+
 
 
 /***** CONSTANTS *****/
@@ -35,58 +38,12 @@ const OUTPUT_PREFIX: &str = "[OUTPUT] ";
 
 
 
-
-
-/***** ARGUMENTS *****/
-#[derive(Parser)]
-#[clap(version = env!("CARGO_PKG_VERSION"))]
-struct Opts {
-    #[clap(short, long, env = "BRANE_APPLICATION_ID")]
-    application_id: String,
-    #[clap(short, long, env = "BRANE_LOCATION_ID")]
-    location_id: String,
-    #[clap(short, long, env = "BRANE_JOB_ID")]
-    job_id: String,
-    #[clap(short, long, env = "BRANE_CALLBACK_TO")]
-    callback_to: Option<String>,
-    #[clap(short, long, env = "BRANE_PROXY_ADDRESS")]
-    proxy_address: Option<String>,
-    #[clap(short, long, env = "BRANE_MOUNT_DFS")]
-    mount_dfs: Option<String>,
-    /// Prints debug info
-    #[clap(short, long, action, env = "DEBUG")]
-    debug: bool,
-    #[clap(subcommand)]
-    sub_command: SubCommand,
-}
-
-#[derive(Parser, Clone)]
-enum SubCommand {
-    /// Execute arbitrary source code and return output
-    #[clap(name = "ecu")]
-    Code {
-        /// Function to execute
-        function:    String,
-        /// Input arguments (encoded, as Base64'ed JSON)
-        arguments:   String,
-        #[clap(short, long, env = "BRANE_WORKDIR", default_value = "/opt/wd")]
-        working_dir: PathBuf,
-    },
-    /// Don't perform any operation and return nothing
-    #[clap(name = "no-op")]
-    NoOp,
-}
-
-
-
-
-
 /***** ENTRYPOINT *****/
 #[tokio::main]
 async fn main() {
     // Parse the arguments
     dotenv().ok();
-    let Opts { proxy_address, debug, sub_command, .. } = Opts::parse();
+    let cli::Cli { proxy_address, debug, sub_command, .. } = cli::Cli::parse();
 
     // Configure logger.
     let mut logger = env_logger::builder();

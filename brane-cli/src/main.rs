@@ -12,6 +12,8 @@
 //!   Entrypoint to the CLI binary.
 //
 
+mod cli;
+
 #[macro_use]
 extern crate human_panic;
 
@@ -26,6 +28,7 @@ use brane_dsl::Language;
 use brane_shr::fs::DownloadSecurity;
 use brane_tsk::docker::DockerOptions;
 use clap::Parser;
+use cli::*;
 use dotenvy::dotenv;
 use error_trace::ErrorTrace as _;
 use humanlog::{DebugMode, HumanLogger};
@@ -37,15 +40,13 @@ use specifications::version::Version as SemVersion;
 use tempfile::TempDir;
 
 
-mod cli;
-use cli::*;
 
 /***** ENTRYPOINT *****/
 #[tokio::main]
 async fn main() -> Result<()> {
     // Parse the CLI arguments
     dotenv().ok();
-    let options = Cli::parse();
+    let options = cli::Cli::parse();
 
     // Prepare the logger
     if let Err(err) = HumanLogger::terminal(if options.debug { DebugMode::Debug } else { DebugMode::HumanFriendly }).init() {
