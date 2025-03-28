@@ -9,7 +9,7 @@ documentation.workspace = true
 license.workspace = true
 
 [dependencies]
-clap = "4.0.0"
+clap = { version = "4.0.0", features = ["string"] }
 humantime = "2.0.0"
 jsonwebtoken = "9.0.0"
 clap_complete = "4.0.0"
@@ -19,8 +19,18 @@ brane-ctl = { path = "../brane-ctl" }
 brane-cli = { path = "../brane-cli" }
 brane-shr = { path = "../brane-shr" }
 brane-tsk = { path = "../brane-tsk" }
+brane-dsl = { path = "../brane-dsl" }
+brane-cc = { path = "../brane-cc" }
 specifications = { path = "../specifications" }
 clap_mangen = "0.2.26"
+directories = "6.0.0"
+strum = { version = "0.27.1", features = ["derive", "strum_macros"] }
+anyhow = "1.0.97"
+tracing = "0.1.41"
+async-compression = { version = "0.3.15", features = ["tokio", "gzip"] }
+tokio = "1.44.0"
+flate2 = { version = "1.1.0" }
+tar = "0.4.0"
 
 [lints]
 workspace = true

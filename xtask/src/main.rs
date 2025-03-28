@@ -1,103 +1,180 @@
 #![allow(dead_code)]
-use std::fs::File;
+
+mod cli;
+mod completions;
+mod install;
+mod man;
+mod package;
+
 use std::path::PathBuf;
+use std::sync::OnceLock;
 
-use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
-use clap_complete::generate;
+use clap::builder::PossibleValue;
+use clap::{CommandFactory, Parser, ValueEnum};
 use clap_complete::shells::Shell;
+use strum::{EnumIter, IntoEnumIterator};
+use tokio;
 
-const SHELLS: [(&str, Shell); 3] = [("bash", Shell::Bash), ("fish", Shell::Fish), ("zsh", Shell::Zsh)];
+const SHELLS: [Shell; 3] = [Shell::Bash, Shell::Fish, Shell::Zsh];
 
-mod completions {
-    pub(crate) mod ctl {
-        include!("../../brane-ctl/src/cli.rs");
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    let opts = cli::xtask::Cli::parse();
+    use cli::xtask::XTaskSubcommand;
+    match opts.subcommand {
+        XTaskSubcommand::Completions { binary, shell } => {
+            completions::generate(binary, shell);
+        },
+        XTaskSubcommand::Man { target } => {
+            let targets = match target {
+                Some(target) => &[target][..],
+                None => Target::value_variants(),
+            };
+            for target in targets {
+                man::create_recursive(target.to_command(), "", true)?;
+            }
+        },
+        XTaskSubcommand::Install { force } => {
+            install::completions(force)?;
+            install::binaries(force)?;
+        },
+        XTaskSubcommand::Package { kind } => {
+            package::create_package(kind).await?;
+        },
     }
-    pub(crate) mod cli {
-        include!("../../brane-cli/src/cli.rs");
+
+    Ok(())
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum Target {
+    Binary(Binary),
+    ContainerBinary(ContainerBinary),
+    Image(Image),
+}
+
+impl ValueEnum for Target {
+    fn value_variants<'a>() -> &'a [Self] {
+        static INSTANCE: OnceLock<Box<[Target]>> = OnceLock::new();
+
+        INSTANCE.get_or_init(|| {
+            std::iter::empty()
+                .chain(Binary::iter().map(|x| Self::Binary(x)))
+                .chain(ContainerBinary::iter().map(|x| Self::ContainerBinary(x)))
+                .chain(Image::iter().map(|x| Self::Image(x)))
+                .collect::<Box<[_]>>()
+        })
+    }
+
+    fn to_possible_value(&self) -> Option<PossibleValue> {
+        match self {
+            Target::Binary(b) => b.to_possible_value(),
+            Target::ContainerBinary(c) => c.to_possible_value(),
+            Target::Image(i) => i.to_possible_value(),
+        }
     }
 }
 
-#[derive(Debug, Parser)]
-#[clap(name = "xtask")]
-struct Arguments {
-    #[clap(subcommand)]
-    pub(crate) subcommand: XTaskSubcommand,
+impl Target {
+    pub(crate) fn to_command(self) -> clap::Command {
+        match self {
+            Target::Binary(x) => x.to_command(),
+            Target::ContainerBinary(x) => x.to_command(),
+            Target::Image(x) => x.to_command(),
+        }
+    }
+
+    // pub(crate) fn to_binary_name(self) -> &'static str {
+    //     match self {
+    //         Target::Binary(x) => x.to_binary_name(),
+    //         Target::ContainerBinary(_) => {
+    //             todo!()
+    //         },
+    //         Target::Image(_) => {
+    //             todo!()
+    //         },
+    //     }
+    // }
 }
 
-#[derive(Debug, Subcommand)]
-enum XTaskSubcommand {
-    #[clap(name = "completions")]
-    Completions {
-        #[clap(long)]
-        shell:  Option<String>,
-        #[clap(name = "binary")]
-        binary: Binary,
-    },
-    #[clap(name = "manpage")]
-    ManPage { binary: Binary },
-}
-
-#[derive(Debug, Clone, Copy, ValueEnum)]
-enum Binary {
+#[derive(Debug, Clone, Copy, ValueEnum, EnumIter)]
+pub(crate) enum Binary {
+    // Binaries
     #[clap(name = "branectl")]
     Branectl,
     #[clap(name = "brane")]
     Brane,
+    #[clap(name = "branec")]
+    BraneC,
+
     #[clap(name = "xtask")]
     XTask,
 }
 
-impl Binary {
-    fn to_binary_name(self) -> &'static str {
-        use Binary::*;
-        match self {
-            Branectl => "branectl",
-            Brane => "brane",
-            XTask => "xtask",
-        }
-    }
+#[derive(Debug, Clone, Copy, ValueEnum, EnumIter)]
+pub(crate) enum ContainerBinary {
+    // Images
+    #[clap(name = "branelet")]
+    BraneLet,
+}
 
-    fn to_command(self) -> clap::Command {
+#[derive(Debug, Clone, Copy, ValueEnum, EnumIter)]
+pub(crate) enum Image {
+    #[clap(name = "brane-api")]
+    BraneAPI,
+    #[clap(name = "brane-drv")]
+    BraneDrv,
+    #[clap(name = "brane-job")]
+    BraneJob,
+    #[clap(name = "brane-plr")]
+    BranePlr,
+    #[clap(name = "brane-prx")]
+    BranePrx,
+    #[clap(name = "brane-reg")]
+    BraneReg,
+}
+
+impl Binary {
+    // pub(crate) fn to_binary_name(self) -> &'static str {
+    //     use Binary::*;
+    //     match self {
+    //         Branectl => "branectl",
+    //         Brane => "brane",
+    //         BraneC => "branec",
+    //
+    //         XTask => "xtask",
+    //     }
+    // }
+
+    pub(crate) fn to_command(self) -> clap::Command {
         use Binary::*;
         match self {
-            Branectl => completions::ctl::Arguments::command(),
-            Brane => completions::cli::Cli::command(),
-            XTask => Arguments::command(),
+            Branectl => crate::cli::ctl::Cli::command(),
+            Brane => crate::cli::cli::Cli::command(),
+            BraneC => crate::cli::cc::Cli::command(),
+
+            XTask => crate::cli::xtask::Cli::command(),
         }
     }
 }
 
-fn main() {
-    let opts = Arguments::parse();
-    match opts.subcommand {
-        XTaskSubcommand::Completions { binary, shell } => {
-            let bin_name = binary.to_binary_name();
-            let mut command = binary.to_command();
+impl ContainerBinary {
+    pub(crate) fn to_command(self) -> clap::Command {
+        match self {
+            ContainerBinary::BraneLet => crate::cli::blet::Cli::command(),
+        }
+    }
+}
 
-            if let Some(shell) = shell {
-                if let Some((extension, sh)) = SHELLS.iter().find(|(name, _)| *name == shell) {
-                    let mut file = File::create(format!("{bin_name}.{extension}")).expect("Could not open/create completions file");
-                    generate(*sh, &mut command, bin_name, &mut file);
-                }
-            } else {
-                for (extension, shell) in SHELLS {
-                    let mut file = File::create(format!("{bin_name}.{extension}")).expect("Could not open/create completions file");
-                    generate(shell, &mut command, bin_name, &mut file);
-                }
-            }
-        },
-        XTaskSubcommand::ManPage { binary } => {
-            let out_dir = PathBuf::from("./");
-
-            let name = binary.to_binary_name();
-            let command = binary.to_command();
-
-            let man = clap_mangen::Man::new(command);
-
-            let mut buffer: Vec<u8> = Default::default();
-            man.render(&mut buffer).unwrap();
-
-            std::fs::write(out_dir.join(format!("{name}.1")), buffer).unwrap();
-        },
+impl Image {
+    pub(crate) fn to_command(self) -> clap::Command {
+        match self {
+            Image::BraneAPI => crate::cli::api::Cli::command(),
+            Image::BraneDrv => crate::cli::drv::Cli::command(),
+            Image::BraneJob => crate::cli::job::Cli::command(),
+            Image::BranePlr => crate::cli::plr::Cli::command(),
+            Image::BranePrx => crate::cli::prx::Cli::command(),
+            Image::BraneReg => crate::cli::reg::Cli::command(),
+        }
     }
 }
