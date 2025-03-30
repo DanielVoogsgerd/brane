@@ -13,11 +13,16 @@ ifeq ($(UNAME_S),Linux)
 	BINARY_TARGETS += brane-let
 endif
 
+ALL_TARGETS := $(BINARY_TARGETS)
+WORKSPACE_MEMBERS := $(sort $(CENTRAL_SERVICES) $(WORKER_SERVICES) $(SHARED_SERVICES))
+
+ifeq ($(UNAME_S),Linux)
+	ALL_TARGETS += $(WORKSPACE_MEMBERS)
+endif
+
 DYNAMIC_LIBRARES := brane-cli-c
 
 BUILD_DIR := target
-
-WORKSPACE_MEMBERS := $(sort $(CENTRAL_SERVICES) $(WORKER_SERVICES) $(SHARED_SERVICES))
 
 BUILDX_ARGS := build 
 CARGO_BUILD_ARGS := 
@@ -65,7 +70,7 @@ endif
 
 # Universal targets
 .PHONY: all
-all: $(WORKSPACE_MEMBERS) $(BINARY_TARGETS)
+all: $(ALL_TARGETS)
 
 .PHONY: binaries
 binaries: $(BINARY_TARGETS)
