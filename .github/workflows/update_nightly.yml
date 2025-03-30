@@ -15,6 +15,12 @@ on:
         type: string
 
 # TODO: block concurrent execution
+#
+env:
+  CARGO_INCREMENTAL: 0
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -Dwarnings
+  RUSTDOCFLAGS: -Dwarnings
 
 jobs:
   tag:
