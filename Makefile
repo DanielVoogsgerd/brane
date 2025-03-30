@@ -9,19 +9,19 @@ SHARED_SERVICES := brane-prx
 
 BINARY_TARGETS := brane-ctl brane-cli brane-cc
 
+DYNAMIC_LIBRARES := brane-cli-c
+
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Linux)
 	BINARY_TARGETS += brane-let
 endif
 
-ALL_TARGETS := $(BINARY_TARGETS)
+ALL_TARGETS := $(BINARY_TARGETS) $(DYNAMIC_LIBRARES)
 WORKSPACE_MEMBERS := $(sort $(CENTRAL_SERVICES) $(WORKER_SERVICES) $(SHARED_SERVICES))
 
 ifeq ($(UNAME_S),Linux)
 	ALL_TARGETS += $(WORKSPACE_MEMBERS)
 endif
-
-DYNAMIC_LIBRARES := brane-cli-c
 
 BUILD_DIR := target
 
