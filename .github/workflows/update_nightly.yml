@@ -1,16 +1,103 @@
 name: Create the nightly release
 on:
+  push:
+
   schedule:
     # Take into account lut99's sleep schedule
-    cron: 0 4 * * *
+    - cron: 0 4 * * *
 
   # Manual mechanism to bump the nightly in case of a issue with the one from last night
   workflow_dispatch:
     inputs:
       ref:
         default: main
-        optional: true
+        required: false
         type: string
 
+# TODO: block concurrent execution
+
 jobs:
-  # TODO: Tag the last commit on main as nightly, but only if this is not the case already
+  tag:
+    name: "Add nightly tag"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || 'main' }}
+          fetch-tags: true
+      - name: Check if there is anything to be done
+        run: |
+          [[ $(git rev-parse HEAD) != $(git rev-parse nightly) ]]
+      - name: Tag the latest commit
+        run: |
+          git config user.name "Brane"
+          git config user.email "brane@nonexistentemail.com"
+          git push --delete origin nightly
+          git tag -a nightly -m "Nightly release"
+          git push --tags
+
+  build:
+    name: "Build & package"
+    needs: tag
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            os: linux
+            arch: x86_64
+          - runner: macos-latest
+            os: macos
+            arch: aarch64
+          # Don't support windows for now as that is complicated with the Makefile,
+          # might add when there's an xtask for building on Windows.
+          # - runner: windows-latest
+          #   os: windows
+          #   arch: x86_64
+          - runner: ubuntu-24.04-arm
+            os: linux
+            arch: aarch64
+          - runner: macos-13
+            os: macos
+            arch: x86_64
+
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: nightly
+          fetch-tags: true
+      - name: Build
+        run: |
+          make all
+      - name: Package
+        run: |
+          cargo run --release --package xtask package release
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          # TODO: add some unique identifier
+          name: build-${{ matrix.os }}-${{ matrix.arch }}-nightly
+          path: |
+            target/package/release/*
+          if-no-files-found: error
+          retention-days: 1
+
+  release:
+    name: "Release artifacts to GitHub"
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        # without further specification, downloads all artifacts from the run
+        with:
+          path: release
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release/*
+          fail_on_unmatched_files: true
