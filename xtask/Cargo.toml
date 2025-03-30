@@ -9,28 +9,41 @@ documentation.workspace = true
 license.workspace = true
 
 [dependencies]
-clap = { version = "4.0.0", features = ["string"] }
-humantime = "2.0.0"
-jsonwebtoken = "9.0.0"
+anyhow = "1.0.97"
+async-compression = { version = "0.3.15", features = ["tokio", "gzip"] }
+clap = { version = "4.0.0", features = ["derive", "string"] }
 clap_complete = "4.0.0"
-
-brane-cfg = { path = "../brane-cfg" }
-brane-ctl = { path = "../brane-ctl" }
-brane-cli = { path = "../brane-cli" }
-brane-shr = { path = "../brane-shr" }
-brane-tsk = { path = "../brane-tsk" }
-brane-dsl = { path = "../brane-dsl" }
-brane-cc = { path = "../brane-cc" }
-specifications = { path = "../specifications" }
 clap_mangen = "0.2.26"
 directories = "6.0.0"
-strum = { version = "0.27.1", features = ["derive", "strum_macros"] }
-anyhow = "1.0.97"
-tracing = "0.1.41"
-async-compression = { version = "0.3.15", features = ["tokio", "gzip"] }
-tokio = "1.44.0"
 flate2 = { version = "1.1.0" }
+humantime = "2.0.0"
+jsonwebtoken = "9.0.0"
+specifications = { path = "../specifications" }
+strum = { version = "0.27.1", features = ["derive", "strum_macros"] }
 tar = "0.4.0"
+tokio = "1.44.0"
+tracing = "0.1.41"
+
+# Only necessary for any task that interacts with the cli arguments
+brane-cfg = { path = "../brane-cfg", optional = true }
+brane-ctl = { path = "../brane-ctl", optional = true }
+brane-cli = { path = "../brane-cli", optional = true }
+brane-shr = { path = "../brane-shr", optional = true }
+brane-tsk = { path = "../brane-tsk", optional = true }
+brane-dsl = { path = "../brane-dsl", optional = true }
+brane-cc = { path = "../brane-cc", optional = true }
+
+[features]
+default = ["cli"]
+cli = [
+    "dep:brane-cfg",
+    "dep:brane-ctl",
+    "dep:brane-cli",
+    "dep:brane-shr",
+    "dep:brane-tsk",
+    "dep:brane-dsl",
+    "dep:brane-cc",
+]
 
 [lints]
 workspace = true

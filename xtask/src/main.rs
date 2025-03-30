@@ -1,8 +1,11 @@
 #![allow(dead_code)]
 
 mod cli;
+#[cfg(feature = "cli")]
 mod completions;
+#[cfg(feature = "cli")]
 mod install;
+#[cfg(feature = "cli")]
 mod man;
 mod package;
 
@@ -16,14 +19,16 @@ use strum::{EnumIter, IntoEnumIterator};
 
 const SHELLS: [Shell; 3] = [Shell::Bash, Shell::Fish, Shell::Zsh];
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() -> anyhow::Result<()> {
     let opts = cli::xtask::Cli::parse();
     use cli::xtask::XTaskSubcommand;
     match opts.subcommand {
+        #[cfg(feature = "cli")]
         XTaskSubcommand::Completions { binary, shell } => {
             completions::generate(binary, shell);
         },
+        #[cfg(feature = "cli")]
         XTaskSubcommand::Man { target } => {
             let targets = match target {
                 Some(target) => &[target][..],
@@ -33,6 +38,7 @@ async fn main() -> anyhow::Result<()> {
                 man::create_recursive(target.to_command(), "", true)?;
             }
         },
+        #[cfg(feature = "cli")]
         XTaskSubcommand::Install { force } => {
             install::completions(force)?;
             install::binaries(force)?;
@@ -45,6 +51,7 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "cli")]
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum Target {
     Binary(Binary),
@@ -52,6 +59,7 @@ pub(crate) enum Target {
     Image(Image),
 }
 
+#[cfg(feature = "cli")]
 impl ValueEnum for Target {
     fn value_variants<'a>() -> &'a [Self] {
         static INSTANCE: OnceLock<Box<[Target]>> = OnceLock::new();
@@ -74,6 +82,7 @@ impl ValueEnum for Target {
     }
 }
 
+#[cfg(feature = "cli")]
 impl Target {
     pub(crate) fn to_command(self) -> clap::Command {
         match self {
@@ -82,20 +91,9 @@ impl Target {
             Target::Image(x) => x.to_command(),
         }
     }
-
-    // pub(crate) fn to_binary_name(self) -> &'static str {
-    //     match self {
-    //         Target::Binary(x) => x.to_binary_name(),
-    //         Target::ContainerBinary(_) => {
-    //             todo!()
-    //         },
-    //         Target::Image(_) => {
-    //             todo!()
-    //         },
-    //     }
-    // }
 }
 
+#[cfg(feature = "cli")]
 #[derive(Debug, Clone, Copy, ValueEnum, EnumIter)]
 pub(crate) enum Binary {
     // Binaries
@@ -110,6 +108,7 @@ pub(crate) enum Binary {
     XTask,
 }
 
+#[cfg(feature = "cli")]
 #[derive(Debug, Clone, Copy, ValueEnum, EnumIter)]
 pub(crate) enum ContainerBinary {
     // Images
@@ -117,6 +116,7 @@ pub(crate) enum ContainerBinary {
     BraneLet,
 }
 
+#[cfg(feature = "cli")]
 #[derive(Debug, Clone, Copy, ValueEnum, EnumIter)]
 pub(crate) enum Image {
     #[clap(name = "brane-api")]
@@ -133,6 +133,7 @@ pub(crate) enum Image {
     BraneReg,
 }
 
+#[cfg(feature = "cli")]
 impl Binary {
     // pub(crate) fn to_binary_name(self) -> &'static str {
     //     use Binary::*;
@@ -157,6 +158,7 @@ impl Binary {
     }
 }
 
+#[cfg(feature = "cli")]
 impl ContainerBinary {
     pub(crate) fn to_command(self) -> clap::Command {
         match self {
@@ -165,6 +167,7 @@ impl ContainerBinary {
     }
 }
 
+#[cfg(feature = "cli")]
 impl Image {
     pub(crate) fn to_command(self) -> clap::Command {
         match self {
