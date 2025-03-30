@@ -47,9 +47,9 @@ jobs:
           - runner: ubuntu-latest
             os: linux
             arch: x86_64
-          # - runner: macos-latest
-          #   os: macos
-          #   arch: aarch64
+          - runner: macos-latest
+            os: macos
+            arch: aarch64
           # Don't support windows for now as that is complicated with the Makefile,
           # might add when there's an xtask for building on Windows.
           # - runner: windows-latest

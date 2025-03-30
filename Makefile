@@ -9,6 +9,7 @@ SHARED_SERVICES := brane-prx
 
 BINARY_TARGETS := brane-ctl brane-cli brane-cc
 
+UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Linux)
 	BINARY_TARGETS += brane-let
 endif
