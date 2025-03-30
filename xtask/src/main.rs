@@ -6,14 +6,13 @@ mod install;
 mod man;
 mod package;
 
-use std::path::PathBuf;
 use std::sync::OnceLock;
 
+use anyhow::Context as _;
 use clap::builder::PossibleValue;
 use clap::{CommandFactory, Parser, ValueEnum};
 use clap_complete::shells::Shell;
 use strum::{EnumIter, IntoEnumIterator};
-use tokio;
 
 const SHELLS: [Shell; 3] = [Shell::Bash, Shell::Fish, Shell::Zsh];
 
@@ -39,7 +38,7 @@ async fn main() -> anyhow::Result<()> {
             install::binaries(force)?;
         },
         XTaskSubcommand::Package { kind } => {
-            package::create_package(kind).await?;
+            package::create_package(kind).await.context("Could not create package")?;
         },
     }
 
@@ -59,9 +58,9 @@ impl ValueEnum for Target {
 
         INSTANCE.get_or_init(|| {
             std::iter::empty()
-                .chain(Binary::iter().map(|x| Self::Binary(x)))
-                .chain(ContainerBinary::iter().map(|x| Self::ContainerBinary(x)))
-                .chain(Image::iter().map(|x| Self::Image(x)))
+                .chain(Binary::iter().map(Self::Binary))
+                .chain(ContainerBinary::iter().map(Self::ContainerBinary))
+                .chain(Image::iter().map(Self::Image))
                 .collect::<Box<[_]>>()
         })
     }
