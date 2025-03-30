@@ -7,13 +7,13 @@ WORKER_SERVICES := brane-job brane-reg brane-chk
 PROXY_SERVICES :=
 SHARED_SERVICES := brane-prx
 
-BINARY_TARGETS := brane-ctl brane-cli brane-cc
+BINARY_TARGETS := brane-cli brane-cc
 
 DYNAMIC_LIBRARES := brane-cli-c
 
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Linux)
-	BINARY_TARGETS += brane-let
+	BINARY_TARGETS += brane-let brane-ctl
 endif
 
 ALL_TARGETS := $(BINARY_TARGETS) $(DYNAMIC_LIBRARES)
