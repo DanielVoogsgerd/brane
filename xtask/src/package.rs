@@ -38,8 +38,10 @@ pub(crate) async fn create_package(kind: PackageKind) -> anyhow::Result<()> {
         std::fs::copy(src_dir.join(src), dst_dir.join(dst)).with_context(|| format!("Could not copy over file: {src}"))?;
     }
 
-    let libbrane_dst = format!("libbrane_cli-{os}-{arch}{lib_suffix}.gz");
-    compress_file(src_dir.join(format!("libbrane_cli{lib_suffix}")), dst_dir.join(&libbrane_dst)).await.context("Could not compress libbrane")?;
+    if os == "linux" && arch == "arm" {
+        let libbrane_dst = format!("libbrane_cli-{os}-{arch}{lib_suffix}.gz");
+        compress_file(src_dir.join(format!("libbrane_cli{lib_suffix}")), dst_dir.join(&libbrane_dst)).await.context("Could not compress libbrane")?;
+    }
 
     if os == "linux" {
         let instance_dst = format!("instance-{arch}.tar.gz");

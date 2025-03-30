@@ -2,34 +2,11 @@
 # This file is used to compile various parts of the Brane infrastructure and tooling
 #
 #
-CENTRAL_SERVICES := brane-api brane-drv brane-plr
-WORKER_SERVICES := brane-job brane-reg brane-chk
-PROXY_SERVICES :=
-SHARED_SERVICES := brane-prx
-
-BINARY_TARGETS := brane-cli brane-cc
-
-DYNAMIC_LIBRARES := brane-cli-c
 
 UNAME_S := $(shell uname -s)
-ifeq ($(UNAME_S),Linux)
-	BINARY_TARGETS += brane-let brane-ctl
-endif
-
-ALL_TARGETS := $(BINARY_TARGETS) $(DYNAMIC_LIBRARES)
-WORKSPACE_MEMBERS := $(sort $(CENTRAL_SERVICES) $(WORKER_SERVICES) $(SHARED_SERVICES))
-
-ifeq ($(UNAME_S),Linux)
-	ALL_TARGETS += $(WORKSPACE_MEMBERS)
-endif
-
-BUILD_DIR := target
-
-BUILDX_ARGS := build 
-CARGO_BUILD_ARGS := 
+SARCH := $(shell uname -m)
 
 ifndef RUST_ARCH
-	SARCH := $(shell uname -m)
 	ifeq ($(SARCH),amd64)
 		RUST_ARCH := x86_64
 	else ifeq ($(SARCH),x86_64)
@@ -44,6 +21,39 @@ ifndef RUST_ARCH
 		RUST_ARCH := UNKNOWN
 	endif
 endif
+
+CENTRAL_SERVICES := brane-api brane-drv brane-plr
+WORKER_SERVICES := brane-job brane-reg brane-chk
+PROXY_SERVICES :=
+SHARED_SERVICES := brane-prx
+
+BINARY_TARGETS := brane-cli brane-cc
+
+DYNAMIC_LIBRARES := brane-cli-c
+
+# Ugly fix to keep linux-arm from compiling the dynlib
+ifeq ($(UNAME_S),Linux)
+ifeq ($(RUST_ARCH),aarch64)
+	DYNAMIC_LIBRARES :=
+endif
+endif
+
+
+ifeq ($(UNAME_S),Linux)
+	BINARY_TARGETS += brane-let brane-ctl
+endif
+
+ALL_TARGETS := $(BINARY_TARGETS) $(DYNAMIC_LIBRARES)
+WORKSPACE_MEMBERS := $(sort $(CENTRAL_SERVICES) $(WORKER_SERVICES) $(SHARED_SERVICES))
+
+ifeq ($(UNAME_S),Linux)
+	ALL_TARGETS += $(WORKSPACE_MEMBERS)
+endif
+
+BUILD_DIR := target
+
+BUILDX_ARGS := build
+CARGO_BUILD_ARGS :=
 
 # The binaries we can build in either debug or release mode
 ifeq ($(PROFILE),debug)
