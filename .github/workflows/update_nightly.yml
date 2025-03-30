@@ -80,7 +80,7 @@ jobs:
           make all
       - name: Package
         run: |
-          cargo run --release --package xtask package release
+          cargo run --release --no-default-features --package xtask package release
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
