@@ -105,6 +105,7 @@ jobs:
         # without further specification, downloads all artifacts from the run
         with:
           path: release
+          merge-multiple: true
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
