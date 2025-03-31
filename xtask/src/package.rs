@@ -12,6 +12,8 @@ pub(crate) async fn create_package(kind: PackageKind) -> anyhow::Result<()> {
     let arch = std::env::consts::ARCH;
     let lib_suffix = std::env::consts::DLL_SUFFIX;
 
+    eprintln!("Creating a package for: {os} {arch}");
+
     let pkgs = match os {
         "linux" => vec!["brane", "branec", "branectl", "branelet"],
         "macos" => vec!["brane", "branec"],
