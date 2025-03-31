@@ -111,3 +111,5 @@ jobs:
           files: |
             release/*
           fail_on_unmatched_files: true
+          tag_name: nightly
+          name: Nightly release
