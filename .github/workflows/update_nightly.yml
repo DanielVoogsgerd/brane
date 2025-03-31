@@ -37,7 +37,7 @@ jobs:
         run: |
           git config user.name "Brane"
           git config user.email "brane@nonexistentemail.com"
-          git push --delete origin nightly
+          git push --delete origin nightly || true
           git tag -a nightly -m "Nightly release"
           git push --tags
 
