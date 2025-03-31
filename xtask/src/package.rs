@@ -16,7 +16,7 @@ pub(crate) async fn create_package(kind: PackageKind) -> anyhow::Result<()> {
 
     let pkgs = match os {
         "linux" => vec!["brane", "branec", "branectl", "branelet"],
-        "macos" => vec!["brane", "branec"],
+        "macos" => vec!["brane", "branec", "branectl"],
         "windows" => vec!["brane"],
         _ => bail!("Unsupported OS: {os}"),
     };
