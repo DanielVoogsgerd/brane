@@ -42,6 +42,9 @@ endif
 ifeq ($(UNAME_S),Linux)
 	BINARY_TARGETS += brane-let brane-ctl
 endif
+ifeq ($(UNAME_S),Darwin)
+	BINARY_TARGETS += brane-ctl
+endif
 
 ALL_TARGETS := $(BINARY_TARGETS) $(DYNAMIC_LIBRARES)
 WORKSPACE_MEMBERS := $(sort $(CENTRAL_SERVICES) $(WORKER_SERVICES) $(SHARED_SERVICES))
