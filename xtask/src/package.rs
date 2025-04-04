@@ -45,7 +45,7 @@ pub(crate) async fn create_package(kind: PackageKind) -> anyhow::Result<()> {
         compress_file(src_dir.join(format!("libbrane_cli{lib_suffix}")), dst_dir.join(&libbrane_dst)).await.context("Could not compress libbrane")?;
     }
 
-    if os == "linux" && arch == "x86" {
+    if os == "linux" && arch == "x86_64" {
         let instance_dst = format!("instance-{arch}.tar.gz");
         create_tar_gz(
             dst_dir.join(&instance_dst),
@@ -93,6 +93,8 @@ fn create_tar_gz(archive_name: impl AsRef<Path>, files: impl IntoIterator<Item =
         .ok_or_else(|| anyhow::anyhow!("Could not extract directory name from archive name"))?
         .into();
 
+    eprintln!("Creating archive: {dirname:?}");
+
     for file in files {
         let filename = file
             .as_path()
@@ -103,6 +105,8 @@ fn create_tar_gz(archive_name: impl AsRef<Path>, files: impl IntoIterator<Item =
 
         archive.append_path_with_name(file.as_path(), dirname.join(filename)).context("Could not add file to archive")?;
     }
+
+    archive.finish().context("Could not finish writing archive")?;
 
     Ok(())
 }
