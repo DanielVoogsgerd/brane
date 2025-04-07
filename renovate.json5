@@ -5,6 +5,7 @@
         ":semanticCommitTypeAll(chore)",
         "schedule:earlyMondays",
     ],
+    "timezone": "Europe/Amsterdam",
     "labels": ["C-Dependencies"],
     "prConcurrentLimit": 5,
     "prHourlyLimit": 5,
