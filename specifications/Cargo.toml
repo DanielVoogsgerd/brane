@@ -8,34 +8,36 @@ authors.workspace = true
 license.workspace = true
 
 [dependencies]
-anyhow = "1.0.66"
-async-trait = "0.1.67"
-base64 = "0.22.0"
 base64ct = { version = "1.6.0", features = ["std"] }
-chrono = { version = "0.4.30", features = ["serde"] }
 const_format = "0.2.22"
-enum-debug.workspace = true
-futures = "0.3.22"
 jsonwebtoken = "9.1.0"
-lazy_static = "1.5.0"
-log = "0.4.22"
 num-traits = "0.2.18"
-parking_lot = { version = "0.12.1", features = ["serde"] }
-prost = "0.13.2"
-rand = "0.9.0"
 semver = "1.0.0"
-serde = { version = "1.0.195", features = ["derive", "rc"] }
-serde_json = "1.0.50"
 serde_json_any_key = "2.0.0"
 serde_test = "1.0.0"
 serde_with = "3.0.0"
-serde_yaml = { version = "0.10.0", package = "serde_yaml_ng" }
-strum = "0.27.0"
-strum_macros = "0.27.0"
-thiserror = "2.0.0"
-tonic = "0.13.0"
 uuid = { version = "1.7.0", features = ["serde", "v4"] }
 
+# Workspace dependencies
+anyhow.workspace = true
+async-trait.workspace = true
+base64.workspace = true
+chrono.workspace = true
+enum-debug.workspace = true
+futures.workspace = true
+lazy_static.workspace = true
+log.workspace = true
+parking_lot = { workspace = true, features = ["serde"] }
+prost.workspace = true
+rand.workspace = true
+serde = { workspace = true, features = ["rc"] }
+serde_json.workspace = true
+serde_yaml.workspace = true
+strum = { workspace = true, features = ["derive"] }
+thiserror.workspace = true
+tonic.workspace = true
+
+# Brane
 policy-reasoner = { workspace = true, features = ["eflint-haskell-reasoner"] }
 policy-store = { workspace = true, features = ["axum-server-spec"] }
 

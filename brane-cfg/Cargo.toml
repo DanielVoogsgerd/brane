@@ -8,18 +8,21 @@ repository.workspace = true
 license.workspace = true
 
 [dependencies]
-async-trait = "0.1.67"
-enum-debug.workspace = true
-log = "0.4.22"
-rustls = "0.21.6"
 rustls-pemfile = "1.0.1"
-serde = { version = "1.0.195", features = ["derive"] }
-serde_yaml = { version = "0.10.0", package = "serde_yaml_ng" }
-thiserror = "2.0.0"
-tokio = { version = "1.44.2", features = [] }
 x509-parser = "0.17.0"
 
-specifications = { path = "../specifications" }
+# Workspace dependencies
+async-trait.workspace = true
+enum-debug.workspace = true
+log.workspace = true
+rustls.workspace = true
+serde.workspace = true
+serde_yaml.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+
+# Brane
+specifications.workspace = true
 
 [lints]
 workspace = true
