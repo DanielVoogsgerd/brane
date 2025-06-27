@@ -17,23 +17,23 @@ clap_complete = "4.5.0"
 clap_mangen = "0.2.26"
 directories = "6.0.0"
 flate2 = { version = "1.0.13" }
+paste = "1.0.0"
 specifications = { path = "../specifications" }
 tar = "0.4.21"
+thiserror = "2.0.0"
 tokio = "1.44.2"
 toml = "0.8.8"
 tracing = "0.1.37"
 tracing-subscriber = { version = "0.3.10", features = ["env-filter"] }
-paste = "1.0.0"
-thiserror = "2.0.0"
 
 # Only necessary for any task that interacts with the cli arguments
+brane-cc = { path = "../brane-cc", optional = true }
 brane-cfg = { path = "../brane-cfg", optional = true }
-brane-ctl = { path = "../brane-ctl", optional = true }
 brane-cli = { path = "../brane-cli", optional = true }
+brane-ctl = { path = "../brane-ctl", optional = true }
+brane-dsl = { path = "../brane-dsl", optional = true }
 brane-shr = { path = "../brane-shr", optional = true }
 brane-tsk = { path = "../brane-tsk", optional = true }
-brane-dsl = { path = "../brane-dsl", optional = true }
-brane-cc = { path = "../brane-cc", optional = true }
 humantime = { version = "2.1.0", optional = true }
 jsonwebtoken = { version = "9.1.0", optional = true }
 
@@ -52,9 +52,7 @@ cli = [
     "dep:humantime",
     "dep:jsonwebtoken",
 ]
-ci = [
-    "dep:semver",
-]
+ci = ["dep:semver"]
 
 [lints]
 workspace = true

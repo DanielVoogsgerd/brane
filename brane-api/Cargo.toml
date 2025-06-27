@@ -27,11 +27,7 @@ serde_json = "1.0.50"
 serde_yaml = { version = "0.10.0", package = "serde_yaml_ng" }
 tempfile = "3.10.1"
 thiserror = "2.0.0"
-tokio = { version = "1.44.2", default-features = false, features = [
-    "macros",
-    "rt",
-    "signal",
-] }
+tokio = { version = "1.44.2", default-features = false, features = ["macros", "rt", "signal"] }
 tokio-stream = "0.1.16"
 tokio-tar = "0.3.0"
 uuid = { version = "1.7.0", features = ["serde", "v4"] }

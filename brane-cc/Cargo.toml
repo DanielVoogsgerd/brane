@@ -15,8 +15,8 @@ path = "src/main.rs"
 clap = { version = "4.5.0", features = ["derive", "env"] }
 dotenvy = "0.15.0"
 enum-debug.workspace = true
-humanlog.workspace = true
 human-panic = "2.0.0"
+humanlog.workspace = true
 log = "0.4.22"
 thiserror = "2.0.0"
 tokio = { version = "1.44.2", features = ["rt", "macros"] }

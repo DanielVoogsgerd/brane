@@ -1,7 +1,7 @@
 [package]
 name = "brane-ctl"
 edition = "2021"
-authors = [ "Tim Müller" ]
+authors = ["Tim Müller"]
 default-run = "branectl"
 rust-version = "1.82"
 version.workspace = true
@@ -17,7 +17,7 @@ base16ct = { version = "0.2.0", features = ["std"] }
 base64ct = "1.6.0"
 bollard = "0.18.0"
 chrono = "0.4.30"
-clap = { version = "4.5.0", features = ["derive","env"] }
+clap = { version = "4.5.0", features = ["derive", "env"] }
 console = "0.15.5"
 dialoguer = "0.11.0"
 diesel_migrations = "2.2.0"
@@ -25,9 +25,9 @@ dirs = "6.0.0"
 dotenvy = "0.15.0"
 enum-debug.workspace = true
 error-trace.workspace = true
+human-panic = "2.0.0"
 humanlog.workspace = true
 humantime = "2.1.0"
-human-panic = "2.0.0"
 jsonwebtoken = "9.1.0"
 lazy_static = "1.5.0"
 log = "0.4.22"
@@ -45,7 +45,10 @@ tokio = { version = "1.44.2", features = [] }
 # Note that this crate needs a root store because it can download from the internet
 reqwest = { workspace = true, features = ["rustls-tls-webpki-roots"] }
 
-policy-store = { git = "https://github.com/BraneFramework/policy-store.git", features = ["sqlite-database", "sqlite-database-embedded-migrations"] }
+policy-store = { git = "https://github.com/BraneFramework/policy-store.git", features = [
+    "sqlite-database",
+    "sqlite-database-embedded-migrations",
+] }
 
 brane-cfg = { path = "../brane-cfg" }
 brane-shr = { path = "../brane-shr" }
@@ -56,7 +59,7 @@ specifications = { path = "../specifications" }
 [build-dependencies]
 download.workspace = true
 hex-literal = "0.4.0"
-clap = { version = "4.5.0", features = ["derive","env"] }
+clap = { version = "4.5.0", features = ["derive", "env"] }
 
 [lints]
 workspace = true

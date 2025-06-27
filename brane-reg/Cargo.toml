@@ -20,23 +20,17 @@ serde_json = "1.0.50"
 serde_yaml = { version = "0.10.0", package = "serde_yaml_ng" }
 tempfile = "3.10.1"
 thiserror = "2.0.0"
-tokio = { version = "1.44.2", features = [
-    "rt",
-    "rt-multi-thread",
-    "macros",
-    "io-util",
-    "signal",
-] }
+tokio = { version = "1.44.2", features = ["rt", "rt-multi-thread", "macros", "io-util", "signal"] }
 tokio-rustls = "0.24.0"
 warp = "0.3.2"
 
 # Workspace dependencies
 reqwest = { workspace = true }
 
-policy-reasoner = { git = "https://github.com/BraneFramework/policy-reasoner.git" }
 brane-cfg = { path = "../brane-cfg" }
 brane-shr = { path = "../brane-shr" }
 brane-tsk = { path = "../brane-tsk" }
+policy-reasoner = { git = "https://github.com/BraneFramework/policy-reasoner.git" }
 specifications = { path = "../specifications" }
 
 [lints]
