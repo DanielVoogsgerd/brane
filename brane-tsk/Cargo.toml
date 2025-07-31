@@ -9,44 +9,46 @@ license.workspace = true
 
 
 [dependencies]
-async-trait = "0.1.67"
-base64 = "0.22.0"
 base64ct = { version = "1.6.0", features = ["alloc"] }
 bollard = "0.18.0"
-chrono = "0.4.30"
 console = "0.15.5"
 dialoguer = "0.11.0"
-enum-debug.workspace = true
 futures-util = "0.3.30"
 graphql_client = "0.14.0"
-log = "0.4.22"
 num-traits = "0.2.18"
-parking_lot = "0.12.1"
-rand = "0.9.0"
-serde = "1.0.195"
-serde_json = "1.0.50"
-serde_yaml = { version = "0.10.0", package = "serde_yaml_ng" }
 sha2 = "0.10.6"
-thiserror = "2.0.0"
-tokio = "1.44.2"
 tokio-tar = "0.3.0"
 tokio-util = "0.7.1"
-tonic = "0.13.0"
 uuid = { version = "1.7.0", features = ["v4"] }
 
 # Workspace dependencies
+async-trait.workspace = true
+base64.workspace = true
+chrono.workspace = true
+enum-debug.workspace = true
+log.workspace = true
+parking_lot.workspace = true
+rand.workspace = true
 reqwest = { workspace = true, features = ["json", "stream", "multipart"] }
-brane-ast = { path = "../brane-ast" }
-brane-cfg = { path = "../brane-cfg" }
-brane-exe = { path = "../brane-exe" }
-brane-shr = { path = "../brane-shr" }
-specifications = { path = "../specifications" }
+serde.workspace = true
+serde_json.workspace = true
+serde_yaml.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tonic.workspace = true
+
+# Brane
+brane-ast.workspace = true
+brane-cfg.workspace = true
+brane-exe.workspace = true
+brane-shr.workspace = true
+specifications.workspace = true
 
 
 [dev-dependencies]
-clap = { version = "4.5.0", features = ["derive"] }
+clap.workspace = true
 humanlog.workspace = true
-lazy_static = "1.5.0"
+lazy_static.workspace = true
 
 
 # [build-dependencies]

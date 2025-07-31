@@ -1,7 +1,7 @@
 [package]
 name = "brane-ctl"
 edition = "2021"
-authors = [ "Tim Müller" ]
+authors = ["Tim Müller"]
 default-run = "branectl"
 rust-version = "1.82"
 version.workspace = true
@@ -14,49 +14,48 @@ path = "src/main.rs"
 
 [dependencies]
 base16ct = { version = "0.2.0", features = ["std"] }
-base64ct = "1.6.0"
+base64ct = { version = "1.6.0" }
 bollard = "0.18.0"
-chrono = "0.4.30"
-clap = { version = "4.5.0", features = ["derive","env"] }
 console = "0.15.5"
 dialoguer = "0.11.0"
 diesel_migrations = "2.2.0"
 dirs = "6.0.0"
-dotenvy = "0.15.0"
+human-panic = "2.0.0"
+humantime = "2.1.0"
+jsonwebtoken = "9.1.0"
+shlex = "1.3.0"
+tempfile = "3.10.1"
+
+# Workspace dependencies
+chrono.workspace = true
+clap.workspace = true
+dotenvy.workspace = true
 enum-debug.workspace = true
 error-trace.workspace = true
 humanlog.workspace = true
-humantime = "2.1.0"
-human-panic = "2.0.0"
-jsonwebtoken = "9.1.0"
-lazy_static = "1.5.0"
-log = "0.4.22"
+lazy_static.workspace = true
+log.workspace = true
 names.workspace = true
-rand = "0.9.0"
-serde = { version = "1.0.195", features = ["derive"] }
-serde_json = { version = "1.0.50", features = ["raw_value"] }
-serde_yaml = { version = "0.10.0", package = "serde_yaml_ng" }
-shlex = "1.3.0"
-tempfile = "3.10.1"
-thiserror = "2.0.0"
-tokio = { version = "1.44.2", features = [] }
-
-# Workspace dependencies
-# Note that this crate needs a root store because it can download from the internet
+rand.workspace = true
 reqwest = { workspace = true, features = ["rustls-tls-webpki-roots"] }
+serde.workspace = true
+serde_json.workspace = true
+serde_yaml.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
 
-policy-store = { git = "https://github.com/BraneFramework/policy-store.git", features = ["sqlite-database", "sqlite-database-embedded-migrations"] }
+# Brane
+brane-cfg.workspace = true
+brane-shr.workspace = true
+brane-tsk.workspace = true
+specifications.workspace = true
 
-brane-cfg = { path = "../brane-cfg" }
-brane-shr = { path = "../brane-shr" }
-brane-tsk = { path = "../brane-tsk" }
-specifications = { path = "../specifications" }
-
+policy-store = { workspace = true, features = ["sqlite-database", "sqlite-database-embedded-migrations"] }
 
 [build-dependencies]
 download.workspace = true
 hex-literal = "0.4.0"
-clap = { version = "4.5.0", features = ["derive","env"] }
+clap = { version = "4.5.0", features = ["derive", "env"] }
 
 [lints]
 workspace = true

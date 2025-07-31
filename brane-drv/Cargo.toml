@@ -8,37 +8,34 @@ authors.workspace = true
 license.workspace = true
 
 [dependencies]
-async-trait = "0.1.67"
-clap = { version = "4.5.0", features = ["derive", "env"] }
 dashmap = "6.0.0"
-dotenvy = "0.15.0"
-enum-debug.workspace = true
-env_logger = "0.11.0"
-error-trace.workspace = true
-log = "0.4.22"
-prost = "0.12.0"
-# rdkafka = { version = "0.31", features = ["cmake-build"] }
-serde_json = "1.0.50"
 serde_json_any_key = "2.0.0"
-thiserror = "2.0.0"
-tokio = { version = "1.44.2", default-features = false, features = [
-    "macros",
-    "rt",
-    "signal",
-] }
 tokio-stream = "0.1.16"
-tonic = "0.13.0"
 
 # Workspace dependencies
+async-trait.workspace = true
+clap.workspace = true
+dotenvy.workspace = true
+enum-debug.workspace = true
+env_logger.workspace = true
+error-trace.workspace = true
+log.workspace = true
+prost.workspace = true
 reqwest = { workspace = true }
+serde_json.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, features = ["macros", "rt", "signal"] }
+tonic.workspace = true
+
+# Brane
+brane-cfg.workspace = true
+brane-exe.workspace = true
+brane-prx.workspace = true
+brane-shr.workspace = true
+brane-tsk.workspace = true
+specifications.workspace = true
 
 policy-reasoner = { workspace = true }
-brane-cfg = { path = "../brane-cfg" }
-brane-exe = { path = "../brane-exe" }
-brane-prx = { path = "../brane-prx" }
-brane-shr = { path = "../brane-shr" }
-brane-tsk = { path = "../brane-tsk" }
-specifications = { path = "../specifications" }
 
 [lints]
 workspace = true

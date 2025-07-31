@@ -9,20 +9,23 @@ license.workspace = true
 
 [dependencies]
 console = "0.15.5"
-enum-debug.workspace = true
 lazy_static = "1.5.0"
-log = "0.4.22"
-rand = "0.9.0"
 num-traits = "0.2.18"
-serde = { version = "1.0.195", features = ["rc"] }
 serde_json_any_key = "2.0.0"
-strum = { version = "0.27.0", features = ["derive"] }
-thiserror = "2.0.0"
 uuid = { version = "1.7.0", features = ["serde", "v4"] }
 
-brane-dsl = { path = "../brane-dsl" }
-brane-shr = { path = "../brane-shr" }
-specifications = { path = "../specifications" }
+# Workspace dependencies
+enum-debug.workspace = true
+log.workspace = true
+rand.workspace = true
+serde = { workspace = true, features = ["rc"] }
+strum = { workspace = true, features = ["derive"] }
+thiserror.workspace = true
+
+# Brane
+brane-dsl.workspace = true
+brane-shr.workspace = true
+specifications.workspace = true
 
 [lints]
 workspace = true

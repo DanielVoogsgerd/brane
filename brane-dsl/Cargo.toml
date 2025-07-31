@@ -8,17 +8,20 @@ authors.workspace = true
 license.workspace = true
 
 [dependencies]
-enum-debug.workspace = true
-log = "0.4.22"
 nom = "7.1.0"
 nom_locate = "4.1.0"
-rand = "0.9.0"
 regex = "1.5.0"
-serde = "1.0.195"
-thiserror = "2.0.0"
 
-brane-shr = { path = "../brane-shr" }
-specifications = { path = "../specifications" }
+# Workspace dependencies
+enum-debug.workspace = true
+log.workspace = true
+rand.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+
+# Brane
+brane-shr.workspace = true
+specifications.workspace = true
 
 [lints]
 workspace = true

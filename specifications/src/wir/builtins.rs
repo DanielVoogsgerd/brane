@@ -19,7 +19,7 @@ use super::data_type::DataType;
 
 /***** LIBRARY *****/
 /// Defines the builtin functions that exist in BraneScript.
-#[derive(Clone, Copy, Debug, strum_macros::EnumIter)]
+#[derive(Clone, Copy, Debug, strum::EnumIter)]
 pub enum BuiltinFunctions {
     /// The print-function, which prints some text to stdout.
     Print,
@@ -74,7 +74,7 @@ pub struct ParseBuiltinFunctionsError {
 
 
 /// Defines the builtin classes that exist in BraneScript.
-#[derive(Clone, Copy, Debug, strum_macros::EnumIter)]
+#[derive(Clone, Copy, Debug, strum::EnumIter)]
 pub enum BuiltinClasses {
     /// The data-class.
     Data,

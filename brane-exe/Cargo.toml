@@ -9,25 +9,28 @@ license.workspace = true
 
 [dependencies]
 async-recursion = "1.0.0"
-async-trait = "0.1.67"
-base64 = "0.22.0"
 console = "0.15.5"
-enum-debug.workspace = true
-futures = "0.3.22"
-lazy_static = "1.5.0"
-log = "0.4.22"
-serde = "1.0.195"
-serde_json = "1.0.50"
-thiserror = "2.0.0"
-tokio = { version = "1.44.2", features = [] }
 
-brane-ast = { path = "../brane-ast" }
-brane-shr = { path = "../brane-shr" }
-specifications = { path = "../specifications" }
+# Workspace dependencies
+async-trait.workspace = true
+base64.workspace = true
+enum-debug.workspace = true
+futures.workspace = true
+lazy_static.workspace = true
+log.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, features = ["default"] }
+
+# Brane
+brane-ast.workspace = true
+brane-shr.workspace = true
+specifications.workspace = true
 
 [dev-dependencies]
 humanlog.workspace = true
-brane-shr = { path = "../brane-shr" }
+brane-shr.workspace = true
 
 [features]
 print_exec_path = []
