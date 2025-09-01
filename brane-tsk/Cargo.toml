@@ -15,7 +15,7 @@ base64ct = { version = "1.6.0", features = ["alloc"] }
 bollard = "0.18.0"
 chrono = "0.4.35"
 console = "0.15.5"
-dialoguer = "0.11.0"
+dialoguer = "0.12.0"
 enum-debug.workspace = true
 futures-util = "0.3.30"
 graphql_client = "0.14.0"
