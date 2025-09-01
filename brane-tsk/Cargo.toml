@@ -14,7 +14,7 @@ base64 = "0.22.0"
 base64ct = { version = "1.6.0", features = ["alloc"] }
 bollard = "0.18.0"
 chrono = "0.4.35"
-console = "0.15.5"
+console = "0.16.0"
 dialoguer = "0.11.0"
 enum-debug.workspace = true
 futures-util = "0.3.30"

@@ -9,7 +9,7 @@ license.workspace = true
 
 [dependencies]
 async-compression = { version = "0.4.0", features = ["tokio","gzip"] }
-console = "0.15.5"
+console = "0.16.0"
 dialoguer = { version = "0.11.0", features = ["completion", "history"] }
 enum-debug.workspace = true
 fs2 = "0.4.0"
