@@ -18,6 +18,7 @@ on:
         required: false
         type: boolean
 
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
@@ -31,6 +32,8 @@ jobs:
   tag:
     name: "Add nightly tag"
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -113,6 +116,8 @@ jobs:
     name: "Release artifacts to GitHub"
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v4
@@ -121,7 +126,7 @@ jobs:
           path: release
           merge-multiple: true
       - name: Delete previous nightly release
-        run: gh -R $GITHUB_REPOSITORY release delete nightly
+        run: gh -R "$GITHUB_REPOSITORY" release delete nightly
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
